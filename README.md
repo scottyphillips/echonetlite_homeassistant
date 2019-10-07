@@ -1,4 +1,4 @@
-# Mitsubishi MAC-568IF-E Echonet
+# Mitsubishi ECHONET Climate Component for Home Assistant
 
 [![GitHub Release][releases-shield]][releases]
 [![License][license-shield]](LICENSE)
@@ -8,7 +8,8 @@
 
 
 A Home Assistant custom component for use with ECHONET enabled Mitsubishi
-HVAC systems. This custom component makes use of the 'mitsubishi_echonet'
+HVAC systems using the MAC-568IF-E WiFi Adaptor.
+This custom component makes use of the 'mitsubishi_echonet'
 Python library also written by yours truly:
 (https://github.com/scottyphillips/mitsubishi_echonet)
 

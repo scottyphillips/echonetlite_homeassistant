@@ -4,7 +4,9 @@
 ![Project Maintenance][maintenance-shield]
 [![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
 
-_Component to integrate with [mitsubishi_echonet][mitsubishi_echonet]._
+# Mitsubishi ECHONET Climate Component for Home Assistant
+
+_Component to integrate Mitsubishi HVAC systems with ECHONET Lite protocol using the [mitsubishi_echonet][mitsubishi_echonet] library._
 
 **This component will set up the following platforms.**
 
