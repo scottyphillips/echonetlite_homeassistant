@@ -74,11 +74,11 @@ the basis of my reverse engineering efforts.
 
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
-[![License][license-shield]](LICENSE.md)
+[![License][license-shield]](LICENSE)
 
 [![hacs][hacsbadge]][hacs]
 ![Project Maintenance][maintenance-shield]
-
+[![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
 
 ## License
 
@@ -86,9 +86,12 @@ This application is licensed under an MIT license, refer to LICENSE for details.
 
 ***
 [mitsubishi_hass]: https://github.com/scottyphillips/mitsubishi_hass
-[commits-shield]: https://img.shields.io/github/commit-activity/y/scottyphillips/mitsubishi_hass.svg?style=for-the-badge
+[commits-shield]: https://img.shields.io/github/commit-activity/scottyphillips/mitsubishi_hass
 [commits]: https://github.com/scottyphillips/mitsubishi_hass/commits/master
 [hacs]: https://github.com/custom-components/hacs
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/custom-components/blueprint.svg?style=for-the-badge
 [releases]: https://github.com/custom-components/blueprint/releases
+[licence-sheild]:https://img.shields.io/github/license/scottyphillips/mitsubishi_hass
+[buymecoffee]: https://www.buymeacoffee.com/RgKWqyt
+[buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
