@@ -24,6 +24,7 @@ Platform | Description
 
 {% endif %}
 
+
 ## Example configuration.yaml
 Add to configuration.yaml:
 
@@ -77,6 +78,16 @@ climate:
       - 'very-high'
       - 'max'
 ```
+
+## Enable ECHONET protocol
+This Custom Component makes use of the official Mitsubishi MAC-568IF-E WiFi
+Adaptor. Other adaptors (indeed other vendors!) may work, but they
+must support the 'ECHONET lite' protocol.
+
+From the official Mitsubishi AU/NZ Wifi App, you will need to enable
+the 'ECHONET lite' protocol under the 'edit unit' settings.
+
+![echonet][echonetimg]
 
 ***
 [mitsubishi_echonet]: https://github.com/scottyphillips/mitsubishi_echonet
