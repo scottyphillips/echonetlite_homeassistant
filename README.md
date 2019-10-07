@@ -118,7 +118,7 @@ This application is licensed under an MIT license, refer to LICENSE for details.
 ***
 [mitsubishi_hass]: https://github.com/scottyphillips/mitsubishi_hass
 [hacs]: https://github.com/custom-components/hacs
-[hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
+[hacsbadge]: https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/scottyphillips/mitsubishi_hass.svg?style=for-the-badge
 [releases]: https://github.com/scottyphillips/mitsubishi_hass/releases
 [license-shield]:https://img.shields.io/github/license/scottyphillips/mitsubishi_hass?style=for-the-badge

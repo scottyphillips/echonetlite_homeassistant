@@ -2,4 +2,5 @@
   "name": "Mitsubishi Echonet Climate Component",
   "domains": ["climate"],
   "homeassistant": "0.96.0",
+  "iot_class": "Local Polling"
 }
