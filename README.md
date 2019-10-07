@@ -73,9 +73,7 @@ the basis of my reverse engineering efforts.
 (https://github.com/futomi/node-echonet-lite)
 
 [![GitHub Release][releases-shield]][releases]
-[![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]](LICENSE)
-
 [![hacs][hacsbadge]][hacs]
 ![Project Maintenance][maintenance-shield]
 [![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
@@ -86,13 +84,11 @@ This application is licensed under an MIT license, refer to LICENSE for details.
 
 ***
 [mitsubishi_hass]: https://github.com/scottyphillips/mitsubishi_hass
-[commits-shield]: https://img.shields.io/github/commit-activity/scottyphillips/mitsubishi_hass
-[commits]: https://github.com/scottyphillips/mitsubishi_hass/commits/master
 [hacs]: https://github.com/custom-components/hacs
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/scottyphillips/mitsubishi_hass.svg?style=for-the-badge
-[releases]: https://github.com/custom-components/blueprint/releases
-[license-shield]:https://img.shields.io/github/license/scottyphillips/mitsubishi_hass
-[buymecoffee]: https://www.buymeacoffee.com/RgKWqyt
+[releases]: https://github.com/scottyphillips/mitsubishi_hass/releases
+[license-shield]:https://img.shields.io/github/license/scottyphillips/mitsubishi_hass?style=for-the-badge
+[buymecoffee]: https://www.buymeacoffee.com/RgKWqyt?style=for-the-badge
 [buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
-[maintenance-shield]: https://img.shields.io/badge/Maintainer-Scott%20Phillips-blue
+[maintenance-shield]: https://img.shields.io/badge/Maintainer-Scott%20Phillips-blue?style=for-the-badge
