@@ -101,3 +101,4 @@ the 'ECHONET lite' protocol under the 'edit unit' settings.
 [buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
 [maintenance-shield]: https://img.shields.io/badge/Maintainer-Scott%20Phillips-blue?style=for-the-badge
 [exampleimg]: Mitsubishi.jpg
+[echonetimg]: ECHONET.jpeg
