@@ -90,7 +90,7 @@ This application is licensed under an MIT license, refer to LICENSE for details.
 [commits]: https://github.com/scottyphillips/mitsubishi_hass/commits/master
 [hacs]: https://github.com/custom-components/hacs
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
-[releases-shield]: https://img.shields.io/github/release/custom-components/blueprint.svg?style=for-the-badge
+[releases-shield]: https://img.shields.io/github/release/scottyphillips/mitsubishi_hass.svg?style=for-the-badge
 [releases]: https://github.com/custom-components/blueprint/releases
 [license-shield]:https://img.shields.io/github/license/scottyphillips/mitsubishi_hass
 [buymecoffee]: https://www.buymeacoffee.com/RgKWqyt
