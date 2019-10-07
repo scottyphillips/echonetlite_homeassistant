@@ -72,7 +72,21 @@ extremely well documented ECHONET Lite library in Node JS that formed
 the basis of my reverse engineering efforts.
 (https://github.com/futomi/node-echonet-lite)
 
+[![GitHub Release][releases-shield]][releases]
+[![GitHub Activity][commits-shield]][commits]
+[![License][license-shield]](LICENSE.md)
+
+[![hacs][hacsbadge]][hacs]
+![Project Maintenance][maintenance-shield]
+
 
 ## License
 
 This application is licensed under an MIT license, refer to LICENSE for details.
+
+***
+[mitsubishi_hass]: https://github.com/scottyphillips/mitsubishi_hass
+[commits-shield]: https://img.shields.io/github/commit-activity/y/custom-components/blueprint.svg?style=for-the-badge
+[commits]: https://github.com/scottyphillips/mitsubishi_hass/commits/master
+[hacs]: https://github.com/custom-components/hacs
+[hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
