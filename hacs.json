@@ -1,0 +1,5 @@
+{
+  "name": "Mitsubishi Echonet Climate Component",
+  "domains": ["climate"],
+  "homeassistant": "0.96.0",
+}
