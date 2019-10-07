@@ -92,6 +92,7 @@ This application is licensed under an MIT license, refer to LICENSE for details.
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/custom-components/blueprint.svg?style=for-the-badge
 [releases]: https://github.com/custom-components/blueprint/releases
-[licence-sheild]:https://img.shields.io/github/license/scottyphillips/mitsubishi_hass
+[license-shield]:https://img.shields.io/github/license/scottyphillips/mitsubishi_hass
 [buymecoffee]: https://www.buymeacoffee.com/RgKWqyt
 [buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
+[maintenance-shield]: https://img.shields.io/badge/Maintainer-Scott%20Phillips-blue
