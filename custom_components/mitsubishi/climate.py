@@ -90,9 +90,12 @@ class MitsubishiClimate(ClimateDevice):
             self._on = True if data['status'] is 'On' else False
 
             # Mode and fan speed
-            self._fan_mode= data['fan_speed'] if 'fan_speed' in data else 'Medium-High'
+            self._fan_mode= data['fan_speed'] if 'fan_speed' in data else 'medium-high'
             if data['status'] is 'On':
-                self._hvac_mode = data['mode'] if 'mode' in data else 'auto'
+                self._hvac_mode = data['mode'] if 'mode' in data else 'heat_cool'
+                # Fix for heat_cool issue for HomeKit support.
+                if self._hvac_mode == 'auto':
+                    self._hvac_mode = 'heat_cool'
             else:
                 self._hvac_mode = 'off'
 
@@ -118,7 +121,7 @@ class MitsubishiClimate(ClimateDevice):
             self._fan_modes = fan_modes
         else:
             self._fan_modes = ['low', 'medium-high']
-        self._hvac_modes = ['heat', 'cool', 'dry','fan_only', 'auto', 'off']
+        self._hvac_modes = ['heat', 'cool', 'dry','fan_only', 'heat_cool', 'off']
         self._swing_list = ['auto', '1', '2', '3', 'off']
 
     def update(self):
@@ -129,7 +132,12 @@ class MitsubishiClimate(ClimateDevice):
               self._target_temperature = data['set_temperature']
               self._current_temperature = data['room_temperature']
               self._fan_mode= data['fan_speed']
-              self._hvac_mode =  data['mode'] if data['status'] is 'On' else 'off'
+              self._hvac_mode = data['mode'] if data['status'] is 'On' else 'off'
+
+              # Shim for Home assistants 'auto' vs 'heat_cool' cliate component debacle
+              if self._hvac_mode == 'auto':
+                 self._hvac_mode = 'heat_cool'
+
               self._on = True if data['status'] is 'On' else False
         except KeyError:
            _LOGGER.warning("HA requested an update from HVAC %s but no data was received", self._api.netif)
@@ -200,7 +208,7 @@ class MitsubishiClimate(ClimateDevice):
            return CURRENT_HVAC_DRY
         if self._hvac_mode == HVAC_MODE_FAN_ONLY:
            return CURRENT_HVAC_FAN
-        if self._hvac_mode == HVAC_MODE_AUTO:
+        if self._hvac_mode == HVAC_MODE_HEAT_COOL:
            """ TODO : distinguish auto activity"""
            if self._target_temperature < self._current_temperature:
                return CURRENT_HVAC_COOL
@@ -278,7 +286,15 @@ class MitsubishiClimate(ClimateDevice):
         else:
            if self._on == False:
               self.turn_on()
-           self._api.setMode(operation_mode)
+
+           # Shim for Home Assistants 'heat_cool' vs 'auto' ideological debate...
+           # 'heat_cool' mode is required to support proper HomeKit integration.
+           # The ECHONET standard only defines 'auto' and I am sticking to that convention
+           # with the API calls to the library.
+           if operation_mode ==  'heat_cool':
+              self._api.setMode('auto')
+           else:
+              self._api.setMode(operation_mode)
         self._hvac_mode = operation_mode
         self.schedule_update_ha_state()
 
