@@ -20,7 +20,7 @@ Platform | Description
 ## Installation
 
 1. Click install.
-1. Add `mitsubishi:` to your HA configuration.
+1. Add `climate:` to your HA configuration as per example below.
 
 {% endif %}
 
