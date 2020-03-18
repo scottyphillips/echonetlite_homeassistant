@@ -134,7 +134,7 @@ class MitsubishiClimate(ClimateDevice):
               self._fan_mode= data['fan_speed']
               self._hvac_mode = data['mode'] if data['status'] is 'On' else 'off'
 
-              # Shim for Home assistants 'auto' vs 'heat_cool' cliate component debacle
+              # Shim for Home assistants 'auto' vs 'heat_cool' climate component debacle
               if self._hvac_mode == 'auto':
                  self._hvac_mode = 'heat_cool'
 
