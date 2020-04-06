@@ -42,6 +42,7 @@ the 'ECHONET lite' protocol under the 'edit unit' settings.
 5. Place the files you downloaded in the new directory (folder) you created.
 6. Restart Home Assistant
 7. Add `climate:` to your HA configuration as per the example below.
+8. Optionally add `sensor` to your HA configuration.
 
 Using your HA configuration directory (folder) as a starting point you should now also have this:
 
@@ -49,6 +50,8 @@ Using your HA configuration directory (folder) as a starting point you should no
 custom_components/mitsubishi/__init__.py
 custom_components/mitsubishi/climate.py
 custom_components/mitsubishi/manifest.json
+custom_components/mitsubishi/sensor.py
+custom_components/mitsubishi/const.py
 ```
 
 ## Example configuration.yaml
@@ -56,6 +59,11 @@ custom_components/mitsubishi/manifest.json
 climate:
   - platform: mitsubishi
     ip_address: 1.2.3.4
+
+sensor:
+  - platform: mitsubishi
+    ip_address: 1.2.3.4
+    name: "mitsubishi_ducted"
 ```
 
 ## Configuration options
@@ -65,6 +73,7 @@ Key | Type | Required | Description
 `ip_address` | `string` | `True` | IP Address for the HVAC system.
 `name` | `string` | `False` | Friendly name for the HVAC system
 `climate` | `list` | `False` | Configuration for the `climate` platform.
+`sensor` | `list` | `False` | Configuration for the `sensor` platform.
 
 ### Configuration options for `climate` list
 
