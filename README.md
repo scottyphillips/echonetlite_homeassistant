@@ -22,7 +22,9 @@ MSZ-GE42VAD
 MSZ-GE24VAD
 MSZ-GL50VGD
 MSZ-GL35VGD
+MSZ-GE35VAD
 PEA-RP140GAA
+
 
 ## Installation - Enable ECHONET protocol
 This Custom Component makes use of the official Mitsubishi MAC-568IF-E WiFi
