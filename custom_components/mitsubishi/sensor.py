@@ -73,8 +73,11 @@ class MitsubishiClimateSensor(Entity):
 
     async def async_update(self):
         """Retrieve latest state."""
-        self._api.update()
-        self._api.getOutdoorTemperature()
+        try:
+            self._api.update()
+            self._api.getOutdoorTemperature()
+        except KeyError:
+           _LOGGER.warning("HA requested an update from HVAC %s but no data was received", self._api.netif)
 
     # @property
     # def device_info(self):

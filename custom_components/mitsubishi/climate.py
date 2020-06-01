@@ -25,7 +25,7 @@ import mitsubishi_echonet as mit
 import logging
 _LOGGER = logging.getLogger(__name__)
 
-from homeassistant.components.climate import ClimateDevice
+from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_HIGH, ATTR_TARGET_TEMP_LOW,
     SUPPORT_TARGET_TEMPERATURE, SUPPORT_FAN_MODE, ATTR_FAN_MODES,
@@ -59,7 +59,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     async_add_entities(entities)
 
 
-class MitsubishiClimate(ClimateDevice):
+class MitsubishiClimate(ClimateEntity):
 
     """Representation of a Mitsubishi ECHONET climate device."""
     def __init__(self, name, echonet_hvac, unit_of_measurement, fan_modes=None):
