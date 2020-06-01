@@ -42,7 +42,7 @@ the 'ECHONET lite' protocol under the 'edit unit' settings.
 5. Place the files you downloaded in the new directory (folder) you created.
 6. Restart Home Assistant
 7. Add `climate:` to your HA configuration as per the example below.
-8. Optionally add `sensor` to your HA configuration.
+8. Optionally add `sensor` to your HA configuration for a indoor and outdoor temperature sensor
 
 Using your HA configuration directory (folder) as a starting point you should now also have this:
 
