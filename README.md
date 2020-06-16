@@ -18,11 +18,17 @@ Python library also written by yours truly:
 # Current working systems:
 Based upon feedback this custom component works on the following Mitsubishi
 HVAC systems all equipped with the MAC-568IF-E WiFi Adaptor:
-MSZ-GE42VAD
-MSZ-GE24VAD
-MSZ-GL50VGD
-MSZ-GL35VGD
-PEA-RP140GAA
+* GE Series
+  * MSZ-GE42VAD
+  * MSZ-GE24VAD
+  * MSZ-GL50VGD
+  * MSZ-GL35VGD
+* AP Series
+  * MSZ-AP22VGD
+  * MSZ-AP25VGD
+  * MSZ-AP50VGD
+* Ducted
+  * PEA-RP140GAA
 
 ## Installation - Enable ECHONET protocol
 This Custom Component makes use of the official Mitsubishi MAC-568IF-E WiFi
