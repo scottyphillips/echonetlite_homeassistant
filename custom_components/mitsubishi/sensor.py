@@ -14,6 +14,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     import mitsubishi_echonet as mit
     """Set up the Mitsubishi ECHONET climate devices."""
@@ -26,6 +27,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         ]
 
     )
+
 
 class MitsubishiClimateSensor(Entity):
     """Representation of a Sensor."""
@@ -60,10 +62,18 @@ class MitsubishiClimateSensor(Entity):
     @property
     def state(self):
         """Return the state of the sensor."""
+
         if self._device_attribute == ATTR_INSIDE_TEMPERATURE:
-            return self._api.roomTemperature
+            if self._api.roomTemperature == 126:
+               return 'unavailable'
+            else:
+               return self._api.roomTemperature
+
         if self._device_attribute == ATTR_OUTSIDE_TEMPERATURE:
-            return self._api.outdoorTemperature
+            if self._api.outdoorTemperature == 126:
+               return 'unavailable'
+            else:
+               return self._api.outdoorTemperature
         return None
 
     @property
