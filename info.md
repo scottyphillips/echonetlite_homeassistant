@@ -12,7 +12,8 @@ _Component to integrate Mitsubishi HVAC systems with ECHONET Lite protocol using
 
 Platform | Description
 -- | --
-`climate` | Interface to Mitsubishi ECHONET API.
+`climate` | Interface to Mitsubishi ECHONET API to control your HVAC
+`sensor`  | Interface to Mitsubishi ECHONET API to poll indoor and outdoor temperature sensors
 
 ![example][exampleimg]
 
@@ -20,7 +21,8 @@ Platform | Description
 ## Installation
 
 1. Click install.
-1. Add `climate:` to your HA configuration as per example below.
+2. Add `climate:` to your HA configuration as per example below.
+3. Optionally, add `sensor` to your HA configuration to get indoor and outdoor temperature sensors
 
 {% endif %}
 
@@ -31,7 +33,7 @@ Add to configuration.yaml:
 ```yaml
 climate:
   - platform: mitsubishi
-    ip_address: 192.168.1.6
+    ip_address: 1.2.3.4
     name: "mitsubishi_ducted"
     fan_modes:
       - 'minimum'
@@ -42,6 +44,11 @@ climate:
       - 'high'
       - 'very-high'
       - 'max'
+
+sensor:
+   - platform: mitsubishi
+     ip_address: 1.2.3.4
+     name: "mitsubishi_ducted"
 ```
 
 ## Configuration options
@@ -51,6 +58,7 @@ Key | Type | Required | Description
 `ip_address` | `string` | `True` | IP Address for the HVAC system.
 `name` | `string` | `False` | Friendly name for the HVAC system
 `climate` | `list` | `False` | Configuration for the `climate` platform.
+`sensor` | `list` | `False` | Configuration for the `sensor` platform.
 
 ### Configuration options for `climate` list
 
@@ -77,6 +85,11 @@ climate:
       - 'high'
       - 'very-high'
       - 'max'
+
+sensor:
+  - platform: mitsubishi
+    ip_address: 192.168.1.6
+    name: "mitsubishi_ducted"
 ```
 
 ## Enable ECHONET protocol
