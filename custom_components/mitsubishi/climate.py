@@ -82,11 +82,11 @@ class MitsubishiClimate(ClimateEntity):
             self._current_temperature = data['room_temperature'] if 'room_temperature' in data else 20
 
             # Current power setting
-            self._on = True if data['status'] is 'On' else False
+            self._on = True if data['status'] == 'On' else False
 
             # Mode and fan speed
             self._fan_mode= data['fan_speed'] if 'fan_speed' in data else 'medium-high'
-            if data['status'] is 'On':
+            if data['status'] == 'On':
                 self._hvac_mode = data['mode'] if 'mode' in data else 'heat_cool'
                 if self._hvac_mode == 'auto':
                     self._hvac_mode = 'heat_cool'
@@ -125,13 +125,13 @@ class MitsubishiClimate(ClimateEntity):
            self._target_temperature = self._api.setTemperature
            self._current_temperature = self._api.roomTemperature
            self._fan_mode = self._api.fan_speed
-           self._hvac_mode = self._api.mode if self._api.status is 'On' else 'off'
+           self._hvac_mode = self._api.mode if self._api.status == 'On' else 'off'
 
            # Shim for Home assistants 'auto' vs 'heat_cool' stupidity
            if self._hvac_mode == 'auto':
               self._hvac_mode = 'heat_cool'
 
-           self._on = True if self._api.status is 'On' else False
+           self._on = True if self._api.status == 'On' else False
         except KeyError:
            _LOGGER.warning("HA requested an update from HVAC %s but no data was received", self._api.netif)
 
