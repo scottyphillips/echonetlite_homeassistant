@@ -64,13 +64,13 @@ class MitsubishiClimateSensor(Entity):
         """Return the state of the sensor."""
 
         if self._device_attribute == ATTR_INSIDE_TEMPERATURE:
-            if self._api.roomTemperature == 126:
+            if self._api.roomTemperature == 126 or self._api.roomTemperature == None:
                return 'unavailable'
             else:
                return self._api.roomTemperature
 
         if self._device_attribute == ATTR_OUTSIDE_TEMPERATURE:
-            if self._api.outdoorTemperature == 126:
+            if self._api.outdoorTemperature == 126 or self._api.outdoorTemperature == None:
                return 'unavailable'
             else:
                return self._api.outdoorTemperature
@@ -84,8 +84,8 @@ class MitsubishiClimateSensor(Entity):
     async def async_update(self):
         """Retrieve latest state."""
         try:
-            self._api.update()
-            self._api.getOutdoorTemperature()
+            await self.hass.async_add_executor_job(self._api.update)
+            ## self._api.getOutdoorTemperature()
         except KeyError:
            _LOGGER.warning("HA requested an update from HVAC %s but no data was received", self._api.netif)
 
