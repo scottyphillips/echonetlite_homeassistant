@@ -1,9 +1,10 @@
 {
   "domain": "mitsubishi",
   "name": "Mitsubishi HVAC with Echonet lite",
-  "documentation": "https://github.com/scottyphillips/mitsubishi_echonet",
+  "version": "2.0.0",
+  "documentation": "https://github.com/scottyphillips/mitsubishi_hass",
   "dependencies": [],
   "codeowners": [],
-  "requirements": ["mitsubishi_echonet==0.3.1"],
-  "homeassistant": "0.96.0"
+  "requirements": ["mitsubishi_echonet==0.4.1"],
+  "homeassistant": "0.110.4"
 }
