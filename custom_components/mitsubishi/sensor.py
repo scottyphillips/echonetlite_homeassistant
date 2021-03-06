@@ -63,18 +63,17 @@ class MitsubishiClimateSensor(Entity):
     def state(self):
         """Return the state of the sensor."""
 
+        temperature = None
         if self._device_attribute == ATTR_INSIDE_TEMPERATURE:
-            if self._api.roomTemperature == 126:
-               return 'unavailable'
-            else:
-               return self._api.roomTemperature
+            temperature = self._api.roomTemperature
 
         if self._device_attribute == ATTR_OUTSIDE_TEMPERATURE:
-            if self._api.outdoorTemperature == 126:
-               return 'unavailable'
-            else:
-               return self._api.outdoorTemperature
-        return None
+            temperature = self._api.outdoorTemperature
+
+        if temperature is None or temperature == 126:
+            return 'unavailable'
+        else:
+            return temperature
 
     @property
     def unit_of_measurement(self):
