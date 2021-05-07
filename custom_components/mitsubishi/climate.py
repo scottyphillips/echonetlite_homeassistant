@@ -98,11 +98,11 @@ class MitsubishiClimate(ClimateEntity):
             # self._current_swing_mode = current_swing_mode if 'current_swing_mode' in data else None
 
         except KeyError:
-            _LOGGER.warning("HA requested an update from HVAC %s but no data was received. Using Defaults", self._api.netif)
+            _LOGGER.warning("HA tried to initialise the HVAC %s but no data was received. Please check IP connectivity and enable ECHONET", self._api.netif)
 
             self._target_temperature = 20
             self._current_temperature = 20
-
+            self._on = False
             # Mode and fan speed
             self._fan_mode= 'medium-high'
             self._hvac_mode = 'off'
