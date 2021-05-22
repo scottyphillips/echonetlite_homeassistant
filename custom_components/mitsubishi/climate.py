@@ -37,7 +37,7 @@ from homeassistant.components.climate.const import (
 from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, ATTR_TEMPERATURE, CONF_HOST, CONF_IP_ADDRESS, CONF_NAME
 
 DOMAIN = "mitsubishi"
-REQUIREMENTS = ['mitsubishi_echonet==0.3']
+REQUIREMENTS = ['mitsubishi_echonet==0.4.1']
 SUPPORT_FLAGS = 0
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
@@ -70,6 +70,7 @@ class MitsubishiClimate(ClimateEntity):
         _LOGGER.debug("ECHONET lite HVAC %s component added to HA", self._api.netif)
 
         self._unit_of_measurement = unit_of_measurement
+        self._precision = 1.0
         self._support_flags = SUPPORT_FLAGS
         self._support_flags = self._support_flags | SUPPORT_TARGET_TEMPERATURE
         self._support_flags = self._support_flags | SUPPORT_FAN_MODE
@@ -121,7 +122,7 @@ class MitsubishiClimate(ClimateEntity):
     async def async_update(self):
         """Get the latest state from the HVAC."""
         try:
-           self._api.update()
+           await self.hass.async_add_executor_job(self._api.update)
            self._target_temperature = self._api.setTemperature
            self._current_temperature = self._api.roomTemperature
            self._fan_mode = self._api.fan_speed
@@ -212,7 +213,7 @@ class MitsubishiClimate(ClimateEntity):
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
         if kwargs.get(ATTR_TEMPERATURE) is not None:
-            self._api.setOperationalTemperature(kwargs.get(ATTR_TEMPERATURE))
+            await self.hass.async_add_executor_job(self._api.setOperationalTemperature, kwargs.get(ATTR_TEMPERATURE))
             self._target_temperature = kwargs.get(ATTR_TEMPERATURE)
         if kwargs.get(ATTR_TARGET_TEMP_HIGH) is not None and \
            kwargs.get(ATTR_TARGET_TEMP_LOW) is not None:
@@ -221,7 +222,7 @@ class MitsubishiClimate(ClimateEntity):
 
     async def async_set_fan_mode(self, fan_mode):
         """Set new target temperature."""
-        self._api.setFanSpeed(fan_mode)
+        await self.hass.async_add_executor_job(self._api.setFanSpeed, fan_mode)
         self._fan_mode = self._api.fan_speed
 
     async def async_set_hvac_mode(self, hvac_mode):
@@ -230,13 +231,13 @@ class MitsubishiClimate(ClimateEntity):
            await self.async_turn_off()
         else:
            if self._on == False:
-               await self.async_turn_on()
+              await self.async_turn_on()
 
            # Shim for Home Assistants 'heat_cool' vs 'auto' stupidity
            if hvac_mode ==  'heat_cool':
-              self._api.setMode('auto')
+              await self.hass.async_add_executor_job(self._api.setMode, 'auto')
            else:
-              self._api.setMode(hvac_mode)
+              await self.hass.async_add_executor_job(self._api.setMode, hvac_mode)
         self._hvac_mode = hvac_mode
 
     async def async_turn_on(self):
