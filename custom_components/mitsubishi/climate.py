@@ -2,23 +2,12 @@
 Mitsubishi platform to control HVAC using MAC-568IF-E Interface over ECHONET-lite
 Protocol.
 
-EXPERIMENTAL ASYNC UPDATE
-
-Use this custom component for HA 0.96 and above
-There are probably a lot of methods in here now that are obsolete with the
-revised Climate class in HA 0.96
+Available on the Home Assistant Community Store
 
 See https://github.com/home-assistant/home-assistant/pull/23899 for more details
 
 Uses mitsubishi_echonet python Library for API calls.
 The library should download automatically and it should download to config/deps
-
-As a last resort if the automatic pip install doesnt work:
-1. Download the GIT repo
-2. Copy the 'misubishi-echonet' subfolder out of the repo and into 'custom_components
-3. Flip the comments on the following lines under setup_platform:
-import mitsubishi_echonet as mit
-# import custom_components.mitsubishi_echonet as mit
 """
 
 

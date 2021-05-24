@@ -25,7 +25,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             MitsubishiClimateSensor(mitsubishi_api, sensor, hass.config.units, config.get(CONF_NAME))
             for sensor in sensors
         ]
-
     )
 
 
