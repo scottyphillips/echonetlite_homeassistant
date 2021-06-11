@@ -26,7 +26,7 @@ from homeassistant.components.climate.const import (
 from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, ATTR_TEMPERATURE, CONF_HOST, CONF_IP_ADDRESS, CONF_NAME
 
 DOMAIN = "mitsubishi"
-REQUIREMENTS = ['mitsubishi_echonet==0.4.1']
+REQUIREMENTS = ['mitsubishi_echonet==0.5']
 SUPPORT_FLAGS = 0
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
@@ -57,7 +57,10 @@ class MitsubishiClimate(ClimateEntity):
         self._name = name
         self._api = echonet_hvac #new line
         _LOGGER.debug("ECHONET lite HVAC %s component added to HA", self._api.netif)
-
+        _LOGGER.debug("HVAC has the following get properties:")
+        _LOGGER.debug(self._api.fetchGetProperties())
+        _LOGGER.debug("HVAC has the following set properties:")
+        _LOGGER.debug(self._api.fetchSetProperties())
         self._unit_of_measurement = unit_of_measurement
         self._precision = 1.0
         self._support_flags = SUPPORT_FLAGS
