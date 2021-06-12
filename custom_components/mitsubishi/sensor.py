@@ -43,11 +43,6 @@ class MitsubishiClimateSensor(Entity):
         if self._sensor[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
             self._unit_of_measurement = units.temperature_unit
 
-    # @property
-    # def unique_id(self):
-    #    """Return a unique ID."""
-    #    return f"{self._api.mac}-{self._device_attribute}"
-
     @property
     def icon(self):
         """Icon to use in the frontend, if any."""
@@ -57,6 +52,11 @@ class MitsubishiClimateSensor(Entity):
     def name(self):
         """Return the name of the sensor."""
         return self._name
+
+    @property
+    def unique_id(self):
+        """Return a unique ID."""
+        return f"{self._api.getIdentificationNumber()["identification_number"]}-{self._device_attribute}"
 
     @property
     def state(self):

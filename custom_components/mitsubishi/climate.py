@@ -144,6 +144,11 @@ class MitsubishiClimate(ClimateEntity):
         return self._name
 
     @property
+    def unique_id(self):
+        """Return a unique ID."""
+        return self._api.getIdentificationNumber()["identification_number"]
+
+    @property
     def temperature_unit(self):
         """Return the unit of measurement."""
         return self._unit_of_measurement
