@@ -19,7 +19,12 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     import mitsubishi_echonet as mit
     """Set up the Mitsubishi ECHONET climate devices."""
     mitsubishi_api = mit.HomeAirConditioner(config.get(CONF_IP_ADDRESS))
-    sensors = [ATTR_INSIDE_TEMPERATURE, ATTR_OUTSIDE_TEMPERATURE]
+    sensors = [ATTR_INSIDE_TEMPERATURE]
+    # check for support for outdoor sensor
+    hvac_properties = mitsubishi_api.fetchGetProperties()
+    if 190 in hvac_properties.values():
+        sensors.append(ATTR_OUTSIDE_TEMPERATURE)
+
     async_add_entities(
         [
             MitsubishiClimateSensor(mitsubishi_api, sensor, hass.config.units, config.get(CONF_NAME))

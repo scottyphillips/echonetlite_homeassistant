@@ -74,7 +74,7 @@ and 'medium-high'.
 ```yaml
 climate:
   - platform: mitsubishi
-    ip_address: 192.168.1.6
+    ip_address: 1.2.3.4
     name: "mitsubishi_ducted"
     fan_modes:
       - 'minimum'
@@ -88,7 +88,7 @@ climate:
 
 sensor:
   - platform: mitsubishi
-    ip_address: 192.168.1.6
+    ip_address: 1.2.3.4
     name: "mitsubishi_ducted"
 ```
 
