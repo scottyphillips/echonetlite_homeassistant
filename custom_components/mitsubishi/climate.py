@@ -23,11 +23,13 @@ from homeassistant.components.climate.const import (
     HVAC_MODE_OFF, HVAC_MODE_HEAT, HVAC_MODE_COOL,
     HVAC_MODE_HEAT_COOL, HVAC_MODE_AUTO, HVAC_MODE_DRY,
     HVAC_MODE_FAN_ONLY)
-from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, ATTR_TEMPERATURE, CONF_HOST, CONF_IP_ADDRESS, CONF_NAME
+from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, ATTR_TEMPERATURE, CONF_HOST, CONF_IP_ADDRESS, CONF_NAME, PRECISION_WHOLE
 
 DOMAIN = "mitsubishi"
 REQUIREMENTS = ['mitsubishi_echonet==0.5.1']
 SUPPORT_FLAGS = 0
+CONF_TARGET_TEMP_STEP = 'target_temp_step'
+
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     import mitsubishi_echonet as mit
@@ -69,6 +71,7 @@ class MitsubishiClimate(ClimateEntity):
             self._uid = None
         self._unit_of_measurement = unit_of_measurement
         self._precision = 1.0
+        self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
         self._support_flags = self._support_flags | SUPPORT_TARGET_TEMPERATURE
         self._support_flags = self._support_flags | SUPPORT_FAN_MODE
@@ -141,6 +144,10 @@ class MitsubishiClimate(ClimateEntity):
         return self._support_flags
 
     @property
+    def precision(self) -> float:
+        return PRECISION_WHOLE
+
+    @property
     def unique_id(self):
          """Return a unique ID."""
          #return self._api.getIdentificationNumber()["identification_number"]
@@ -170,6 +177,11 @@ class MitsubishiClimate(ClimateEntity):
     def target_temperature(self):
         """Return the temperature we try to reach."""
         return self._target_temperature
+
+    @property
+    def target_temperature_step(self):
+        """Return the supported step of target temperature."""
+        return self._target_temperature_step
 
     @property
     def hvac_mode(self):
