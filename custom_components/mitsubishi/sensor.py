@@ -44,7 +44,11 @@ class MitsubishiClimateSensor(Entity):
             name = f"{self._sensor[CONF_NAME]}"
         self._name = f"{name} {monitored_state.replace('_', ' ')}"
         self._device_attribute = monitored_state
-
+        try:
+           self._uid = f'{api.getIdentificationNumber()["identification_number"]}-{self._device_attribute}'
+           _LOGGER.debug("Sensor has UID of %s",self._uid)
+        except KeyError:
+           self._uid = None
         if self._sensor[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
             self._unit_of_measurement = units.temperature_unit
 
@@ -62,6 +66,11 @@ class MitsubishiClimateSensor(Entity):
     def name(self):
         """Return the name of the sensor."""
         return self._name
+
+    @property
+    def unique_id(self):
+         """Return a unique ID."""
+         return self._uid
 
     @property
     def state(self):
