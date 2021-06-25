@@ -1,7 +1,7 @@
 """Support for Mitsubishi HVAC sensors."""
 import logging
 
-from homeassistant.const import CONF_ICON, CONF_NAME, CONF_TYPE, CONF_IP_ADDRESS
+from homeassistant.const import CONF_ICON, CONF_NAME, CONF_TYPE, CONF_IP_ADDRESS, CONF_SENSORS
 from homeassistant.helpers.entity import Entity
 from homeassistant.util.unit_system import UnitSystem
 
@@ -13,17 +13,24 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
+PARALLEL_UPDATES = 1
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     import mitsubishi_echonet as mit
     """Set up the Mitsubishi ECHONET climate devices."""
     mitsubishi_api = mit.HomeAirConditioner(config.get(CONF_IP_ADDRESS))
-    sensors = [ATTR_INSIDE_TEMPERATURE]
-    # check for support for outdoor sensor
-    hvac_properties = mitsubishi_api.fetchGetProperties()
-    if 190 in hvac_properties.values():
-        sensors.append(ATTR_OUTSIDE_TEMPERATURE)
+
+    # let users (optionally) configure sensors to monitor
+    sensors = config.get(CONF_SENSORS)
+
+    # no sensors in configuration, add default sensors
+    if sensors is None:
+        sensors = [ATTR_INSIDE_TEMPERATURE]
+
+        # query device to see if outside temp is supported and add if so  
+        hvac_properties = mitsubishi_api.fetchGetProperties()
+        if 190 in hvac_properties.values():
+            sensors.append(ATTR_OUTSIDE_TEMPERATURE)
 
     async_add_entities(
         [
@@ -42,7 +49,8 @@ class MitsubishiClimateSensor(Entity):
         self._sensor = SENSOR_TYPES.get(monitored_state)
         if name is None:
             name = f"{self._sensor[CONF_NAME]}"
-        self._name = f"{name} {monitored_state.replace('_', ' ')}"
+        else:
+            self._name = f"{name} {self._sensor[CONF_NAME]}"
         self._device_attribute = monitored_state
         try:
            self._uid = f'{api.getIdentificationNumber()["identification_number"]}-{self._device_attribute}'
@@ -52,10 +60,6 @@ class MitsubishiClimateSensor(Entity):
         if self._sensor[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
             self._unit_of_measurement = units.temperature_unit
 
-    # @property
-    # def unique_id(self):
-    #    """Return a unique ID."""
-    #    return f"{self._api.mac}-{self._device_attribute}"
 
     @property
     def icon(self):
@@ -97,12 +101,9 @@ class MitsubishiClimateSensor(Entity):
     async def async_update(self):
         """Retrieve latest state."""
         try:
+            _LOGGER.debug("Requesting update from HVAC %s (%s)", self._name, self._api.netif)
             await self.hass.async_add_executor_job(self._api.update)
-            ## self._api.getOutdoorTemperature()
+            _LOGGER.debug("Received response from HVAC %s (%s)", self._name, self._api.netif)
         except KeyError:
-           _LOGGER.warning("HA requested an update from HVAC %s but no data was received", self._api.netif)
+           _LOGGER.warning("HA requested an update from HVAC %s (%s) but no data was received", self._name, self._api.netif)
 
-    # @property
-    # def device_info(self):
-    #    """Return a device description for device registry."""
-    #    return self._api.
