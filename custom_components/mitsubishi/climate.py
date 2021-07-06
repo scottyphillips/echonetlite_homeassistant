@@ -26,17 +26,17 @@ from homeassistant.components.climate.const import (
 from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, ATTR_TEMPERATURE, CONF_HOST, CONF_IP_ADDRESS, CONF_NAME, PRECISION_WHOLE
 
 DOMAIN = "mitsubishi"
-REQUIREMENTS = ['mitsubishi_echonet==0.5.1']
+REQUIREMENTS = ['pychonet==1.0.3']
 SUPPORT_FLAGS = 0
 CONF_TARGET_TEMP_STEP = 'target_temp_step'
-
+PARALLEL_UPDATES = 1
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    import mitsubishi_echonet as mit
+    import pychonet as echonet
     """Set up the Mitsubishi ECHONET climate devices."""
     entities = []
     if config.get(CONF_IP_ADDRESS) is None:
-        hvac_list = mit.discover("Home air conditioner")
+        hvac_list = echonet.discover()
         if len(hvac_list) > 0:
             for idx, hvac in enumerate(hvac_list):
                 entities.append(MitsubishiClimate("hvac_{}".format(idx),
@@ -45,7 +45,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             _LOGGER.warning("No ECHONET lite HVAC found")
     else:
         entities.append(MitsubishiClimate(config.get(CONF_NAME),
-           mit.HomeAirConditioner(config.get(CONF_IP_ADDRESS)),
+           echonet.HomeAirConditioner(config.get(CONF_IP_ADDRESS)),
            TEMP_CELSIUS, config.get(ATTR_FAN_MODES)))
     async_add_entities(entities)
 
@@ -119,23 +119,30 @@ class MitsubishiClimate(ClimateEntity):
             self._fan_modes = ['low', 'medium-high']
         self._hvac_modes = ['heat', 'cool', 'dry','fan_only', 'heat_cool', 'off']
         # self._swing_list = ['auto', '1', '2', '3', 'off']
+        self._extra_attributes = {}
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
         try:
+           _LOGGER.debug("Requesting update from HVAC %s (%s)", self._name, self._api.netif)
            await self.hass.async_add_executor_job(self._api.update)
-           self._target_temperature = self._api.setTemperature
-           self._current_temperature = self._api.roomTemperature
-           self._fan_mode = self._api.fan_speed
-           self._hvac_mode = self._api.mode if self._api.status == 'On' else 'off'
+           _LOGGER.debug("Received response from HVAC %s (%s)", self._name, self._api.netif)
+           self._target_temperature = self._api.update_data["set_temperature"]
+           self._current_temperature = self._api.update_data['room_temperature']
+           self._fan_mode = self._api.update_data['fan_speed']
+           self._hvac_mode = self._api.update_data['mode'] if self._api.update_data['status'] == 'On' else 'off'
 
            # Shim for Home assistants 'auto' vs 'heat_cool' stupidity
            if self._hvac_mode == 'auto':
               self._hvac_mode = 'heat_cool'
 
            self._on = True if self._api.status == 'On' else False
+
+           if self._api.update_data["outdoor_temperature"]is not None:
+              self._extra_attributes['outdoor_temperature'] = self._api.update_data["outdoor_temperature"]
+
         except KeyError as problem:
-           _LOGGER.warning("HA requested an update from HVAC %s but no data was received", self._api.netif)
+           _LOGGER.warning("HA requested an update from HVAC %s (%s) but no data was received", self._name, self._api.netif)
            _LOGGER.debug("The actual python error is: ", problem)
 
     @property
@@ -150,7 +157,6 @@ class MitsubishiClimate(ClimateEntity):
     @property
     def unique_id(self):
          """Return a unique ID."""
-         #return self._api.getIdentificationNumber()["identification_number"]
          return self._uid
 
     @property
@@ -227,6 +233,11 @@ class MitsubishiClimate(ClimateEntity):
         """Return the list of available fan modes."""
         return self._fan_modes
 
+    @property
+    def extra_state_attributes(self):
+        """Return entity specific state attributes."""
+        return self._extra_attributes
+
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
         if kwargs.get(ATTR_TEMPERATURE) is not None:
@@ -259,90 +270,10 @@ class MitsubishiClimate(ClimateEntity):
 
     async def async_turn_on(self):
         """Turn on."""
-        self._api.on()
+        self.hass.async_add_executor_job(self._api.on())
         self._on = True
 
     async def async_turn_off(self):
         """Turn off."""
-        self._api.off()
+        self.hass.async_add_executor_job(self._api.off())
         self._on = False
-
-#    @property
-#    def target_temperature_high(self):
-#        """Return the highbound target temperature we try to reach."""
-#        return self._target_temperature_high
-
-#    @property
-#    def target_temperature_low(self):
-#        """Return the lowbound target temperature we try to reach."""
-#        return self._target_temperature_low
-
-#    @property
-#    def current_swing_mode(self):
-#        """Return the swing setting."""
-#        return self._current_swing_mode
-
-#    @property
-#    def swing_list(self):
-#        """List of available swing modes."""
-#        return self._swing_list
-
-#    def turn_away_mode_on(self):
-#        """Turn away mode on."""
-#        self._away = True
-#        self.schedule_update_ha_state()
-
-#    def turn_away_mode_off(self):
-#        """Turn away mode off."""
-#        self._away = False
-#        self.schedule_update_ha_state()
-
-#    def set_hold_mode(self, hold_mode):
-#        """Update hold_mode on."""
-#        self._hold = hold_mode
-#        self.schedule_update_ha_state()
-
-#    def turn_aux_heat_on(self):
-#        """Turn auxiliary heater on."""
-#        self._aux = True
-#        self.schedule_update_ha_state()
-
-#    def turn_aux_heat_off(self):
-#        """Turn auxiliary heater off."""
-#        self._aux = False
-#        self.schedule_update_ha_state()
-
-#    def set_humidity(self, humidity):
-#        """Set new target temperature."""
-#        self._target_humidity = humidity
-#        # self.schedule_update_ha_state()
-
-#    def set_swing_mode(self, swing_mode):
-#        """Set new target temperature."""
-#        self._current_swing_mode = swing_mode
-#        # self.schedule_update_ha_state()
-
-#    @property
-#    def is_aux_heat_on(self):
-#        """Return true if aux heat is on."""
-#        return self._aux
-
-#    @property
-#    def is_away_mode_on(self):
-#        """Return if away mode is on."""
-#        return self._away
-
-#    @property
-#    def current_hold_mode(self):
-#        """Return hold mode setting."""
-#        return self._hold
-
-#    @property
-#    def current_humidity(self):
-#       """Return the current humidity."""
-#       return self._current_humidity
-
-#    @property
-#    def target_humidity(self):
-#        """Return the humidity we try to reach."""
-#        return self._target_humidity

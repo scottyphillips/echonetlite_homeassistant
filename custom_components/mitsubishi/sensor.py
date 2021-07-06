@@ -16,18 +16,18 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    import mitsubishi_echonet as mit
+    import pychonet as echonet
     """Set up the Mitsubishi ECHONET climate devices."""
-    mitsubishi_api = mit.HomeAirConditioner(config.get(CONF_IP_ADDRESS))
+    echonet_api = echonet.HomeAirConditioner(config.get(CONF_IP_ADDRESS))
     sensors = [ATTR_INSIDE_TEMPERATURE]
     # check for support for outdoor sensor
-    hvac_properties = mitsubishi_api.fetchGetProperties()
+    hvac_properties = echonet_api.fetchGetProperties()
     if 190 in hvac_properties.values():
         sensors.append(ATTR_OUTSIDE_TEMPERATURE)
 
     async_add_entities(
         [
-            MitsubishiClimateSensor(mitsubishi_api, sensor, hass.config.units, config.get(CONF_NAME))
+            MitsubishiClimateSensor(echonet_api, sensor, hass.config.units, config.get(CONF_NAME))
             for sensor in sensors
         ]
     )
@@ -35,7 +35,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
 class MitsubishiClimateSensor(Entity):
     """Representation of a Sensor."""
-
     def __init__(self, api, monitored_state, units: UnitSystem, name=None) -> None:
         """Initialize the sensor."""
         self._api = api
@@ -77,16 +76,16 @@ class MitsubishiClimateSensor(Entity):
         """Return the state of the sensor."""
 
         if self._device_attribute == ATTR_INSIDE_TEMPERATURE:
-            if self._api.roomTemperature == 126 or self._api.roomTemperature == None:
+            if self._api.update_data["room_temperature"] == 126 or self._api.update_data["room_temperature"]== None:
                return 'unavailable'
             else:
-               return self._api.roomTemperature
+               return self._api.update_data["room_temperature"]
 
         if self._device_attribute == ATTR_OUTSIDE_TEMPERATURE:
-            if self._api.outdoorTemperature == 126 or self._api.outdoorTemperature == None:
+            if self._api.update_data["outdoor_temperature"] == 126 or self._api.update_data["outdoor_temperature"] == None:
                return 'unavailable'
             else:
-               return self._api.outdoorTemperature
+               return self._api.update_data["outdoor_temperature"]
         return None
 
     @property
