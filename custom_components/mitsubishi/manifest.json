@@ -4,7 +4,7 @@
   "documentation": "https://github.com/scottyphillips/mitsubishi_echonet",
   "dependencies": [],
   "codeowners": [],
-  "requirements": ["pychonet==1.0.3"],
+  "requirements": ["pychonet==1.0.4"],
   "homeassistant": "0.96.0",
-  "version": "2.1.4"
+  "version": "2.2.0"
 }

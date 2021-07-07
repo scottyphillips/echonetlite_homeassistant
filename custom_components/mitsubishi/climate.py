@@ -26,7 +26,7 @@ from homeassistant.components.climate.const import (
 from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, ATTR_TEMPERATURE, CONF_HOST, CONF_IP_ADDRESS, CONF_NAME, PRECISION_WHOLE
 
 DOMAIN = "mitsubishi"
-REQUIREMENTS = ['pychonet==1.0.3']
+REQUIREMENTS = ['pychonet==1.0.4']
 SUPPORT_FLAGS = 0
 CONF_TARGET_TEMP_STEP = 'target_temp_step'
 PARALLEL_UPDATES = 1
@@ -58,7 +58,7 @@ class MitsubishiClimate(ClimateEntity):
         """Initialize the climate device."""
         self._name = name
         self._api = echonet_hvac #new line
-
+        self._update_data = {}
         _LOGGER.debug("ECHONET lite HVAC %s component added to HA", self._api.netif)
         _LOGGER.debug("HVAC has the following get properties:")
         _LOGGER.debug(self._api.fetchGetProperties())
@@ -77,19 +77,19 @@ class MitsubishiClimate(ClimateEntity):
         self._support_flags = self._support_flags | SUPPORT_FAN_MODE
 
         try:
-            data = self._api.update()
+            self._update_data = self._api.update()
 
             # Current and Target temperature
-            self._target_temperature = data['set_temperature'] if 'set_temperature' in data else 20
-            self._current_temperature = data['room_temperature'] if 'room_temperature' in data else 20
+            self._target_temperature = self._update_data['set_temperature'] if 'set_temperature' in self._update_data  else 20
+            self._current_temperature = self._update_data['room_temperature'] if 'room_temperature' in self._update_data  else 20
 
             # Current power setting
-            self._on = True if data['status'] == 'On' else False
+            self._on = True if self._update_data['status'] == 'On' else False
 
             # Mode and fan speed
-            self._fan_mode= data['fan_speed'] if 'fan_speed' in data else 'medium-high'
-            if data['status'] == 'On':
-                self._hvac_mode = data['mode'] if 'mode' in data else 'heat_cool'
+            self._fan_mode= self._update_data['fan_speed'] if 'fan_speed' in self._update_data else 'medium-high'
+            if self._update_data['status'] == 'On':
+                self._hvac_mode = self._update_data['mode'] if 'mode' in self._update_data else 'heat_cool'
                 if self._hvac_mode == 'auto':
                     self._hvac_mode = 'heat_cool'
             else:
@@ -120,26 +120,28 @@ class MitsubishiClimate(ClimateEntity):
         self._hvac_modes = ['heat', 'cool', 'dry','fan_only', 'heat_cool', 'off']
         # self._swing_list = ['auto', '1', '2', '3', 'off']
         self._extra_attributes = {}
+        self._extra_attributes['outdoor_temperature'] = self._update_data["outdoor_temperature"]
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
         try:
            _LOGGER.debug("Requesting update from HVAC %s (%s)", self._name, self._api.netif)
-           await self.hass.async_add_executor_job(self._api.update)
+           self._update_data  = await self.hass.async_add_executor_job(self._api.update)
+           _LOGGER.debug(self._update_data)
            _LOGGER.debug("Received response from HVAC %s (%s)", self._name, self._api.netif)
-           self._target_temperature = self._api.update_data["set_temperature"]
-           self._current_temperature = self._api.update_data['room_temperature']
-           self._fan_mode = self._api.update_data['fan_speed']
-           self._hvac_mode = self._api.update_data['mode'] if self._api.update_data['status'] == 'On' else 'off'
+           self._target_temperature = self._update_data["set_temperature"]
+           self._current_temperature = self._update_data['room_temperature']
+           self._fan_mode = self._update_data['fan_speed']
+           self._hvac_mode = self._update_data['mode'] if self._update_data['status'] == 'On' else 'off'
 
            # Shim for Home assistants 'auto' vs 'heat_cool' stupidity
            if self._hvac_mode == 'auto':
               self._hvac_mode = 'heat_cool'
 
-           self._on = True if self._api.status == 'On' else False
+           self._on = True if self._update_data["status"]  == 'On' else False
 
-           if self._api.update_data["outdoor_temperature"]is not None:
-              self._extra_attributes['outdoor_temperature'] = self._api.update_data["outdoor_temperature"]
+           if self._update_data["outdoor_temperature"] is not None:
+              self._extra_attributes['outdoor_temperature'] = self._update_data["outdoor_temperature"]
 
         except KeyError as problem:
            _LOGGER.warning("HA requested an update from HVAC %s (%s) but no data was received", self._name, self._api.netif)
@@ -251,7 +253,7 @@ class MitsubishiClimate(ClimateEntity):
     async def async_set_fan_mode(self, fan_mode):
         """Set new target temperature."""
         await self.hass.async_add_executor_job(self._api.setFanSpeed, fan_mode)
-        self._fan_mode = self._api.fan_speed
+        self._fan_mode = self._update_data["fan_speed"]
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode."""
