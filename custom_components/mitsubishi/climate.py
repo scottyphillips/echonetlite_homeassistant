@@ -26,7 +26,7 @@ from homeassistant.components.climate.const import (
 from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT, ATTR_TEMPERATURE, CONF_HOST, CONF_IP_ADDRESS, CONF_NAME, PRECISION_WHOLE
 
 DOMAIN = "mitsubishi"
-REQUIREMENTS = ['pychonet==1.0.4']
+REQUIREMENTS = ['pychonet==1.0.7']
 SUPPORT_FLAGS = 0
 CONF_TARGET_TEMP_STEP = 'target_temp_step'
 PARALLEL_UPDATES = 1
