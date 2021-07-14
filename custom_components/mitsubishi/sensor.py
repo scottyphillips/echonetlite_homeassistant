@@ -50,7 +50,7 @@ class MitsubishiClimateSensor(Entity):
         self._sensor = SENSOR_TYPES.get(monitored_state)
 
         if name is None:
-            name = f"{self._sensor[CONF_NAME]}"
+            self._name = f"{self._sensor[CONF_NAME]}"
         else:
             self._name = f"{name} {self._sensor[CONF_NAME]}"
         self._device_attribute = monitored_state
