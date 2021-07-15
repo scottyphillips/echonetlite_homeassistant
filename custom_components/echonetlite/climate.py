@@ -62,7 +62,7 @@ class EchonetClimate(ClimateEntity):
         if fan_modes is not None:
             self._fan_modes = fan_modes
         else:
-            self._fan_modes = ["low", "medium-high"]
+            self._fan_modes = ['auto', 'minimum', 'low', 'medium-low', 'medium', 'medium-high', 'high', 'very-high', 'max']
         self._hvac_modes = ["heat", "cool", "dry", "fan_only", "heat_cool", "off"]
 
     async def async_update(self):
