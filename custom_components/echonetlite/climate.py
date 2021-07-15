@@ -171,18 +171,24 @@ class EchonetClimate(ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode):
         _LOGGER.warning(self._instance._update_data)
-        """Set new operation mode."""
-        if hvac_mode == "off":
-            await self.hass.async_add_executor_job(self._instance._api.off)
+        """Set new operation mode (including off)"""
+        if hvac_mode == "heat_cool":
+            await self.hass.async_add_executor_job(self._instance._api.setMode, "auto")
         else:
-            if self._instance._update_data["status"] == "Off":
-                await self.hass.async_add_executor_job(self._instance._api.on)
-                self._instance._update_data["status"] = "On"
-            if hvac_mode == "heat_cool":
-                await self.hass.async_add_executor_job(self._instance._api.setMode, "auto")
-            else:
-                await self.hass.async_add_executor_job(self._instance._api.setMode, hvac_mode)
+            await self.hass.async_add_executor_job(self._instance._api.setMode, hvac_mode)
         self._instance._update_data["mode"]  = hvac_mode
+        if hvac_mode == "off":
+            self._instance._update_data["status"] = "Off"
+        else:
+            self._instance._update_data["status"] = "On"
+
+    async def async_turn_on(self):
+        """Turn on."""
+        self.hass.async_add_executor_job(self._instance._api.on())
+
+    async def async_turn_off(self):
+        """Turn off."""
+        self.hass.async_add_executor_job(self._instance._api.off())
 
     async def async_turn_on(self):
         """Turn on."""

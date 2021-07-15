@@ -22,7 +22,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     instance = hass.data[DOMAIN][config.entry_id]
 
     # query device to see if outside temp is supported and add the entity
-    # this needs more logic when this is being used for non HVAC devices.   
+    # this needs more logic when this is being used for non HVAC devices.
     if HVAC_OP_CODES["outdoor_temperature"] in instance._api.propertyMaps[159].values(): #outside temperature
         sensors.append(ATTR_OUTSIDE_TEMPERATURE)
 
@@ -40,7 +40,6 @@ class EchonetClimateSensor(Entity):
     def __init__(self, instance, monitored_state, units: UnitSystem, name=None) -> None:
         """Initialize the sensor."""
         self._instance = instance
-        self._update_data = {}
         self._sensor = SENSOR_TYPES.get(monitored_state)
 
         if name is None:
@@ -50,7 +49,6 @@ class EchonetClimateSensor(Entity):
         self._device_attribute = monitored_state
         try:
            self._uid = f'{self._instance._uid}-{self._device_attribute}'
-           self._update_data = self._instance._update_data
         except KeyError:
            self._uid = None
         if self._sensor[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
@@ -80,7 +78,7 @@ class EchonetClimateSensor(Entity):
             if self._instance._update_data["room_temperature"] == 126 or self._instance._update_data["room_temperature"] == None:
                return 'unavailable'
             else:
-               return self._update_data["room_temperature"]
+               return self._instance._update_data["room_temperature"]
 
         if self._device_attribute == ATTR_OUTSIDE_TEMPERATURE:
             if self._instance._update_data["outdoor_temperature"] == 126 or self._instance._update_data["outdoor_temperature"]  == None:
