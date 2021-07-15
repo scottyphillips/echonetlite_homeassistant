@@ -1,0 +1,7 @@
+*.pyc
+*.tar.gz
+build/*
+dist/*
+pychonet.egg-info/*
+.DS_Store
+__pycache__
