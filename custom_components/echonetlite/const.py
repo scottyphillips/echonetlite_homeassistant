@@ -2,6 +2,7 @@
 from homeassistant.const import CONF_ICON, CONF_NAME, CONF_TYPE
 from pychonet.HomeAirConditioner import FAN_SPEED, AIRFLOW_VERT, AIRFLOW_HORIZ
 
+
 DOMAIN = "echonetlite"
 
 HVAC_SELECT_OP_CODES = {

@@ -1,7 +1,7 @@
 {'Operation status': 'On', 'Set temperature value': 20, 
-'Air flow rate setting': 'medium-high',
-'Measured value of room temperature': 19,
-'Operation mode setting': 'heat',
+'Air flow rate setting': 'medium-high', 
+'Measured value of room temperature': 19, 
+'Operation mode setting': 'heat', 
 'Measured outdoor air temperature': 11}
 
 import logging
@@ -46,7 +46,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         _LOGGER.debug(entity)
-        if entity['eojgc'] == 1 and entity['eojcc'] == 48: #Home Air Conditioner
+        if entity['instance_data']['eojgc'] == 1 and entity['instance_data']['eojcc'] == 48: #Home Air Conditioner
              entities.append(EchonetClimate(config_entry.data["title"], entity['API'], TEMP_CELSIUS))
     async_add_devices(entities)
 
@@ -186,7 +186,7 @@ class EchonetClimate(ClimateEntity):
         self._instance._update_data["Operation mode setting"]  = hvac_mode
         if hvac_mode == "off":
             self._instance._update_data["Operation status"] = "Off"
-        else:
+        else: 
             self._instance._update_data["Operation status"] = "On"
 
     async def async_turn_on(self):
@@ -196,3 +196,4 @@ class EchonetClimate(ClimateEntity):
     async def async_turn_off(self):
         """Turn off."""
         self.hass.async_add_executor_job(self._instance._api.off())
+

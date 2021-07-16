@@ -15,12 +15,14 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-entities = []
 
 # TODO
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
+    entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        if entity['eojgc'] == 1 and entity['eojcc'] == 48: #Home Air Conditioner
+        _LOGGER.debug("Setup Sensor.. %s",entity)
+        _LOGGER.debug("Setup name.. %s",config.data["title"])
+        if entity['instance_data']['eojgc'] == 1 and entity['instance_data']['eojcc'] == 48: #Home Air Conditioner
             if HVAC_SENSOR_OP_CODES["Measured value of room temperature"] in list(entity['API']._api.propertyMaps[159].values()): #room temperature
                 entities.append(EchonetClimateSensor(entity['API'], ATTR_INSIDE_TEMPERATURE, hass.config.units, config.data["title"]))
             if HVAC_SENSOR_OP_CODES["Measured outdoor air temperature"] in list(entity['API']._api.propertyMaps[159].values()): #outside temperature
@@ -42,10 +44,7 @@ class EchonetClimateSensor(Entity):
         else:
             self._name = f"{name} {self._sensor[CONF_NAME]}"
         self._device_attribute = monitored_state
-        try:
-           self._uid = f'{self._instance._uid}-{self._device_attribute}'
-        except KeyError:
-           self._uid = None
+        self._uid = f'{self._instance._uid}-{self._device_attribute}'
         if self._sensor[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
             self._unit_of_measurement = units.temperature_unit
 

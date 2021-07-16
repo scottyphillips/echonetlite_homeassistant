@@ -17,18 +17,18 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    # TODO - fix this up to seletive configure API depending on entities.
+    # TODO - fix this up to seletive configure API depending on entities. 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].update({entry.entry_id: []})
-    _LOGGER.debug(entry.data)
+    _LOGGER.debug("platform entry data - %s", entry.data)
     for instance in entry.data["instances"]:
         # if ECHONETLite instance is HomeAirConditioner enable climate platform
         echonetlite = None
         if instance['eojgc'] == 1 and instance['eojcc'] == 48:
             echonetlite = EchonetHVACAPIConnector(entry.data["host"])
-        instance['API'] = echonetlite
-        hass.data[DOMAIN][entry.entry_id].append(instance)
-    _LOGGER.debug(hass.data[DOMAIN])
+        hass.data[DOMAIN][entry.entry_id].append({"instance_data": instance, "API":echonetlite})
+    # _LOGGER.debug(hass.data[DOMAIN])
+    # _LOGGER.debug("does config data get smushed? %s", entry.data["instances"])
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)
     return True
 
@@ -50,14 +50,15 @@ class EchonetHVACAPIConnector():
        self._api = echonet.HomeAirConditioner(host)
        self._update_data = self._api.update(self._update_flags)
 
-       # TODO - occasional bug here if ECHONETLite node doesnt return ID.
+       # TODO - occasional bug here if ECHONETLite node doesnt return ID. 
        try:
           self._uid = self._api.getIdentificationNumber()
        except IndexError:
           self._uid = f"{host}-{self._api.eojgc}-{self._api.eojcc}-{self._api.instance}"
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)   
     async def async_update(self, **kwargs):
         _LOGGER.debug("Commence polling ECHONET Instance")
         self._update_data = self._api.update(self._update_flags)
         _LOGGER.debug(f"polling ECHONET Instance complete - {self._update_data}")
         return self._update_data
+    
