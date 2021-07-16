@@ -23,35 +23,39 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         _LOGGER.debug("Setup Sensor.. %s",entity)
         _LOGGER.debug("Setup name.. %s",config.data["title"])
         if entity['instance_data']['eojgc'] == 1 and entity['instance_data']['eojcc'] == 48: #Home Air Conditioner
-            if HVAC_SENSOR_OP_CODES["Measured value of room temperature"] in list(entity['API']._api.propertyMaps[159].values()): #room temperature
-                entities.append(EchonetClimateSensor(entity['API'], ATTR_INSIDE_TEMPERATURE, hass.config.units, config.data["title"]))
-            if HVAC_SENSOR_OP_CODES["Measured outdoor air temperature"] in list(entity['API']._api.propertyMaps[159].values()): #outside temperature
-                entities.append(EchonetClimateSensor(entity['API'], ATTR_OUTSIDE_TEMPERATURE, hass.config.units, config.data["title"]))
+            for op_code in HVAC_SENSOR_OP_CODES.keys():
+                if op_code in list(entity['API']._api.propertyMaps[159].values()):
+                    entities.append(EchonetClimateSensor(entity['API'], op_code, HVAC_SENSOR_OP_CODES[op_code], hass.config.units, config.data["title"]))
+                    
+            #if HVAC_SENSOR_OP_CODES["Measured value of room temperature"] in list(entity['API']._api.propertyMaps[159].values()): #room temperature
+            #    entities.append(EchonetClimateSensor(entity['API'], ATTR_INSIDE_TEMPERATURE, hass.config.units, config.data["title"]))
+            #if HVAC_SENSOR_OP_CODES["Measured outdoor air temperature"] in list(entity['API']._api.propertyMaps[159].values()): #outside temperature
+            #    entities.append(EchonetClimateSensor(entity['API'], ATTR_OUTSIDE_TEMPERATURE, hass.config.units, config.data["title"]))
     async_add_entities(entities)
 
 
 class EchonetClimateSensor(Entity):
     """Representation of an ECHONETLite HVAC Sensor."""
 
-    def __init__(self, instance, monitored_state, units: UnitSystem, name=None) -> None:
+    def __init__(self, instance, op_code, attributes, units: UnitSystem, name=None) -> None:
         """Initialize the sensor."""
         self._instance = instance
+        self._op_code = op_code
         _LOGGER.debug("sensor init %s",self._instance._update_data)
-        self._sensor = SENSOR_TYPES.get(monitored_state)
+        self._sensor_attributes = attributes
 
         if name is None:
-            self._name = f"{self._sensor[CONF_NAME]}"
+            self._name = f"{self._sensor_attributes[CONF_NAME]}"
         else:
-            self._name = f"{name} {self._sensor[CONF_NAME]}"
-        self._device_attribute = monitored_state
-        self._uid = f'{self._instance._uid}-{self._device_attribute}'
-        if self._sensor[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
+            self._name = f"{name} {self._sensor_attributes[CONF_NAME]}"
+        self._uid = f'{self._instance._uid}-{op_code}'
+        if self._sensor_attributes[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
             self._unit_of_measurement = units.temperature_unit
 
     @property
     def icon(self):
         """Icon to use in the frontend, if any."""
-        return self._sensor[CONF_ICON]
+        return self._sensor_attributes[CONF_ICON]
 
     @property
     def name(self):
@@ -66,18 +70,10 @@ class EchonetClimateSensor(Entity):
     @property
     def state(self):
         """Return the state of the sensor."""
-
-        if self._device_attribute == ATTR_INSIDE_TEMPERATURE:
-            if self._instance._update_data["Measured value of room temperature"] == 126 or self._instance._update_data["Measured value of room temperature"] == None:
-               return 'unavailable'
-            else:
-               return self._instance._update_data["Measured value of room temperature"]
-
-        if self._device_attribute == ATTR_OUTSIDE_TEMPERATURE:
-            if self._instance._update_data["Measured outdoor air temperature"] == 126 or self._instance._update_data["Measured outdoor air temperature"]  == None:
-               return 'unavailable'
-            else:
-               return self._instance._update_data["Measured outdoor air temperature"]
+        if self._instance._update_data[HVAC_SENSOR_OP_CODES[self._op_code][CONF_NAME]] == 126 or self._instance._update_data[HVAC_SENSOR_OP_CODES[self._op_code][CONF_NAME]]  == None:
+            return 'unavailable'
+        else:
+            return self._instance._update_data[HVAC_SENSOR_OP_CODES[self._op_code][CONF_NAME]]
         return None
 
     @property

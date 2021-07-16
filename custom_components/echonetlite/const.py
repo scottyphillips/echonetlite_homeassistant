@@ -2,8 +2,9 @@
 from homeassistant.const import CONF_ICON, CONF_NAME, CONF_TYPE
 from pychonet.HomeAirConditioner import FAN_SPEED, AIRFLOW_VERT, AIRFLOW_HORIZ
 
-
 DOMAIN = "echonetlite"
+
+SENSOR_TYPE_TEMPERATURE = "temperature"
 
 HVAC_SELECT_OP_CODES = {
         0xA0: {"name": "Air flow rate setting", "options": FAN_SPEED},
@@ -12,8 +13,8 @@ HVAC_SELECT_OP_CODES = {
         }
 
 HVAC_SENSOR_OP_CODES = {
-        "Measured outdoor air temperature": 0xBE,
-        "Measured value of room temperature": 0xBB,
+        0xBE: {CONF_NAME: "Measured outdoor air temperature", CONF_ICON: "mdi:thermometer", CONF_TYPE: SENSOR_TYPE_TEMPERATURE},
+        0xBB: {CONF_NAME: "Measured value of room temperature", CONF_ICON: "mdi:thermometer", CONF_TYPE: SENSOR_TYPE_TEMPERATURE}
         }
 
 ATTR_TARGET_TEMPERATURE = "target_temperature"
@@ -23,7 +24,7 @@ ATTR_OUTSIDE_TEMPERATURE = "outside_temperature"
 ATTR_STATE_ON = "on"
 ATTR_STATE_OFF = "off"
 
-SENSOR_TYPE_TEMPERATURE = "temperature"
+
 
 SENSOR_TYPES = {
     ATTR_INSIDE_TEMPERATURE: {
