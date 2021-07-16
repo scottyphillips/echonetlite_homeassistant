@@ -10,6 +10,7 @@ from homeassistant.components.climate.const import (
     SUPPORT_FAN_MODE,
     SUPPORT_SWING_MODE,
     ATTR_FAN_MODES,
+    ATTR_SWING_MODES,
     CURRENT_HVAC_OFF,
     CURRENT_HVAC_HEAT,
     CURRENT_HVAC_COOL,
@@ -167,10 +168,15 @@ class EchonetClimate(ClimateEntity):
         self._instance._update_data["Air flow rate setting"] = fan_mode
 
     @property
+    def swing_modes(self):
+        """Return the list of available swing modes."""
+        return self._swing_modes
+
+    @property
     def swing_mode(self):
         """Return the swing mode setting."""
         return self._instance._update_data["Air flow direction (vertical) setting"] if "Air flow direction (vertical) setting" in self._instance._update_data else "unavailable"
-
+        
     async def async_set_swing_mode(self, swing_mode):
         """Set new swing mode."""
         await self.hass.async_add_executor_job(self._instance._api.setAirflowVert, swing_mode)
