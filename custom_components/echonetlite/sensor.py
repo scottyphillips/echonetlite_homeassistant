@@ -20,17 +20,10 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        _LOGGER.debug("Setup Sensor.. %s",entity)
-        _LOGGER.debug("Setup name.. %s",config.data["title"])
         if entity['instance_data']['eojgc'] == 1 and entity['instance_data']['eojcc'] == 48: #Home Air Conditioner
             for op_code in HVAC_SENSOR_OP_CODES.keys():
                 if op_code in list(entity['API']._api.propertyMaps[159].values()):
                     entities.append(EchonetClimateSensor(entity['API'], op_code, HVAC_SENSOR_OP_CODES[op_code], hass.config.units, config.data["title"]))
-                    
-            #if HVAC_SENSOR_OP_CODES["Measured value of room temperature"] in list(entity['API']._api.propertyMaps[159].values()): #room temperature
-            #    entities.append(EchonetClimateSensor(entity['API'], ATTR_INSIDE_TEMPERATURE, hass.config.units, config.data["title"]))
-            #if HVAC_SENSOR_OP_CODES["Measured outdoor air temperature"] in list(entity['API']._api.propertyMaps[159].values()): #outside temperature
-            #    entities.append(EchonetClimateSensor(entity['API'], ATTR_OUTSIDE_TEMPERATURE, hass.config.units, config.data["title"]))
     async_add_entities(entities)
 
 
@@ -41,7 +34,6 @@ class EchonetClimateSensor(Entity):
         """Initialize the sensor."""
         self._instance = instance
         self._op_code = op_code
-        _LOGGER.debug("sensor init %s",self._instance._update_data)
         self._sensor_attributes = attributes
 
         if name is None:
