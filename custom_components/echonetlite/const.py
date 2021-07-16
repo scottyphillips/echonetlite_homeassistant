@@ -8,8 +8,8 @@ SENSOR_TYPE_TEMPERATURE = "temperature"
 
 HVAC_SELECT_OP_CODES = {
         0xA0: {"name": "Air flow rate setting", "options": FAN_SPEED},
-        0xA1: {"name": "Automatic control of air flow direction setting": AUTO_DIRECTION}
-        0xA3: {"name": "Automatic swing of air flow setting", "options": SWING_MODE}
+        0xA1: {"name": "Automatic control of air flow direction setting": AUTO_DIRECTION},
+        0xA3: {"name": "Automatic swing of air flow setting", "options": SWING_MODE},
         0xA5: {"name": "Air flow direction (horizontal) setting", "options": AIRFLOW_HORIZ},
         0xA4: {"name": "Air flow direction (vertical) setting", "options": AIRFLOW_VERT}
 
