@@ -44,7 +44,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
    At some stage this will need to be refactored or extended to use the generic EchonetInstance class"""
 class EchonetHVACAPIConnector():
     def __init__(self, host):
-       self._update_flags = [0x80, 0xB3, 0xA0, 0xA3, 0xA4, 0xA5, 0xB0, 0xBB, 0xBE] # outdoor temperature
+       self._update_flags = [0x80, 0xB3, 0xA0, 0xA1, 0xA3, 0xA4, 0xA5, 0xB0, 0xBB, 0xBE] # outdoor temperature
        self._update_data = {'status': 'Off'}
        self._api = echonet.HomeAirConditioner(host)
        self._update_data = self._api.update(self._update_flags)
@@ -54,6 +54,7 @@ class EchonetHVACAPIConnector():
           self._uid = self._api.getIdentificationNumber()
        except IndexError:
           self._uid = f"{host}-{self._api.eojgc}-{self._api.eojcc}-{self._api.instance}"
+          
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self, **kwargs):
         _LOGGER.debug("Commence polling ECHONET Instance")
