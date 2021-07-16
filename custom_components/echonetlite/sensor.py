@@ -7,10 +7,7 @@ from homeassistant.util.unit_system import UnitSystem
 
 from .const import (
     DOMAIN,
-    ATTR_INSIDE_TEMPERATURE,
-    ATTR_OUTSIDE_TEMPERATURE,
     SENSOR_TYPE_TEMPERATURE,
-    SENSOR_TYPES,
     HVAC_SENSOR_OP_CODES
 )
 
