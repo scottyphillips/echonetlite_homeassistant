@@ -15,17 +15,20 @@ PLATFORMS = ["sensor"]
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # TODO - fix this up to seletive configure API depending on entities.
     echonetlite = EchonetAPIConnector(entry.data["host"])
+    _LOGGER.debug(entry.data)
     for instance in entry.data["instances"]:
-        # if ECHONETLite instance is HomeAirConditioner enable climate and select platforms
+        # if ECHONETLite instance is HomeAirConditioner enable climate platform
         if instance['eojgc'] == 1 and instance['eojcc'] == 48:
             PLATFORMS.append("climate")
             PLATFORMS.append("select")
     hass.data.setdefault(DOMAIN, {}).update({entry.entry_id: echonetlite})
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
@@ -36,18 +39,21 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 """EchonetAPIConnector is used to centralise API calls per platform
-   At some stage another conenctor will be needed that uses the generic EchonetInstance class"""
+   At some stage this will need to be refactored or extended to use the generic EchonetInstance class"""
 class EchonetAPIConnector():
     def __init__(self, host):
        self._update_data = {'status': 'Off'}
        self._api = echonet.HomeAirConditioner(host)
        self._update_data = self._api.update()
        # TODO - occasional bug here if ECHONETLite node doesnt return ID.
-       self._uid = self._api.getIdentificationNumber()["identification_number"]
-
+       try:
+          self._uid = self._api.getIdentificationNumber()["identification_number"]
+       except IndexError:
+          self._uid = f"{host}-{self._api.eojgc}-{self._api.eojcc}-{self._api.instance}"
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self, **kwargs):
         _LOGGER.debug("Commence polling ECHONET Instance")
         self._update_data = self._api.update()
         _LOGGER.debug(f"polling ECHONET Instance complete - {self._update_data}")
         return self._update_data
+    

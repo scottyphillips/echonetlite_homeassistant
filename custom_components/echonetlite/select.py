@@ -11,8 +11,6 @@ from .const import HVAC_OP_CODES, DOMAIN
 from pychonet.HomeAirConditioner import FAN_SPEED, AIRFLOW_VERT, AIRFLOW_HORIZ
 
 
-# this is another case where this framework could be extended to other ECHONET classes. 
-# in fact Select is probably the easiest to do at the moment.
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     instance = hass.data[DOMAIN][config.entry_id]
     echonet_set_properties = instance._api.propertyMaps[158]

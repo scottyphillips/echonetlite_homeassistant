@@ -15,23 +15,20 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-sensors = [ATTR_INSIDE_TEMPERATURE]
+entities = []
 
 # TODO
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     instance = hass.data[DOMAIN][config.entry_id]
-
     # query device to see if outside temp is supported and add the entity
     # this needs more logic when this is being used for non HVAC devices.
-    if HVAC_OP_CODES["outdoor_temperature"] in instance._api.propertyMaps[159].values(): #outside temperature
-        sensors.append(ATTR_OUTSIDE_TEMPERATURE)
+    _LOGGER.warning(list(instance._api.propertyMaps[159].values()))
+    if HVAC_OP_CODES["room_temperature"] in list(instance._api.propertyMaps[159].values()): #room temperature
+        entities.append(EchonetClimateSensor(instance, ATTR_INSIDE_TEMPERATURE, hass.config.units, config.data["title"]))
+    if HVAC_OP_CODES["outdoor_temperature"] in list(instance._api.propertyMaps[159].values()): #outside temperature
+        entities.append(EchonetClimateSensor(instance, ATTR_OUTSIDE_TEMPERATURE, hass.config.units, config.data["title"]))
 
-    async_add_entities(
-        [
-            EchonetClimateSensor(instance, sensor, hass.config.units, config.data["title"])
-            for sensor in sensors
-        ]
-    )
+    async_add_entities(entities)
 
 
 class EchonetClimateSensor(Entity):

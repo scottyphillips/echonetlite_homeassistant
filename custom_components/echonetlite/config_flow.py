@@ -53,7 +53,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # await hass.async_add_executor_job(
     #     your_validate_func, data["username"], data["password"]
     # )
-    _LOGGER.debug(f"IP address is {data['host']}")
+    _LOGGER.warning(f"IP address is {data['host']}")
     discover = echonet.discover(data["host"])
 
     # if not await hub.authenticate(data["username"], data["password"]):
@@ -81,6 +81,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA
             )
+
         errors = {}
 
         try:

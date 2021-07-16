@@ -32,7 +32,7 @@ from homeassistant.const import (
     CONF_NAME,
     PRECISION_WHOLE,
 )
-from .const import DOMAIN
+from .const import DOMAIN, HVAC_OP_CODES
 SUPPORT_FLAGS = 0
 
 async def async_setup_entry(hass, config_entry, async_add_devices):
@@ -57,7 +57,8 @@ class EchonetClimate(ClimateEntity):
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
         self._support_flags = self._support_flags | SUPPORT_TARGET_TEMPERATURE
-        self._support_flags = self._support_flags | SUPPORT_FAN_MODE
+        if HVAC_OP_CODES["fan_speed"] in list(instance._api.propertyMaps[158].values()):
+            self._support_flags = self._support_flags | SUPPORT_FAN_MODE
 
         if fan_modes is not None:
             self._fan_modes = fan_modes
@@ -101,7 +102,7 @@ class EchonetClimate(ClimateEntity):
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        return self._instance._update_data["room_temperature"] if "room_temperature" in self._instance._update_data else 'unavailable'
+        return self._instance._update_data["room_temperature"] if "room_temperature" in self._instance._update_data else self._instance._update_data["set_temperature"]
 
     @property
     def target_temperature(self):
@@ -131,10 +132,11 @@ class EchonetClimate(ClimateEntity):
             elif self._instance._update_data["mode"] == HVAC_MODE_FAN_ONLY:
                 return CURRENT_HVAC_FAN
             elif self._instance._update_data["mode"] == HVAC_MODE_HEAT_COOL:
-                if self._instance._update_data["set_temperature"]  < self._instance._update_data["room_temperature"]:
-                    return CURRENT_HVAC_COOL
-                if self._instance._update_data["set_temperature"]  > self._instance._update_data["room_temperature"]:
-                    return CURRENT_HVAC_HEAT
+                if "room_temperature" in self._instance._update_data:
+                    if self._instance._update_data["set_temperature"]  < self._instance._update_data["room_temperature"]:
+                        return CURRENT_HVAC_COOL
+                    elif self._instance._update_data["set_temperature"]  > self._instance._update_data["room_temperature"]:
+                        return CURRENT_HVAC_HEAT
                 return CURRENT_HVAC_IDLE
         return CURRENT_HVAC_OFF
 
@@ -181,14 +183,6 @@ class EchonetClimate(ClimateEntity):
             self._instance._update_data["status"] = "Off"
         else:
             self._instance._update_data["status"] = "On"
-
-    async def async_turn_on(self):
-        """Turn on."""
-        self.hass.async_add_executor_job(self._instance._api.on())
-
-    async def async_turn_off(self):
-        """Turn off."""
-        self.hass.async_add_executor_job(self._instance._api.off())
 
     async def async_turn_on(self):
         """Turn on."""

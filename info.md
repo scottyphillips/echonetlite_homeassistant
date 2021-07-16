@@ -34,6 +34,7 @@ Platform | Description
 ## Enable ECHONETLite protocol
 This Custom Component has been designed to be compatable with the following HVAC systems:  
 Mitsubishi MAC-568IF-E WiFi adaptor
+MoekadenRoom ECHONETLite Emulator (https://github.com/SonyCSL/MoekadenRoom)
 
 Other vendor HVAC systems may work, but they must support the 'ECHONETlite' protocol.
 
