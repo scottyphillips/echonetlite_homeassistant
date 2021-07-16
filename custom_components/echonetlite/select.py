@@ -7,30 +7,24 @@ import voluptuous as vol
 from homeassistant.components import select
 from homeassistant.components.select import SelectEntity
 from homeassistant.const import CONF_HOST, CONF_IP_ADDRESS, CONF_NAME
-from .const import HVAC_OP_CODES, DOMAIN
-from pychonet.HomeAirConditioner import FAN_SPEED, AIRFLOW_VERT, AIRFLOW_HORIZ
-
+from .const import HVAC_SELECT_OP_CODES, DOMAIN
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
-    instance = hass.data[DOMAIN][config.entry_id]
-    echonet_set_properties = instance._api.propertyMaps[158]
-    vk_echonet_set_properties = {value:key for key, value in echonet_set_properties.items()}
-    _LOGGER.debug(echonet_set_properties)
-
-    # get supported entities - swing mode, horizontal swing, vertical swing.
     entities = []
-    if HVAC_OP_CODES['fan_speed'] in echonet_set_properties.values(): # fan speed
-        entities.append(EchonetSelect(hass, instance, config, HVAC_OP_CODES['fan_speed'], FAN_SPEED, vk_echonet_set_properties[HVAC_OP_CODES['fan_speed']]))
-    if HVAC_OP_CODES['airflow_horizt'] in echonet_set_properties.values(): # Horizontal Airflow
-        entities.append(EchonetSelect(hass, instance, config, HVAC_OP_CODES['airflow_horizt'], AIRFLOW_HORIZ, vk_echonet_set_properties[HVAC_OP_CODES['airflow_horizt']]))
-    if HVAC_OP_CODES['airflow_vert'] in echonet_set_properties.values(): # Vertical Airflow
-        entities.append(EchonetSelect(hass, instance, config, HVAC_OP_CODES['airflow_vert'], AIRFLOW_VERT, vk_echonet_set_properties[HVAC_OP_CODES['airflow_vert']]))
-
+    for entity in hass.data[DOMAIN][config.entry_id]:
+        if entity['eojgc'] == 1 and entity['eojcc'] == 48: #Home Air Conditioner
+            echonet_set_properties = entity['API']._api.propertyMaps[158]
+            vk_echonet_set_properties = {value:key for key, value in echonet_set_properties.items()}
+            for op_code in echonet_set_properties.values():
+                if op_code in HVAC_SELECT_OP_CODES:
+                     entities.append(EchonetSelect(hass, entity['API'], config,
+                     op_code, HVAC_SELECT_OP_CODES[op_code]['name'],
+                     HVAC_SELECT_OP_CODES[op_code]['options'], vk_echonet_set_properties[op_code]))
     async_add_entities(entities)
 
 
 class EchonetSelect(SelectEntity):
-    def __init__(self, hass, instance, config, code, options, echonet_property):
+    def __init__(self, hass, instance, config, code, codeword, options, echonet_property):
         """Initialize the select."""
         self._instance = instance
         self._config = config
@@ -39,7 +33,7 @@ class EchonetSelect(SelectEntity):
         self._sub_state = None
         self._vk_options = {value:key for key, value in options.items()}
         self._kv_options = options
-        self._codeword = [key for key, value in HVAC_OP_CODES.items() if value == self._code][0]
+        self._codeword = codeword
         self._attr_options = list(options.keys())
         self._attr_current_option = self._instance._update_data[self._codeword]
         self._attr_name = f"{config.data['title']} {echonet_property}"

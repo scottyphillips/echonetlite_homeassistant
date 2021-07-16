@@ -1,14 +1,18 @@
 """Constants for the echonetlite integration."""
 from homeassistant.const import CONF_ICON, CONF_NAME, CONF_TYPE
+from pychonet.HomeAirConditioner import FAN_SPEED, AIRFLOW_VERT, AIRFLOW_HORIZ
 
 DOMAIN = "echonetlite"
 
-HVAC_OP_CODES = {
-        "fan_speed": 0xA0,
-        "outdoor_temperature": 0xBE,
-        "room_temperature": 0xBB,
-        "airflow_horizt": 0xA5,
-        "airflow_vert": 0xA4
+HVAC_SELECT_OP_CODES = {
+        0xA0: {"name": "Air flow rate setting", "options": FAN_SPEED},
+        0xA5: {"name": "Air flow direction (horizontal) setting", "options": AIRFLOW_HORIZ},
+        0xA4: {"name": "Air flow direction (vertical) setting", "options": AIRFLOW_VERT}
+        }
+
+HVAC_SENSOR_OP_CODES = {
+        "Measured outdoor air temperature": 0xBE,
+        "Measured value of room temperature": 0xBB,
         }
 
 ATTR_TARGET_TEMPERATURE = "target_temperature"

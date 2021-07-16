@@ -17,15 +17,20 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    # TODO - fix this up to seletive configure API depending on entities.
-    echonetlite = EchonetAPIConnector(entry.data["host"])
+    # TODO - fix this up to seletive configure API depending on entities. 
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN].update({entry.entry_id: []})
     _LOGGER.debug(entry.data)
     for instance in entry.data["instances"]:
         # if ECHONETLite instance is HomeAirConditioner enable climate platform
+        echonetlite = None
         if instance['eojgc'] == 1 and instance['eojcc'] == 48:
+            echonetlite = EchonetHVACAPIConnector(entry.data["host"])
             PLATFORMS.append("climate")
             PLATFORMS.append("select")
-    hass.data.setdefault(DOMAIN, {}).update({entry.entry_id: echonetlite})
+        instance['API'] = echonetlite
+        hass.data[DOMAIN][entry.entry_id].append(instance)
+    _LOGGER.debug(hass.data[DOMAIN])
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)
     return True
 
@@ -40,20 +45,22 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 """EchonetAPIConnector is used to centralise API calls per platform
    At some stage this will need to be refactored or extended to use the generic EchonetInstance class"""
-class EchonetAPIConnector():
+class EchonetHVACAPIConnector():
     def __init__(self, host):
+       self._update_flags = [0x80, 0xB3, 0xA0, 0xBB, 0xB0, 0xA3, 0xBE] # outdoor temperature
        self._update_data = {'status': 'Off'}
        self._api = echonet.HomeAirConditioner(host)
-       self._update_data = self._api.update()
-       # TODO - occasional bug here if ECHONETLite node doesnt return ID.
+       self._update_data = self._api.update(self._update_flags)
+
+       # TODO - occasional bug here if ECHONETLite node doesnt return ID. 
        try:
-          self._uid = self._api.getIdentificationNumber()["identification_number"]
+          self._uid = self._api.getIdentificationNumber()
        except IndexError:
           self._uid = f"{host}-{self._api.eojgc}-{self._api.eojcc}-{self._api.instance}"
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)   
     async def async_update(self, **kwargs):
         _LOGGER.debug("Commence polling ECHONET Instance")
-        self._update_data = self._api.update()
+        self._update_data = self._api.update(self._update_flags)
         _LOGGER.debug(f"polling ECHONET Instance complete - {self._update_data}")
         return self._update_data
     
