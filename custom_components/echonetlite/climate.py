@@ -1,9 +1,3 @@
-{'Operation status': 'On', 'Set temperature value': 20,
-'Air flow rate setting': 'medium-high',
-'Measured value of room temperature': 19,
-'Operation mode setting': 'heat',
-'Measured outdoor air temperature': 11}
-
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -14,6 +8,7 @@ from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_LOW,
     SUPPORT_TARGET_TEMPERATURE,
     SUPPORT_FAN_MODE,
+    SUPPORT_SWING_MODE,
     ATTR_FAN_MODES,
     CURRENT_HVAC_OFF,
     CURRENT_HVAC_HEAT,
@@ -63,12 +58,14 @@ class EchonetClimate(ClimateEntity):
         self._support_flags = self._support_flags | SUPPORT_TARGET_TEMPERATURE
         if 0xA0 in list(instance._api.propertyMaps[158].values()):
             self._support_flags = self._support_flags | SUPPORT_FAN_MODE
-
+        if 0xA4 in list(instance._api.propertyMaps[158].values()):
+            self._support_flags = self._support_flags | SUPPORT_SWING_MODE
         if fan_modes is not None:
             self._fan_modes = fan_modes
         else:
             self._fan_modes = ['auto', 'minimum', 'low', 'medium-low', 'medium', 'medium-high', 'high', 'very-high', 'max']
         self._hvac_modes = ["heat", "cool", "dry", "fan_only", "heat_cool", "off"]
+        self._swing_modes = ['upper', 'upper-central','central', 'lower-central', 'lower']
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
@@ -164,16 +161,27 @@ class EchonetClimate(ClimateEntity):
         """Return the list of available fan modes."""
         return self._fan_modes
 
+    async def async_set_fan_mode(self, fan_mode):
+        """Set new fan mode."""
+        await self.hass.async_add_executor_job(self._instance._api.setFanSpeed, fan_mode)
+        self._instance._update_data["Air flow rate setting"] = fan_mode
+
+    @property
+    def swing_mode(self):
+        """Return the swing mode setting."""
+        return self._instance._update_data["Air flow direction (vertical) setting"] if "Air flow direction (vertical) setting" in self._instance._update_data else "unavailable"
+
+    async def async_set_swing_mode(self, swing_mode):
+        """Set new swing mode."""
+        await self.hass.async_add_executor_job(self._instance._api.setAirflowVert, swing_mode)
+        self._instance._update_data["Air flow direction (vertical) setting"] = swing_mode
+
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
         if kwargs.get(ATTR_TEMPERATURE) is not None:
             await self.hass.async_add_executor_job(self._instance._api.setOperationalTemperature, kwargs.get(ATTR_TEMPERATURE))
             self._instance._update_data["Set temperature value"] =  kwargs.get(ATTR_TEMPERATURE)
 
-    async def async_set_fan_mode(self, fan_mode):
-        """Set new fan mode."""
-        await self.hass.async_add_executor_job(self._instance._api.setFanSpeed, fan_mode)
-        self._instance._update_data["Air flow rate setting"] = fan_mode
 
     async def async_set_hvac_mode(self, hvac_mode):
         _LOGGER.warning(self._instance._update_data)
