@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        _LOGGER.debug("processing entity %s")
+        _LOGGER.debug("processing entity %s: %s", config.entry_id, config.data["title"])
         if entity['instance_data']['eojgc'] == 1 and entity['instance_data']['eojcc'] == 48: #Home Air Conditioner
             for op_code in HVAC_SENSOR_OP_CODES.keys():
                 if op_code in list(entity['API']._api.propertyMaps[159].values()):
@@ -28,7 +28,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             for op_code in EPC_CODE[entity['instance_data']['eojgc']][entity['instance_data']['eojcc']]:
                 if op_code in list(entity['API']._api.propertyMaps[159].values()):
                     entities.append(EchonetSensor(entity['API'], op_code, hass.config.units, config.data["title"]))
-    async_add_entities(entities)
+    async_add_entities(entities, True)
 
 
 class EchonetClimateSensor(Entity):
@@ -62,6 +62,18 @@ class EchonetClimateSensor(Entity):
     def unique_id(self):
          """Return a unique ID."""
          return self._uid
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {
+                (DOMAIN, self._instance._uid)
+            },
+            #"name": "",
+            #"manufacturer": "Mitsubishi",
+            #"model": "",
+            #"sw_version": "",
+        }
 
     @property
     def state(self):
