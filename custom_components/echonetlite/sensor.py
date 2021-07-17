@@ -36,7 +36,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             entities.append(EchonetSensor(entity['API'], op_code, ENL_SENSOR_OP_CODES['default'], hass.config.units, config.data["title"]))
                 elif op_code in list(entity['API']._api.propertyMaps[ENL_GETMAP].values()):
                     entities.append(EchonetSensor(entity['API'], op_code, ENL_SENSOR_OP_CODES['default'], hass.config.units, config.data["title"]))
-    async_add_entities(entities)
+    async_add_entities(entities, True)
 
 
 class EchonetSensor(Entity):
@@ -50,11 +50,7 @@ class EchonetSensor(Entity):
         self._eojgc = self._instance._api.eojgc
         self._eojcc = self._instance._api.eojcc
         self._eojci = self._instance._api.instance
-
-        if name is None:
-            self._name = f"{self._eojgc}-{self._eojgc}-{self._eojci}-{self._op_code} {EPC_CODE[self._eojgc][self._eojcc][self._op_code]}"
-        else:
-            self._name = f"{name} {self._eojgc}-{self._eojcc}-{self._eojci}{self._op_code} {EPC_CODE[self._eojgc][self._eojcc][self._op_code]}"
+        self._name = f"{EPC_CODE[self._eojgc][self._eojcc][self._op_code]}"
         self._uid = f'{self._instance._api.netif}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
         if self._sensor_attributes[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
             self._unit_of_measurement = units.temperature_unit
@@ -75,6 +71,18 @@ class EchonetSensor(Entity):
     def unique_id(self):
          """Return a unique ID."""
          return self._uid
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {
+                (DOMAIN, self._instance._uid, self._instance._api.eojgc, self._instance._api.eojcc, self._instance._api.instance)
+            },
+            "name": EOJX_CLASS[self._eojgc][self._eojcc]
+            #"manufacturer": "Mitsubishi",
+            #"model": "",
+            #"sw_version": "",
+        }
 
     @property
     def state(self):

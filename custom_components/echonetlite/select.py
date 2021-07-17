@@ -8,6 +8,7 @@ from homeassistant.components import select
 from homeassistant.components.select import SelectEntity
 from homeassistant.const import CONF_HOST, CONF_IP_ADDRESS, CONF_NAME
 from .const import HVAC_SELECT_OP_CODES, DOMAIN
+from pychonet.lib.eojx import EOJX_CLASS
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
@@ -20,7 +21,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                      entities.append(EchonetSelect(hass, entity['API'], config, 
                      op_code, HVAC_SELECT_OP_CODES[op_code]['name'], 
                      HVAC_SELECT_OP_CODES[op_code]['options'], vk_echonet_set_properties[op_code]))
-    async_add_entities(entities)
+    async_add_entities(entities, True)
 
 
 class EchonetSelect(SelectEntity):
@@ -46,7 +47,19 @@ class EchonetSelect(SelectEntity):
     def unique_id(self):
          """Return a unique ID."""
          return self._uid    
-    
+         
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {
+                  (DOMAIN, self._instance._uid, self._instance._api.eojgc, self._instance._api.eojcc, self._instance._api.instance)
+            },
+            "name": EOJX_CLASS[self._instance._api.eojgc][self._instance._api.eojcc]
+            #"manufacturer": "Mitsubishi",
+            #"model": "",
+            #"sw_version": "",
+        }
+
     async def async_select_option(self, option: str):
         _LOGGER.debug("option %s selected", self._kv_options[option])
         self.hass.async_add_executor_job(self._instance._api.setMessage, [{'EPC': self._code, 'PDC': 0x01, 'EDT': self._kv_options[option]}])

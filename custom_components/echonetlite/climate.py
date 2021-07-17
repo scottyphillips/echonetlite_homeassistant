@@ -16,8 +16,10 @@ from pychonet.HomeAirConditioner import (
 )
 
 from pychonet.EchonetInstance import ENL_SETMAP
+from pychonet.lib.eojx import EOJX_CLASS
 
 from homeassistant.components.climate import ClimateEntity
+from homeassistant.util.unit_system import UnitSystem
 from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -57,17 +59,17 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         if entity['instance_data']['eojgc'] == 1 and entity['instance_data']['eojcc'] == 48: #Home Air Conditioner
-             entities.append(EchonetClimate(config_entry.data["title"], entity['API'], TEMP_CELSIUS))
-    async_add_devices(entities)
+             entities.append(EchonetClimate(config_entry.data["title"], entity['API'], hass.config.units))
+    async_add_devices(entities, True)
 
 """Representation of an ECHONETLite climate device."""
 class EchonetClimate(ClimateEntity):
-    def __init__(self, name, instance, unit_of_measurement, fan_modes=None):
+    def __init__(self, name, instance, units: UnitSystem, fan_modes=None):
         """Initialize the climate device."""
         self._name = name
         self._instance = instance  # new line
         self._uid = self._instance._uid
-        self._unit_of_measurement = unit_of_measurement
+        self._unit_of_measurement = units.temperature_unit
         self._precision = 1.0
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
@@ -100,6 +102,18 @@ class EchonetClimate(ClimateEntity):
     def unique_id(self):
         """Return a unique ID."""
         return self._uid
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {
+                  (DOMAIN, self._instance._uid, self._instance._api.eojgc, self._instance._api.eojcc, self._instance._api.instance)
+            },
+            "name": EOJX_CLASS[self._instance._api.eojgc][self._instance._api.eojcc]
+            #"manufacturer": "Mitsubishi",
+            #"model": "",
+            #"sw_version": "",
+        }
 
     @property
     def should_poll(self):
