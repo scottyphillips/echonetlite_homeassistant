@@ -2,6 +2,21 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+from pychonet.HomeAirConditioner import (
+    ENL_STATUS,
+    ENL_FANSPEED,
+    ENL_AUTO_DIRECTION,
+    ENL_SWING_MODE,
+    ENL_AIR_VERT,
+    ENL_AIR_HORZ,
+    ENL_HVAC_MODE,
+    ENL_HVAC_SET_TEMP,
+    ENL_HVAC_ROOM_TEMP,
+    ENL_HVAC_OUT_TEMP
+)
+
+from pychonet.EchonetInstance import ENL_SETMAP
+
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_HIGH,
@@ -57,9 +72,9 @@ class EchonetClimate(ClimateEntity):
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
         self._support_flags = self._support_flags | SUPPORT_TARGET_TEMPERATURE
-        if 0xA0 in list(instance._api.propertyMaps[158].values()):
+        if ENL_FANSPEED in list(instance._api.propertyMaps[ENL_SETMAP].values()):
             self._support_flags = self._support_flags | SUPPORT_FAN_MODE
-        if 0xA4 in list(instance._api.propertyMaps[158].values()):
+        if ENL_AIR_HORZ in list(instance._api.propertyMaps[ENL_SETMAP].values()):
             self._support_flags = self._support_flags | SUPPORT_SWING_MODE
         if fan_modes is not None:
             self._fan_modes = fan_modes
@@ -104,12 +119,15 @@ class EchonetClimate(ClimateEntity):
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        return self._instance._update_data["Measured value of room temperature"] if "Measured value of room temperature" in self._instance._update_data else self._instance._update_data["Set temperature value"]
+        if ENL_HVAC_ROOM_TEMP in list(self._instance._api.propertyMaps[ENL_SETMAP].values()):
+            return self._instance._update_data[ENL_HVAC_ROOM_TEMP] if ENL_HVAC_ROOM_TEMP in self._instance._update_data else 'unavailable'
+        else:
+            return self._instance._update_data[ENL_HVAC_SET_TEMP]
 
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        return self._instance._update_data["Set temperature value"] if "Set temperature value" in self._instance._update_data else 'unavailable'
+        return self._instance._update_data[ENL_HVAC_SET_TEMP] if ENL_HVAC_SET_TEMP in self._instance._update_data else 'unavailable'
 
     @property
     def target_temperature_step(self):
@@ -119,25 +137,25 @@ class EchonetClimate(ClimateEntity):
     @property
     def hvac_mode(self):
         """Return current operation ie. heat, cool, idle."""
-        return self._instance._update_data["Operation mode setting"] if self._instance._update_data["Operation status"] == "On" else "off"
+        return self._instance._update_data[ENL_HVAC_MODE] if self._instance._update_data[ENL_STATUS] == "On" else "off"
 
     @property
     def hvac_action(self):
         """Return current operation ie. heat, cool, idle."""
-        if self._instance._update_data["Operation status"] == "On":
-            if self._instance._update_data["Operation mode setting"] == HVAC_MODE_HEAT:
+        if self._instance._update_data[ENL_STATUS] == "On":
+            if self._instance._update_data[ENL_HVAC_MODE] == HVAC_MODE_HEAT:
                 return CURRENT_HVAC_HEAT
-            elif self._instance._update_data["Operation mode setting"] == HVAC_MODE_COOL:
+            elif self._instance._update_data[ENL_HVAC_MODE] == HVAC_MODE_COOL:
                 return CURRENT_HVAC_COOL
-            elif self._instance._update_data["Operation mode setting"]== HVAC_MODE_DRY:
+            elif self._instance._update_data[ENL_HVAC_MODE]== HVAC_MODE_DRY:
                 return CURRENT_HVAC_DRY
-            elif self._instance._update_data["Operation mode setting"] == HVAC_MODE_FAN_ONLY:
+            elif self._instance._update_data[ENL_HVAC_MODE] == HVAC_MODE_FAN_ONLY:
                 return CURRENT_HVAC_FAN
-            elif self._instance._update_data["Operation mode setting"] == HVAC_MODE_HEAT_COOL:
-                if "room_temperature" in self._instance._update_data:
-                    if self._instance._update_data["Set temperature value"]  < self._instance._update_data["Measured value of room temperature"]:
+            elif self._instance._update_data[ENL_HVAC_MODE] == HVAC_MODE_HEAT_COOL:
+                if ENL_HVAC_ROOM_TEMP in self._instance._update_data:
+                    if self._instance._update_data[ENL_HVAC_SET_TEMP]  < self._instance._update_data[ENL_HVAC_ROOM_TEMP]:
                         return CURRENT_HVAC_COOL
-                    elif self._instance._update_data["Set temperature value"]  > self._instance._update_data["Measured value of room temperature"]:
+                    elif self._instance._update_data[ENL_HVAC_SET_TEMP]  > self._instance._update_data[ENL_HVAC_ROOM_TEMP]:
                         return CURRENT_HVAC_HEAT
                 return CURRENT_HVAC_IDLE
         return CURRENT_HVAC_OFF
@@ -150,12 +168,12 @@ class EchonetClimate(ClimateEntity):
     @property
     def is_on(self):
         """Return true if the device is on."""
-        return True if self._instance._update_data["Operation status"] == "On" else False
+        return True if self._instance._update_data[ENL_STATUS] == "On" else False
 
     @property
     def fan_mode(self):
         """Return the fan setting."""
-        return self._instance._update_data["Air flow rate setting"] if "Air flow rate setting" in self._instance._update_data else "unavailable"
+        return self._instance._update_data[ENL_FANSPEED] if ENL_FANSPEED in self._instance._update_data else "unavailable"
 
     @property
     def fan_modes(self):
@@ -165,7 +183,7 @@ class EchonetClimate(ClimateEntity):
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode."""
         await self.hass.async_add_executor_job(self._instance._api.setFanSpeed, fan_mode)
-        self._instance._update_data["Air flow rate setting"] = fan_mode
+        self._instance._update_data[ENL_FANSPEED] = fan_mode
 
     @property
     def swing_modes(self):
@@ -175,18 +193,18 @@ class EchonetClimate(ClimateEntity):
     @property
     def swing_mode(self):
         """Return the swing mode setting."""
-        return self._instance._update_data["Air flow direction (vertical) setting"] if "Air flow direction (vertical) setting" in self._instance._update_data else "unavailable"
+        return self._instance._update_data[ENL_AIR_VERT] if ENL_AIR_VERT in self._instance._update_data else "unavailable"
         
     async def async_set_swing_mode(self, swing_mode):
         """Set new swing mode."""
         await self.hass.async_add_executor_job(self._instance._api.setAirflowVert, swing_mode)
-        self._instance._update_data["Air flow direction (vertical) setting"] = swing_mode
+        self._instance._update_data[ENL_AIR_VERT] = swing_mode
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
         if kwargs.get(ATTR_TEMPERATURE) is not None:
             await self.hass.async_add_executor_job(self._instance._api.setOperationalTemperature, kwargs.get(ATTR_TEMPERATURE))
-            self._instance._update_data["Set temperature value"] =  kwargs.get(ATTR_TEMPERATURE)
+            self._instance._update_data[ENL_HVAC_SET_TEMP] =  kwargs.get(ATTR_TEMPERATURE)
 
 
     async def async_set_hvac_mode(self, hvac_mode):
@@ -196,11 +214,11 @@ class EchonetClimate(ClimateEntity):
             await self.hass.async_add_executor_job(self._instance._api.setMode, "auto")
         else:
             await self.hass.async_add_executor_job(self._instance._api.setMode, hvac_mode)
-        self._instance._update_data["Operation mode setting"]  = hvac_mode
+        self._instance._update_data[ENL_HVAC_MODE]  = hvac_mode
         if hvac_mode == "off":
-            self._instance._update_data["Operation status"] = "Off"
+            self._instance._update_data[ENL_STATUS] = "Off"
         else:
-            self._instance._update_data["Operation status"] = "On"
+            self._instance._update_data[ENL_STATUS] = "On"
 
     async def async_turn_on(self):
         """Turn on."""

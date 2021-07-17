@@ -35,7 +35,7 @@ class EchonetSelect(SelectEntity):
         self._kv_options = options
         self._codeword = codeword 
         self._attr_options = list(options.keys())
-        self._attr_current_option = self._instance._update_data[self._codeword]
+        self._attr_current_option = self._instance._update_data[self._code]
         self._attr_name = f"{config.data['title']} {echonet_property}"
         try:
            self._uid = f'{self._instance._uid}-{self._code}'
@@ -48,11 +48,11 @@ class EchonetSelect(SelectEntity):
          return self._uid    
     
     async def async_select_option(self, option: str):
-        _LOGGER.debug("option %s selected", option)
-        self.hass.async_add_executor_job(self._instance._api.setMessage, self._code, self._kv_options[option])
+        _LOGGER.debug("option %s selected", self._kv_options[option])
+        self.hass.async_add_executor_job(self._instance._api.setMessage, [{'EPC': self._code, 'PDC': 0x01, 'EDT': self._kv_options[option]}])
         self._attr_current_option = option
         
     async def async_update(self):
         """Retrieve latest state."""
         await self._instance.async_update()
-        self._attr_current_option = self._instance._update_data[self._codeword]
+        self._attr_current_option = self._instance._update_data[self._code]

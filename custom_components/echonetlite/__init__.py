@@ -12,6 +12,20 @@ from homeassistant.util import Throttle
 
 from .const import DOMAIN
 
+
+from pychonet.EchonetInstance import ENL_STATUS, ENL_SETMAP, ENL_GETMAP
+from pychonet.HomeAirConditioner import (
+    ENL_FANSPEED,
+    ENL_AUTO_DIRECTION,
+    ENL_SWING_MODE,
+    ENL_AIR_VERT,
+    ENL_AIR_HORZ,
+    ENL_HVAC_MODE,
+    ENL_HVAC_SET_TEMP,
+    ENL_HVAC_ROOM_TEMP,
+    ENL_HVAC_OUT_TEMP
+)
+
 PLATFORMS = ["sensor",'climate', 'select']
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
@@ -46,8 +60,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 """EchonetHVACAPIConnector is used to centralise API calls for climate entities"""
 class HVACConnector():
     def __init__(self, host):
-       self._update_flags = [0x80, 0xB3, 0xA0, 0xA1, 0xA3, 0xA4, 0xA5, 0xB0, 0xBB, 0xBE]
-       self._update_data = {'status': 'Off'}
+       self._update_flags = [ENL_STATUS, 
+       ENL_FANSPEED, ENL_AUTO_DIRECTION, ENL_SWING_MODE, 
+       ENL_AIR_VERT, ENL_AIR_HORZ, ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP]
+       self._update_data = {ENL_STATUS: 'Off'}
        self._api = echonet.HomeAirConditioner(host)
        self._update_data = self._api.update(self._update_flags)
 
@@ -64,21 +80,21 @@ class HVACConnector():
         _LOGGER.debug(f"polling ECHONET HVAC Instance complete - {self._update_data}")
         return self._update_data
 
-"""EchonetAPIConnector is used to centralise API calls for generic Echonet devicess"""
+"""EchonetAPIConnector is used to centralise API calls for generic Echonet devices"""
 class ECHONETConnector():
     def __init__(self, eojgc, eojcc, eojci, host):
        _LOGGER.debug("initialisating generic ECHONET connector %s %s %s %s", eojgc, eojcc, eojci, host)    
-       self._update_data = {'status': 'Off'}
+       self._update_data = {ENL_STATUS: 'Off'}
        self._api = echonet.EchonetInstance(eojgc, eojcc, eojci, host)
-       _LOGGER.debug(f"what is this list giving me? {self._api.propertyMaps[0x9f].values()}")
-       self._useful_attributes = list(self._api.propertyMaps[0x9f].values())
+       self._update_flags = list(self._api.propertyMaps[ENL_GETMAP].values())
        for item in list(EPC_SUPER.keys()):
-            if item in self._useful_attributes:
-                self._useful_attributes.remove(item)
-       self._useful_attributes.append(0x80)
-       self._useful_attributes.append(0x84)
-       self._useful_attributes.append(0x85)
-       self._update_data = self._api.update(self._useful_attributes)
+            if item in self._update_flags:
+                self._update_flags.remove(item)
+       self._update_flags.append(ENL_STATUS)
+       self._update_flags.append(0x84)
+       self._update_flags.append(0x85)
+       _LOGGER.debug(f"update data is failing here -> {self._update_flags}")
+       self._update_data = self._api.update(self._update_flags)
 
        # TODO - occasional bug here if ECHONETLite node doesnt return ID. 
        try:
@@ -89,7 +105,7 @@ class ECHONETConnector():
     @Throttle(MIN_TIME_BETWEEN_UPDATES)   
     async def async_update(self, **kwargs):
         _LOGGER.debug("Commence polling ECHONET Instance")
-        self._update_data = self._api.update(self._useful_attributes)
-        _LOGGER.debug(f"polling ECHONET Instance complete - {self._update_data}")
+        self._update_data = self._api.update(self._update_flags)
+        _LOGGER.debug(f"polling ECHONET Instance complete - {self._update_flags}")
         return self._update_data
     

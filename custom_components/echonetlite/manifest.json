@@ -5,7 +5,7 @@
   "documentation": "https://www.github.com/scottyphillips/mitsubishi_hass",
   "issues": "https://www.github.com/scottyphillips/mitsubishi_hass/issues",
   "requirements": [
-    "pychonet==1.0.10"
+    "pychonet==1.2.2"
   ],
   "dependencies": [],
   "codeowners": [
