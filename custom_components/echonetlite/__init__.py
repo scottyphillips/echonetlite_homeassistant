@@ -60,13 +60,16 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 """EchonetHVACAPIConnector is used to centralise API calls for climate entities"""
 class HVACConnector():
     def __init__(self, host, uid):
-       self._update_flags = [ENL_STATUS, 
-       ENL_FANSPEED, ENL_AUTO_DIRECTION, ENL_SWING_MODE, 
-       ENL_AIR_VERT, ENL_AIR_HORZ, ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP]
-       self._update_data = {ENL_STATUS: 'Off'}
-       self._api = echonet.HomeAirConditioner(host)
-       self._update_data = self._api.update(self._update_flags)
-       self._uid = uid
+        self._update_data = {}
+        self._update_flags = [ENL_STATUS, 
+        ENL_FANSPEED, ENL_AUTO_DIRECTION, ENL_SWING_MODE, 
+        ENL_AIR_VERT, ENL_AIR_HORZ, ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP]
+        for value in self._update_flags:
+            self._update_data[value] = False
+        self._update_data = {ENL_STATUS: 'Off'}
+        self._api = echonet.HomeAirConditioner(host)
+        # self._update_data = self._api.update(self._update_flags)
+        self._uid = uid
        # TODO - occasional bug here if ECHONETLite node doesnt return ID. 
        
 
@@ -79,9 +82,9 @@ class HVACConnector():
 
 """EchonetAPIConnector is used to centralise API calls for generic Echonet devices"""
 class ECHONETConnector():
-    def __init__(self, eojgc, eojcc, eojci, host, uid, setmap, getmap):
+    def __init__(self, eojgc, eojcc, eojci, host, uid, getmap, setmap):
        _LOGGER.debug("initialisating generic ECHONET connector %s %s %s %s", eojgc, eojcc, eojci, host)    
-       self._update_data = {ENL_STATUS: 'Off'}
+       self._update_data = {}
        self._api = echonet.EchonetInstance(eojgc, eojcc, eojci, host)
        self._update_flags = getmap
        for item in list(EPC_SUPER.keys()):
@@ -90,7 +93,8 @@ class ECHONETConnector():
        self._update_flags.append(ENL_STATUS)
        self._update_flags.append(0x84)
        self._update_flags.append(0x85)
-       self._update_data = self._api.update(self._update_flags)
+       for value in self._update_flags:
+           self._update_data[value] = False
 
        # TODO - occasional bug here if ECHONETLite node doesnt return ID. 
        try:

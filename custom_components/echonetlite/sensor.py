@@ -24,7 +24,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         #Home Air Conditioner we dont bother exposing all sensors
         if eojgc == 1 and eojcc == 48: 
             for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
-                if op_code in list(entity['API']._api.propertyMaps[ENL_GETMAP].values()):
+                if op_code in entity['instance_data']['getPropertyMap']:
                     entities.append(EchonetSensor(entity['API'], op_code, ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code], hass.config.units, config.data["title"]))
         else: #handle other ECHONET instances
             for op_code in EPC_CODE[eojgc][eojcc]:
@@ -34,7 +34,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             entities.append(EchonetSensor(entity['API'], op_code, ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code], hass.config.units, config.data["title"]))
                         else:
                             entities.append(EchonetSensor(entity['API'], op_code, ENL_SENSOR_OP_CODES['default'], hass.config.units, config.data["title"]))
-                elif op_code in list(entity['API']._api.propertyMaps[ENL_GETMAP].values()):
+                elif op_code in list(entity['API']._update_flags):
                     entities.append(EchonetSensor(entity['API'], op_code, ENL_SENSOR_OP_CODES['default'], hass.config.units, config.data["title"]))
     async_add_entities(entities, True)
 
@@ -88,6 +88,8 @@ class EchonetSensor(Entity):
     def state(self):
         """Return the state of the sensor."""
         if self._sensor_attributes[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
+            _LOGGER.debug(f"problem here with {self._name} {self._uid}")
+            _LOGGER.debug(f"update data is {self._instance._update_data} with op code {self._op_code} ")
             if self._instance._update_data[self._op_code] == 126 or self._instance._update_data[self._op_code]  == None:
                 return 'unavailable'
             else:
