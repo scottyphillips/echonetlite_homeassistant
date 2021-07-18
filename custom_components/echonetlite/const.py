@@ -7,11 +7,11 @@ DOMAIN = "echonetlite"
 SENSOR_TYPE_TEMPERATURE = "temperature"
 
 HVAC_SELECT_OP_CODES = {
-        0xA0: {"name": "Air flow rate setting", "options": FAN_SPEED},
-        0xA1: {"name": "Automatic control of air flow direction setting", "options": AUTO_DIRECTION},
-        0xA3: {"name": "Automatic swing of air flow setting", "options": SWING_MODE},
-        0xA5: {"name": "Air flow direction (horizontal) setting", "options": AIRFLOW_HORIZ},
-        0xA4: {"name": "Air flow direction (vertical) setting", "options": AIRFLOW_VERT}
+        0xA0: FAN_SPEED,
+        0xA1: AUTO_DIRECTION,
+        0xA3: SWING_MODE,
+        0xA5: AIRFLOW_HORIZ,
+        0xA4: AIRFLOW_VERT
         }
 
 ENL_SENSOR_OP_CODES = {
@@ -32,3 +32,14 @@ ENL_SENSOR_OP_CODES = {
 ATTR_STATE_ON = "on"
 ATTR_STATE_OFF = "off"
 
+FAN_SPEED_OPTIONS = {
+	'auto':	        'Auto',
+	'minimum':      'Minimum',
+	'low':  		'Low',
+	'medium-low': 	'Medium-Low',
+	'medium':		'Medium',
+	'medium-high': 	'Medium-High',
+	'high':			'High',
+	'very-high':    'Very-High',
+	'max':			'Max'
+}

@@ -16,6 +16,22 @@
                 }
             }
         }
-    },
-    "title": "echonetlite"
+    },    
+    "options": {
+        "error": {
+            "invalid_path": "The path provided is not valid. Should be in the format `user/repo-name` and should be a valid github repository."
+        },
+        "step": {
+            "init": {
+                "title": "ECHONET Lite HVAC Options",
+                "data": {
+                    "fan_settings": "Configure Fan Settings",
+                    "swing_horiz": "Configure Horizontal Swing Settings",
+                    "swing_vert": "Configure Vertical Swing Settings"
+                },
+                "description": "Configure optional fan and swing mode settings"
+                }
+            }
+        },
+    "title": "ECHONET Lite"
 }

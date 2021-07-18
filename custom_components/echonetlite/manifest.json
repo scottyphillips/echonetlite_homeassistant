@@ -1,6 +1,6 @@
 {
   "domain": "echonetlite",
-  "name": "echonetlite",
+  "name": "ECHONET Lite",
   "config_flow": true,
   "documentation": "https://www.github.com/scottyphillips/mitsubishi_hass",
   "issues": "https://www.github.com/scottyphillips/mitsubishi_hass/issues",

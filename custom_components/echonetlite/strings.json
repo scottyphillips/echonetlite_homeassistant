@@ -18,5 +18,21 @@
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
     }
-  }
+},
+    "options": {
+       "error": {
+          "invalid_path": "Invalid Setting"
+        },
+       "step": {
+            "init": {
+                "title": "ECHONET Lite HVAC Options",
+                "data": {
+                   "fan_settings": "Configure fan settings",
+                   "swing_horiz": "Configure Horizontal Swing Settings",
+                   "swing_vert": "Configure Vertical Swing Settings"
+                },
+                "description": "Configure Fan Settings"
+            }
+        }
+    }
 }

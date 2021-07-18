@@ -57,14 +57,19 @@ SUPPORT_FLAGS = 0
 async def async_setup_entry(hass, config_entry, async_add_devices):
     """Set up entry."""
     entities = []
+    fan_speed = None
+    _LOGGER.warning(f'whats in config entry under fan speed: {config_entry.options.get("fan_settings")}')
+    if config_entry.options.get("fan_settings") is not None: # check if options has been created
+        if len(config_entry.options.get("fan_settings")) > 0: # if it has been created then check list length. 
+            fan_speed = config_entry.options.get("fan_settings")
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         if entity['instance_data']['eojgc'] == 1 and entity['instance_data']['eojcc'] == 48: #Home Air Conditioner
-             entities.append(EchonetClimate(config_entry.data["title"], entity['API'], hass.config.units))
+             entities.append(EchonetClimate(config_entry.data["title"], entity['API'], hass.config.units, fan_speed))
     async_add_devices(entities, True)
 
 """Representation of an ECHONETLite climate device."""
 class EchonetClimate(ClimateEntity):
-    def __init__(self, name, instance, units: UnitSystem, fan_modes=None):
+    def __init__(self, name, instance, units: UnitSystem, fan_modes=None, swing_vert=None):
         """Initialize the climate device."""
         self._name = name
         self._instance = instance  # new line
@@ -74,9 +79,9 @@ class EchonetClimate(ClimateEntity):
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
         self._support_flags = self._support_flags | SUPPORT_TARGET_TEMPERATURE
-        if ENL_FANSPEED in list(instance._api.propertyMaps[ENL_SETMAP].values()):
+        if ENL_FANSPEED in list(instance._setPropertyMap):
             self._support_flags = self._support_flags | SUPPORT_FAN_MODE
-        if ENL_AIR_HORZ in list(instance._api.propertyMaps[ENL_SETMAP].values()):
+        if ENL_AIR_VERT in list(instance._setPropertyMap):
             self._support_flags = self._support_flags | SUPPORT_SWING_MODE
         if fan_modes is not None:
             self._fan_modes = fan_modes
@@ -192,6 +197,9 @@ class EchonetClimate(ClimateEntity):
     @property
     def fan_modes(self):
         """Return the list of available fan modes."""
+        if ENL_FANSPEED in list(self._instance._user_options.keys()):
+           if self._instance._user_options[ENL_FANSPEED ] is not False:
+                self._fan_modes = self._instance._user_options[ENL_FANSPEED]
         return self._fan_modes
 
     async def async_set_fan_mode(self, fan_mode):

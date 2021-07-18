@@ -7,12 +7,48 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import Throttle
+import homeassistant.helpers.config_validation as cv
 
-from .const import DOMAIN
+from .const import DOMAIN, FAN_SPEED_OPTIONS
+
+AIRFLOW_HORIZ = {
+    'rc-right':             0x41,
+    'left-lc':              0x42,
+    'lc-center-rc':         0x43,
+    'left-lc-rc-right':     0x44,
+    'right':                0x51,
+    'rc':                   0x52,
+    'center':               0x54,
+    'center-right':         0x55,
+    'center-rc':            0x56,
+    'center-rc-right':      0x57,
+    'lc':                   0x58,
+    'lc-right':             0x59,
+    'lc-rc':                0x5A,
+    'left':                 0x60,
+    'left-right':           0x61,
+    'left-rc':              0x62,
+    'left-rc-right':        0x63,
+    'left-center':          0x64,
+    'left-center-right':    0x65,
+    'left-center-rc':       0x66,
+    'left-center-rc-right': 0x67,
+    'left-lc-right':        0x69,
+    'left-lc-rc':           0x6A
+}
+
+AIRFLOW_VERT = {
+    'upper':            0x41,
+    'upper-central':    0x44,
+    'central':          0x43,
+    'lower-central':    0x45,
+    'lower':            0x42
+}
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,6 +120,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     return {"host": data["host"], "title": data["title"], "instances": discover}
 
 
+
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for echonetlite."""
 
@@ -115,7 +152,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
-
+        
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        return OptionsFlowHandler(config_entry)
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
@@ -124,3 +165,33 @@ class CannotConnect(HomeAssistantError):
 class InvalidAuth(HomeAssistantError):
     """Error to indicate there is invalid auth."""
 
+
+    
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    def __init__(self, config):
+        self._config_entry = config
+        
+    async def async_step_init(self, user_input=None):
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        "fan_settings",
+                       default=self._config_entry.options.get("fan_settings") if self._config_entry.options.get("fan_settings") is not None else [] ,
+                    ): cv.multi_select(FAN_SPEED_OPTIONS),
+#                    vol.Optional(
+#                        "swing_horiz",
+#                        default = []# default=self._config_entry.options.get("swing_horiz"),
+#                    ): cv.multi_select({'horizontal 1':'test', 'horizontal 2':2}),
+#                    vol.Optional(
+#                        "swing_vert",
+#                        default = []
+#                        # default=self._config_entry.options.get("swing_vert"),
+#                    ): cv.multi_select({'vert 1':1, 'vert 2':2}),
+                }
+            ),
+        )
