@@ -15,7 +15,7 @@ from pychonet.HomeAirConditioner import (
     ENL_HVAC_OUT_TEMP
 )
 
-from pychonet.EchonetInstance import ENL_SETMAP
+from pychonet.EchonetInstance import ENL_SETMAP, ENL_GETMAP
 from pychonet.lib.eojx import EOJX_CLASS
 
 from homeassistant.components.climate import ClimateEntity
@@ -133,7 +133,7 @@ class EchonetClimate(ClimateEntity):
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        if ENL_HVAC_ROOM_TEMP in list(self._instance._api.propertyMaps[ENL_SETMAP].values()):
+        if ENL_HVAC_ROOM_TEMP in list(self._instance._api.propertyMaps[ENL_GETMAP].values()):
             return self._instance._update_data[ENL_HVAC_ROOM_TEMP] if ENL_HVAC_ROOM_TEMP in self._instance._update_data else 'unavailable'
         else:
             return self._instance._update_data[ENL_HVAC_SET_TEMP]

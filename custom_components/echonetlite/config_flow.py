@@ -10,6 +10,7 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.util import Throttle
 
 from .const import DOMAIN
 
@@ -53,9 +54,24 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # await hass.async_add_executor_job(
     #     your_validate_func, data["username"], data["password"]
     # )
+    
+    # First confirm device exists:
     _LOGGER.warning(f"IP address is {data['host']}")
-    discover = echonet.discover(data["host"])
+    discover = await hass.async_add_executor_job(echonet.discover, data["host"])
 
+
+    # Then build default object and grab static such as UID and property maps...
+    for instance in discover:
+        device = await hass.async_add_executor_job(echonet.EchonetInstance, instance['eojgc'], instance['eojcc'], instance['eojci'], instance['netaddr'])
+        # probaby need to make this a bit more robust - per
+        device_data = await hass.async_add_executor_job(device.update, [0x83,0x9f,0x9e])
+        instance['getPropertyMap'] = device_data[0x9f]
+        instance['setPropertyMap'] = device_data[0x9e]
+        if device_data[0x83]:
+            instance['UID'] = await hass.async_add_executor_job(device.getIdentificationNumber)
+        else:
+            instance['UID'] = f'{instance["netaddr"]}-{instance["eojgc"]}{instance["eojcc"]}{instance["eojci"]}'
+    
     # if not await hub.authenticate(data["username"], data["password"]):
     #    raise InvalidAuth
 
@@ -107,3 +123,4 @@ class CannotConnect(HomeAssistantError):
 
 class InvalidAuth(HomeAssistantError):
     """Error to indicate there is invalid auth."""
+

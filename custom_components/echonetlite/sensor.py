@@ -93,6 +93,8 @@ class EchonetSensor(Entity):
             else:
                 return self._instance._update_data[self._op_code]
         elif self._op_code in self._instance._update_data:
+            if isinstance(self._instance._update_data[self._op_code], (int,float)):
+                return self._instance._update_data[self._op_code] 
             if len(self._instance._update_data[self._op_code]) < 255:
                 return self._instance._update_data[self._op_code] 
             else:
