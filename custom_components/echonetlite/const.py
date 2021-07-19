@@ -1,6 +1,6 @@
 """Constants for the echonetlite integration."""
 from homeassistant.const import CONF_ICON, CONF_NAME, CONF_TYPE
-from pychonet.HomeAirConditioner import FAN_SPEED, AIRFLOW_VERT, AIRFLOW_HORIZ, AUTO_DIRECTION, SWING_MODE
+from pychonet.HomeAirConditioner import ENL_FANSPEED, ENL_AIR_VERT, ENL_AIR_HORZ, FAN_SPEED, AIRFLOW_VERT, AIRFLOW_HORIZ, AUTO_DIRECTION, SWING_MODE
 
 DOMAIN = "echonetlite"
 
@@ -43,3 +43,44 @@ FAN_SPEED_OPTIONS = {
 	'very-high':    'Very-High',
 	'max':			'Max'
 }
+
+AIRFLOW_HORIZ_OPTIONS = {
+    'rc-right':             'Right Center + Right',
+    'left-lc':              'Left + Left Center',
+    'lc-center-rc':         'Left + Center + Right Center',
+    'left-lc-rc-right':     'Left + Left Center + Right Center + Right',
+    'right':                'Right',
+    'rc':                   'Right Center',
+    'center':               'Center',
+    'center-right':         'Center + Right',
+    'center-rc':            'Center + Right Center',
+    'center-rc-right':      'Center + Right Center + Right',
+    'lc':                   'Left Center',
+    'lc-right':             'Left Center + Right',
+    'lc-rc':                'Left Center + Right Center',
+    'left':                 'Left',
+    'left-right':           'Left + Right',
+    'left-rc':              'Left + Right Center',
+    'left-rc-right':        'Left + Right Center + Right',
+    'left-center':          'Left + Center',
+    'left-center-right':    'Left + Center + Right',
+    'left-center-rc':       'Left + Center + Right Center',
+    'left-center-rc-right': 'Left + Center + Right Center + Right',
+    'left-lc-right':        'Left + Left Center + Right',
+    'left-lc-rc':           'Left + Left Center + Right Center'
+}
+
+AIRFLOW_VERT_OPTIONS = {
+    'upper':            'Upper',
+    'upper-central':    'Upper Central',
+    'central':          'Central',
+    'lower-central':    'Lower Central',
+    'lower':            'Lower'
+}
+
+USER_OPTIONS = {
+    ENL_FANSPEED: {'option' : 'fan_settings', 'option_list': FAN_SPEED_OPTIONS},
+    ENL_AIR_HORZ: {'option' : 'swing_horiz', 'option_list': AIRFLOW_HORIZ_OPTIONS},
+    ENL_AIR_VERT: {'option' : 'swing_vert', 'option_list': AIRFLOW_VERT_OPTIONS}
+}
+

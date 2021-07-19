@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import asyncio
 from typing import Any
 
 import voluptuous as vol
@@ -12,42 +13,9 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import Throttle
 import homeassistant.helpers.config_validation as cv
+from pychonet.HomeAirConditioner import ENL_FANSPEED, ENL_AIR_VERT, ENL_AIR_HORZ
 
-from .const import DOMAIN, FAN_SPEED_OPTIONS
-
-AIRFLOW_HORIZ = {
-    'rc-right':             0x41,
-    'left-lc':              0x42,
-    'lc-center-rc':         0x43,
-    'left-lc-rc-right':     0x44,
-    'right':                0x51,
-    'rc':                   0x52,
-    'center':               0x54,
-    'center-right':         0x55,
-    'center-rc':            0x56,
-    'center-rc-right':      0x57,
-    'lc':                   0x58,
-    'lc-right':             0x59,
-    'lc-rc':                0x5A,
-    'left':                 0x60,
-    'left-right':           0x61,
-    'left-rc':              0x62,
-    'left-rc-right':        0x63,
-    'left-center':          0x64,
-    'left-center-right':    0x65,
-    'left-center-rc':       0x66,
-    'left-center-rc-right': 0x67,
-    'left-lc-right':        0x69,
-    'left-lc-rc':           0x6A
-}
-
-AIRFLOW_VERT = {
-    'upper':            0x41,
-    'upper-central':    0x44,
-    'central':          0x43,
-    'lower-central':    0x45,
-    'lower':            0x42
-}
+from .const import DOMAIN, USER_OPTIONS
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -95,7 +63,6 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     _LOGGER.warning(f"IP address is {data['host']}")
     discover = await hass.async_add_executor_job(echonet.discover, data["host"])
 
-
     # Then build default object and grab static such as UID and property maps...
     for instance in discover:
         device = await hass.async_add_executor_job(echonet.EchonetInstance, instance['eojgc'], instance['eojcc'], instance['eojci'], instance['netaddr'])
@@ -119,44 +86,58 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # Return info that you want to store in the config entry.
     return {"host": data["host"], "title": data["title"], "instances": discover}
 
+# class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+#     VERSION = 1
+#     task_one = None
+
+
+
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for echonetlite."""
-
+    discover_task = None
+    polling_maps_task = None
+    info = None
     VERSION = 1
+    
+    async def _async_do_task(self, task):
+        self.info = await task  # A task that take some time to complete.
+        self.hass.async_create_task(
+             self.hass.config_entries.flow.async_configure(flow_id=self.flow_id)
+        )
+        return self.info
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        
         """Handle the initial step."""
         if user_input is None:
             return self.async_show_form(
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA
             )
-
-        errors = {}
-
-        try:
-            info = await validate_input(self.hass, user_input)
-        except CannotConnect:
-            errors["base"] = "cannot_connect"
-        except InvalidAuth:
-            errors["base"] = "invalid_auth"
-        except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception("Unexpected exception")
-            errors["base"] = "unknown"
-        else:
-            return self.async_create_entry(title=info["title"], data=info)
-
-        return self.async_show_form(
-            step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
-        )
+            
+        # Commence discovery task... 
+        _LOGGER.debug("Step 1 - test discovery task")
+        return await self.async_step_discover(user_input)
+    
+    async def async_step_discover(self, user_input=None):
+        _LOGGER.debug("Step 2")
+        if not self.discover_task:
+            _LOGGER.debug("Step 3")
+            self.discover_task = self.hass.async_create_task(self._async_do_task(validate_input(self.hass, user_input)))
+            return self.async_show_progress(step_id="discover", progress_action="user")
         
+        return self.async_show_progress_done(next_step_id="finish")
+    
+    async def async_step_finish(self, user_input=None):
+        _LOGGER.debug("Step 4")
+        return self.async_create_entry(title=self.info["title"], data=self.info)
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
         return OptionsFlowHandler(config_entry)
+
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
@@ -173,25 +154,21 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         
     async def async_step_init(self, user_input=None):
         """Manage the options."""
+        data_schema_structure = {}
+        
+        # Handle HVAC User configurable options
+        for instance in self._config_entry.data["instances"]:
+           if instance['eojgc'] == 0x01 and instance['eojcc'] == 0x30:
+                for option in list(USER_OPTIONS.keys()):
+                    if option in instance['setPropertyMap']:
+                       data_schema_structure.update({vol.Optional(
+                           USER_OPTIONS[option]['option'],
+                           default=self._config_entry.options.get(USER_OPTIONS[option]['option']) if self._config_entry.options.get(USER_OPTIONS[option]['option']) is not None else [] ,
+                        ):cv.multi_select(USER_OPTIONS[option]['option_list'])})
+               
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        "fan_settings",
-                       default=self._config_entry.options.get("fan_settings") if self._config_entry.options.get("fan_settings") is not None else [] ,
-                    ): cv.multi_select(FAN_SPEED_OPTIONS),
-#                    vol.Optional(
-#                        "swing_horiz",
-#                        default = []# default=self._config_entry.options.get("swing_horiz"),
-#                    ): cv.multi_select({'horizontal 1':'test', 'horizontal 2':2}),
-#                    vol.Optional(
-#                        "swing_vert",
-#                        default = []
-#                        # default=self._config_entry.options.get("swing_vert"),
-#                    ): cv.multi_select({'vert 1':1, 'vert 2':2}),
-                }
-            ),
+            data_schema=vol.Schema(data_schema_structure),
         )

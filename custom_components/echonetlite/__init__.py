@@ -30,6 +30,11 @@ PLATFORMS = ["sensor",'climate', 'select']
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 
+HVAC_API_CONNECTOR_DEFAULT_FLAGS = [ENL_STATUS, 
+        ENL_FANSPEED, ENL_AUTO_DIRECTION, ENL_SWING_MODE, 
+        ENL_AIR_VERT, ENL_AIR_HORZ, ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP]
+
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -73,26 +78,35 @@ class HVACConnector():
         self._update_data = {}
         self._getPropertyMap = getmap
         self._setPropertyMap = setmap
-        self._update_flags = [ENL_STATUS, 
-        ENL_FANSPEED, ENL_AUTO_DIRECTION, ENL_SWING_MODE, 
-        ENL_AIR_VERT, ENL_AIR_HORZ, ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP]
+        self._update_flags = []
+        for value in HVAC_API_CONNECTOR_DEFAULT_FLAGS:
+            if value in self._getPropertyMap:
+                self._update_flags.append(value)
         self._user_options = {ENL_FANSPEED: False, ENL_AUTO_DIRECTION: False, ENL_SWING_MODE: False, ENL_AIR_VERT: False, ENL_AIR_HORZ: False }
+        
+        
+        # Stich together user selectable options for fan + swing modes for HVAC #TODO - fix code repetition
         if entry.options.get("fan_settings") is not None: # check if options has been created
             if len(entry.options.get("fan_settings")) > 0: # if it has been created then check list length. 
                 self._user_options[ENL_FANSPEED] = entry.options.get("fan_settings")
-            
+        if entry.options.get("swing_horiz") is not None: 
+            if len(entry.options.get("swing_horiz")) > 0: 
+                self._user_options[ENL_AIR_HORZ] = entry.options.get("swing_horiz")
+        if entry.options.get("swing_vert") is not None: # check if options has been created
+            if len(entry.options.get("swing_vert")) > 0: 
+                self._user_options[ENL_AIR_VERT] = entry.options.get("swing_vert")
+        
         for value in self._update_flags:
             self._update_data[value] = False
         self._update_data = {ENL_STATUS: 'Off'}
         self._api = echonet.HomeAirConditioner(entry.data["host"])
         # self._update_data = self._api.update(self._update_flags)
         self._uid = uid
-       # TODO - occasional bug here if ECHONETLite node doesnt return ID. 
        
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)   
     async def async_update(self, **kwargs):
-        _LOGGER.debug("Commence polling ECHONET HVAC Instance")
+        _LOGGER.debug(f"commence polling ECHONET HVAC Instance")
         self._update_data = self._api.update(self._update_flags)
         _LOGGER.debug(f"polling ECHONET HVAC Instance complete - {self._update_data}")
         return self._update_data
@@ -102,17 +116,14 @@ class ECHONETConnector():
     def __init__(self, eojgc, eojcc, eojci, host, uid, getmap, setmap):
        _LOGGER.debug("initialisating generic ECHONET connector %s %s %s %s", eojgc, eojcc, eojci, host)    
        self._update_data = {}
+       self._getPropertyMap = getmap
+       self._setPropertyMap = setmap
        self._api = echonet.EchonetInstance(eojgc, eojcc, eojci, host)
-       self._update_flags = getmap
-       for item in list(EPC_SUPER.keys()):
-            # _LOGGER.warning(f'something messed here.. {item}  {self._update_flags}' )
-            if item in self._update_flags:
-                self._update_flags.remove(item)
-       self._update_flags.append(ENL_STATUS)
-       self._update_flags.append(0x84)
-       self._update_flags.append(0x85)
-       for value in self._update_flags:
-           self._update_data[value] = False
+       self._update_flags = [ENL_STATUS]
+       for item in self._getPropertyMap:
+            if item not in list(EPC_SUPER.keys()):
+                self._update_flags.append(item)
+                self._update_data[item] = False
        self._uid = uid
           
     @Throttle(MIN_TIME_BETWEEN_UPDATES)   

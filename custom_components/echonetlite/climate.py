@@ -54,17 +54,16 @@ from homeassistant.const import (
 from .const import DOMAIN
 SUPPORT_FLAGS = 0
 
+DEFAULT_FAN_MODES = ['auto', 'minimum', 'low', 'medium-low', 'medium', 'medium-high', 'high', 'very-high', 'max']
+DEFAULT_HVAC_MODES = ["heat", "cool", "dry", "fan_only", "heat_cool", "off"]
+DEFAULT_SWING_MODES = ['upper', 'upper-central','central', 'lower-central', 'lower']
+
 async def async_setup_entry(hass, config_entry, async_add_devices):
     """Set up entry."""
     entities = []
-    fan_speed = None
-    _LOGGER.warning(f'whats in config entry under fan speed: {config_entry.options.get("fan_settings")}')
-    if config_entry.options.get("fan_settings") is not None: # check if options has been created
-        if len(config_entry.options.get("fan_settings")) > 0: # if it has been created then check list length. 
-            fan_speed = config_entry.options.get("fan_settings")
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         if entity['instance_data']['eojgc'] == 1 and entity['instance_data']['eojcc'] == 48: #Home Air Conditioner
-             entities.append(EchonetClimate(config_entry.data["title"], entity['API'], hass.config.units, fan_speed))
+             entities.append(EchonetClimate(config_entry.data["title"], entity['API'], hass.config.units))
     async_add_devices(entities, True)
 
 """Representation of an ECHONETLite climate device."""
@@ -83,12 +82,7 @@ class EchonetClimate(ClimateEntity):
             self._support_flags = self._support_flags | SUPPORT_FAN_MODE
         if ENL_AIR_VERT in list(instance._setPropertyMap):
             self._support_flags = self._support_flags | SUPPORT_SWING_MODE
-        if fan_modes is not None:
-            self._fan_modes = fan_modes
-        else:
-            self._fan_modes = ['auto', 'minimum', 'low', 'medium-low', 'medium', 'medium-high', 'high', 'very-high', 'max']
-        self._hvac_modes = ["heat", "cool", "dry", "fan_only", "heat_cool", "off"]
-        self._swing_modes = ['upper', 'upper-central','central', 'lower-central', 'lower']
+        self._hvac_modes =  DEFAULT_HVAC_MODES
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
@@ -199,8 +193,8 @@ class EchonetClimate(ClimateEntity):
         """Return the list of available fan modes."""
         if ENL_FANSPEED in list(self._instance._user_options.keys()):
            if self._instance._user_options[ENL_FANSPEED ] is not False:
-                self._fan_modes = self._instance._user_options[ENL_FANSPEED]
-        return self._fan_modes
+                return self._instance._user_options[ENL_FANSPEED]
+        return DEFAULT_FAN_MODES
 
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode."""
@@ -210,7 +204,10 @@ class EchonetClimate(ClimateEntity):
     @property
     def swing_modes(self):
         """Return the list of available swing modes."""
-        return self._swing_modes
+        if ENL_AIR_VERT in list(self._instance._user_options.keys()):
+           if self._instance._user_options[ENL_AIR_VERT ] is not False:
+                return self._instance._user_options[ENL_AIR_VERT]
+        return DEFAULT_SWING_MODES
 
     @property
     def swing_mode(self):

@@ -15,8 +15,11 @@
                     "title": "Description"
                 }
             }
+        },
+        "progress": {
+            "user": "Discovering ECHONETLite devices.."
         }
-    },    
+    },
     "options": {
         "error": {
             "invalid_path": "The path provided is not valid. Should be in the format `user/repo-name` and should be a valid github repository."

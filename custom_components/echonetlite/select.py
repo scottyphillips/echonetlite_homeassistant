@@ -33,7 +33,6 @@ class EchonetSelect(SelectEntity):
         self._optimistic = False
         self._sub_state = None
         self._options = options
-        _LOGGER.warning(f"flags set are {self._instance._user_options}")
         self._attr_options = list(self._options.keys())
         if self._code in list(self._instance._user_options.keys()):
            if self._instance._user_options[code] is not False:

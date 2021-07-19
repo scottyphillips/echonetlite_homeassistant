@@ -88,8 +88,6 @@ class EchonetSensor(Entity):
     def state(self):
         """Return the state of the sensor."""
         if self._sensor_attributes[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
-            _LOGGER.debug(f"problem here with {self._name} {self._uid}")
-            _LOGGER.debug(f"update data is {self._instance._update_data} with op code {self._op_code} ")
             if self._instance._update_data[self._op_code] == 126 or self._instance._update_data[self._op_code]  == None:
                 return 'unavailable'
             else:
