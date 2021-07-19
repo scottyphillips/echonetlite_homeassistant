@@ -11,10 +11,11 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.util import Throttle
 import homeassistant.helpers.config_validation as cv
 from pychonet.HomeAirConditioner import ENL_FANSPEED, ENL_AIR_VERT, ENL_AIR_HORZ
-
+import pychonet as echonet
 from .const import DOMAIN, USER_OPTIONS
 
 
@@ -28,110 +29,82 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
-
-class PlaceholderHub:
-    """Placeholder class to make tests pass.
-
-    TODO Remove this placeholder class and replace with things from your PyPI package.
-    """
-
-    def __init__(self, host: str) -> None:
-        """Initialize."""
-        self.host = host
-
-    async def authenticate(self, username: str, password: str) -> bool:
-        """Test if we can authenticate with the host."""
-        return True
-
-
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-    """Validate the user input allows us to connect.
-
-    Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
-    """
-    import pychonet as echonet
-
-    # TODO validate the data can be used to set up a connection.
-
-    # If your PyPI package is not built with async, pass your methods
-    # to the executor:
-    # await hass.async_add_executor_job(
-    #     your_validate_func, data["username"], data["password"]
-    # )
-    
-    # First confirm device exists:
+    """Validate the user input allows us to connect."""
     _LOGGER.warning(f"IP address is {data['host']}")
-    discover = await hass.async_add_executor_job(echonet.discover, data["host"])
+    instances = await hass.async_add_executor_job(echonet.discover, data["host"])
+    if len(instances) == 0:
+        raise CannotConnect
+    return {"host": data["host"], "title": data["title"], "instances": instances}
 
+
+async def discover_devices(hass: HomeAssistant, discovery_info: list):
     # Then build default object and grab static such as UID and property maps...
-    for instance in discover:
-        device = await hass.async_add_executor_job(echonet.EchonetInstance, instance['eojgc'], instance['eojcc'], instance['eojci'], instance['netaddr'])
-        # probaby need to make this a bit more robust - per
-        device_data = await hass.async_add_executor_job(device.update, [0x83,0x9f,0x9e])
-        instance['getPropertyMap'] = device_data[0x9f]
-        instance['setPropertyMap'] = device_data[0x9e]
-        if device_data[0x83]:
-            instance['UID'] = await hass.async_add_executor_job(device.getIdentificationNumber)
-        else:
-            instance['UID'] = f'{instance["netaddr"]}-{instance["eojgc"]}{instance["eojcc"]}{instance["eojci"]}'
-    
-    # if not await hub.authenticate(data["username"], data["password"]):
-    #    raise InvalidAuth
-
-    # If you cannot connect:
-    # throw CannotConnect
-    # If the authentication is wrong:
-    # InvalidAuth
-
+    for instance in discovery_info['instances']:
+         device = await hass.async_add_executor_job(echonet.EchonetInstance, instance['eojgc'], instance['eojcc'], instance['eojci'], instance['netaddr'])
+         device_data = await hass.async_add_executor_job(device.update, [0x83,0x9f,0x9e])
+         instance['getPropertyMap'] = device_data[0x9f]
+         instance['setPropertyMap'] = device_data[0x9e]
+         if device_data[0x83]:
+             instance['UID'] = await hass.async_add_executor_job(device.getIdentificationNumber)
+         else:
+             instance['UID'] = f'{instance["netaddr"]}-{instance["eojgc"]}{instance["eojcc"]}{instance["eojci"]}'
+    _LOGGER.debug(discovery_info)
     # Return info that you want to store in the config entry.
-    return {"host": data["host"], "title": data["title"], "instances": discover}
-
-# class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-#     VERSION = 1
-#     task_one = None
-
-
-
-
+    return discovery_info
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for echonetlite."""
     discover_task = None
-    polling_maps_task = None
-    info = None
+    discovery_info = {}
+    instances = None
     VERSION = 1
-    
+            
     async def _async_do_task(self, task):
-        self.info = await task  # A task that take some time to complete.
+        self.discovery_info = await task  # A task that take some time to complete.
         self.hass.async_create_task(
              self.hass.config_entries.flow.async_configure(flow_id=self.flow_id)
         )
-        return self.info
-
+        return self.discovery_info        
+            
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
-        
+        errors = {}
         """Handle the initial step."""
         if user_input is None:
             return self.async_show_form(
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA
             )
+        
+        try:
+            self.discovery_info = await validate_input(self.hass, user_input)
+        except CannotConnect:
+            errors["base"] = "cannot_connect"
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.exception("Unexpected exception")
+            errors["base"] = "unknown"
+        else:
+            return await self.async_step_discover(user_input)
             
-        # Commence discovery task... 
-        _LOGGER.debug("Step 1 - test discovery task")
-        return await self.async_step_discover(user_input)
+        return self.async_show_form(
+            step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+        )
     
     async def async_step_discover(self, user_input=None):
-        _LOGGER.debug("Step 2")
+        errors = {}
         if not self.discover_task:
-            _LOGGER.debug("Step 3")
-            self.discover_task = self.hass.async_create_task(self._async_do_task(validate_input(self.hass, user_input)))
-            return self.async_show_progress(step_id="discover", progress_action="user")
+             _LOGGER.debug('Step 1')
+             try: 
+                 self.discover_task = self.hass.async_create_task(self._async_do_task(discover_devices(self.hass, self.discovery_info)))
+             except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception")
+             else:
+                 return self.async_show_progress(step_id="discover", progress_action="user")
         
         return self.async_show_progress_done(next_step_id="finish")
-    
+        
     async def async_step_finish(self, user_input=None):
-        _LOGGER.debug("Step 4")
-        return self.async_create_entry(title=self.info["title"], data=self.info)
+        #_LOGGER.debug("Step 4")
+        return self.async_create_entry(title=self.discovery_info["title"], data=self.discovery_info)
 
     @staticmethod
     @callback
@@ -142,12 +115,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
 
-
-class InvalidAuth(HomeAssistantError):
-    """Error to indicate there is invalid auth."""
-
-
-    
 class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config):
         self._config_entry = config
