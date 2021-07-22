@@ -14,32 +14,32 @@ from pychonet.lib.epc import EPC_CODE
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        if entity['instance_data']['eojgc'] == 1 and entity['instance_data']['eojcc'] == 48: #Home Air Conditioner
-            for op_code in entity['instance_data']['setPropertyMap']:
+        if entity['instance']['eojgc'] == 1 and entity['instance']['eojcc'] == 48: #Home Air Conditioner
+            for op_code in entity['instance']['setmap']:
                 if op_code in HVAC_SELECT_OP_CODES:
                      entities.append(EchonetSelect(hass, 
-                     entity['API'], 
+                     entity['echonetlite'], 
                      config, 
                      op_code, 
                      HVAC_SELECT_OP_CODES[op_code]))
     async_add_entities(entities, True)
 
 class EchonetSelect(SelectEntity):
-    def __init__(self, hass, instance, config, code, options):
+    def __init__(self, hass, connector, config, code, options):
         """Initialize the select."""
-        self._instance = instance
+        self._connector= connector
         self._config = config
         self._code = code
         self._optimistic = False
         self._sub_state = None
         self._options = options
         self._attr_options = list(self._options.keys())
-        if self._code in list(self._instance._user_options.keys()):
-           if self._instance._user_options[code] is not False:
-               self._attr_options = self._instance._user_options[code]
-        self._attr_current_option = self._instance._update_data[self._code]
-        self._attr_name = f"{config.data['title']} {EPC_CODE[self._instance._api.eojgc][self._instance._api.eojcc][self._code]}"
-        self._uid = f'{self._instance._uid}-{self._code}'
+        if self._code in list(self._connector._user_options.keys()):
+           if self._connector._user_options[code] is not False:
+               self._attr_options = self._connector._user_options[code]
+        self._attr_current_option = self._connector._update_data[self._code]
+        self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
+        self._uid = f'{self._connector._uid}-{self._code}'
     
     @property
     def unique_id(self):
@@ -50,9 +50,9 @@ class EchonetSelect(SelectEntity):
     def device_info(self):
         return {
             "identifiers": {
-                  (DOMAIN, self._instance._uid, self._instance._api.eojgc, self._instance._api.eojcc, self._instance._api.instance)
+                  (DOMAIN, self._connector._uid, self._connector._eojgc, self._connector._eojgc, self._connector._eojci)
             },
-            "name": EOJX_CLASS[self._instance._api.eojgc][self._instance._api.eojcc]
+            "name": EOJX_CLASS[self._connector._eojgc][self._connector._eojcc]
             #"manufacturer": "Mitsubishi",
             #"model": "",
             #"sw_version": "",
@@ -60,14 +60,14 @@ class EchonetSelect(SelectEntity):
     
     
     async def async_select_option(self, option: str):
-        self.hass.async_add_executor_job(self._instance._api.setMessage, [{'EPC': self._code, 'PDC': 0x01, 'EDT': self._options[option]}])
+        await self._connector._instance.setMessage([{'EPC': self._code, 'PDC': 0x01, 'EDT': self._options[option]}])
         self._attr_current_option = option
         
     async def async_update(self):
         """Retrieve latest state."""
-        await self._instance.async_update()
-        self._attr_current_option = self._instance._update_data[self._code]
+        await self._connector.async_update()
+        self._attr_current_option = self._connector._update_data[self._code]
         self._attr_options = list(self._options.keys())
-        if self._code in list(self._instance._user_options.keys()):
-           if self._instance._user_options[self._code] is not False:
-                self._attr_options = self._instance._user_options[self._code]
+        if self._code in list(self._connector._user_options.keys()):
+           if self._connector._user_options[self._code] is not False:
+                self._attr_options = self._connector._user_options[self._code]

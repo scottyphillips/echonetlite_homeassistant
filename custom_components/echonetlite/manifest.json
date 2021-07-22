@@ -5,12 +5,13 @@
   "documentation": "https://www.github.com/scottyphillips/mitsubishi_hass",
   "issues": "https://www.github.com/scottyphillips/mitsubishi_hass/issues",
   "requirements": [
-    "pychonet==1.2.3"
+    "pychonet==2.0.8",
+    "aio-udp-server"
   ],
   "dependencies": [],
   "codeowners": [
     "@scottyphillips"
   ],
-  "version":  "1.0.0",
+  "version":  "2.0.0",
   "iot_class": "local_polling"
 }

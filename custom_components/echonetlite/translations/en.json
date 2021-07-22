@@ -17,7 +17,7 @@
             }
         },
         "progress": {
-            "user": "Discovering ECHONETLite devices.."
+            "discover": "Discovering ECHONETLite devices.."
         }
     },
     "options": {

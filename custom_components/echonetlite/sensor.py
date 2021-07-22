@@ -18,24 +18,25 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        eojgc = entity['instance_data']['eojgc']
-        eojcc = entity['instance_data']['eojcc']
+        _LOGGER.debug(entity)
+        eojgc = entity['instance']['eojgc']
+        eojcc = entity['instance']['eojcc']
         
         #Home Air Conditioner we dont bother exposing all sensors
         if eojgc == 1 and eojcc == 48: 
             for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
-                if op_code in entity['instance_data']['getPropertyMap']:
-                    entities.append(EchonetSensor(entity['API'], op_code, ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code], hass.config.units, config.data["title"]))
+                if op_code in entity['instance']['getmap']:
+                    entities.append(EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code], hass.config.units, config.title))
         else: #handle other ECHONET instances
             for op_code in EPC_CODE[eojgc][eojcc]:
                 if eojgc in ENL_SENSOR_OP_CODES.keys():
                     if eojcc in ENL_SENSOR_OP_CODES[eojgc].keys():
                         if op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
-                            entities.append(EchonetSensor(entity['API'], op_code, ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code], hass.config.units, config.data["title"]))
+                            entities.append(EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code], hass.config.units, config.title))
                         else:
-                            entities.append(EchonetSensor(entity['API'], op_code, ENL_SENSOR_OP_CODES['default'], hass.config.units, config.data["title"]))
-                elif op_code in list(entity['API']._update_flags):
-                    entities.append(EchonetSensor(entity['API'], op_code, ENL_SENSOR_OP_CODES['default'], hass.config.units, config.data["title"]))
+                            entities.append(EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], hass.config.units, config.title))
+                elif op_code in list(entity['echonetlite']._update_flags):
+                    entities.append(EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], hass.config.units, config.title))
     async_add_entities(entities, True)
 
 
@@ -47,11 +48,11 @@ class EchonetSensor(Entity):
         self._instance = instance
         self._op_code = op_code
         self._sensor_attributes = attributes
-        self._eojgc = self._instance._api.eojgc
-        self._eojcc = self._instance._api.eojcc
-        self._eojci = self._instance._api.instance
+        self._eojgc = self._instance._eojgc
+        self._eojcc = self._instance._eojcc
+        self._eojci = self._instance._eojci
         self._name = f"{EPC_CODE[self._eojgc][self._eojcc][self._op_code]}"
-        self._uid = f'{self._instance._api.netif}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
+        self._uid = f'{self._instance._host}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
         if self._sensor_attributes[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
             self._unit_of_measurement = units.temperature_unit
         else:
@@ -76,7 +77,7 @@ class EchonetSensor(Entity):
     def device_info(self):
         return {
             "identifiers": {
-                (DOMAIN, self._instance._uid, self._instance._api.eojgc, self._instance._api.eojcc, self._instance._api.instance)
+                (DOMAIN, self._instance._uid, self._instance._eojgc, self._instance._eojcc, self._instance._eojci)
             },
             "name": EOJX_CLASS[self._eojgc][self._eojcc]
             #"manufacturer": "Mitsubishi",
@@ -88,10 +89,13 @@ class EchonetSensor(Entity):
     def state(self):
         """Return the state of the sensor."""
         if self._sensor_attributes[CONF_TYPE] == SENSOR_TYPE_TEMPERATURE:
-            if self._instance._update_data[self._op_code] == 126 or self._instance._update_data[self._op_code]  == None:
+            if self._op_code in self._instance._update_data:
+                if self._instance._update_data[self._op_code] == 126 or self._instance._update_data[self._op_code]  == None:
+                    return 'unavailable'
+                else:
+                    return self._instance._update_data[self._op_code]
+            else: 
                 return 'unavailable'
-            else:
-                return self._instance._update_data[self._op_code]
         elif self._op_code in self._instance._update_data:
             if isinstance(self._instance._update_data[self._op_code], (int,float)):
                 return self._instance._update_data[self._op_code] 

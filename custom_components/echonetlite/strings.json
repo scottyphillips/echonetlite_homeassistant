@@ -19,7 +19,7 @@
              "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
         },
         "progress": {
-             "user": "Discovering ECHONETLite devices.."
+             "discover": "Discovering ECHONETLite devices.."
         }
     },
     "options": {

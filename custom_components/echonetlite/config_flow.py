@@ -15,7 +15,12 @@ from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.util import Throttle
 import homeassistant.helpers.config_validation as cv
 from pychonet.HomeAirConditioner import ENL_FANSPEED, ENL_AIR_VERT, ENL_AIR_HORZ
-import pychonet as echonet
+from pychonet.lib.const import GET, SETC, ENL_SETMAP, ENL_GETMAP, ENL_UID
+from aioudp import UDPServer
+from pychonet import Factory
+from pychonet import ECHONETAPIClient
+from pychonet import HomeAirConditioner
+from pychonet import EchonetInstance
 from .const import DOMAIN, USER_OPTIONS
 
 
@@ -29,43 +34,53 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
-    _LOGGER.warning(f"IP address is {data['host']}")
-    instances = await hass.async_add_executor_job(echonet.discover, data["host"])
-    if len(instances) == 0:
-        raise CannotConnect
-    return {"host": data["host"], "title": data["title"], "instances": instances}
-
-
-async def discover_devices(hass: HomeAssistant, discovery_info: list):
-    # Then build default object and grab static such as UID and property maps...
-    for instance in discovery_info['instances']:
-         device = await hass.async_add_executor_job(echonet.EchonetInstance, instance['eojgc'], instance['eojcc'], instance['eojci'], instance['netaddr'])
-         device_data = await hass.async_add_executor_job(device.update, [0x83,0x9f,0x9e])
-         instance['getPropertyMap'] = device_data[0x9f]
-         instance['setPropertyMap'] = device_data[0x9e]
-         if device_data[0x83]:
-             instance['UID'] = await hass.async_add_executor_job(device.getIdentificationNumber)
-         else:
-             instance['UID'] = f'{instance["netaddr"]}-{instance["eojgc"]}{instance["eojcc"]}{instance["eojci"]}'
-    _LOGGER.debug(discovery_info)
-    # Return info that you want to store in the config entry.
-    return discovery_info
+    _LOGGER.debug(f"IP address is {user_input['host']}")
+    host = user_input['host']
+    server = None
+    if DOMAIN in hass.data: # maybe set up by config entry?
+        _LOGGER.debug(f"{hass.data[DOMAIN]} has already been setup..")
+        server = hass.data[DOMAIN]['api']
+    else:
+        udp = UDPServer()
+        loop = asyncio.get_event_loop()
+        udp.run("0.0.0.0",3610, loop=loop)
+        server = ECHONETAPIClient(server=udp,loop=loop)
+    
+    instance_list = []
+    _LOGGER.debug(f"Beginning ECHONET node discovery")
+    await server.discover(host)
+    
+    # Timeout after 3 seconds
+    for x in range(0,300):
+        await asyncio.sleep(0.01)
+        if 'discovered' in list(server._state[host]):
+             _LOGGER.debug(f"ECHONET Node Discovery Successful!")
+             break
+    state = server._state[host]
+    for eojgc in list(state['instances'].keys()):
+        for eojcc in list(state['instances'][eojgc].keys()):
+            for instance in list(state['instances'][eojgc][eojcc].keys()):
+                  _LOGGER.debug(f"instance is {instance}")
+                  await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
+                  _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
+                  getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
+                  setmap = state['instances'][eojgc][eojcc][instance][ENL_SETMAP]
+                  await server.getIdentificationNumber(host, eojgc, eojcc, instance)
+                  uid = state['instances'][eojgc][eojcc][instance][ENL_UID]
+                  _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} Identification number discovered!")
+                  instance_list.append({"host":host,"eojgc":eojgc,"eojcc":eojcc,"eojci":instance,"getmap":getmap,"setmap":setmap, "uid":uid})
+    return instance_list
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for echonetlite."""
+    host = None
+    title = None
     discover_task = None
-    discovery_info = {}
+    instance_list = None
     instances = None
     VERSION = 1
-            
-    async def _async_do_task(self, task):
-        self.discovery_info = await task  # A task that take some time to complete.
-        self.hass.async_create_task(
-             self.hass.config_entries.flow.async_configure(flow_id=self.flow_id)
-        )
-        return self.discovery_info        
             
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         errors = {}
@@ -74,43 +89,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA
             )
-        
         try:
-            self.discovery_info = await validate_input(self.hass, user_input)
+            self.instance_list = await validate_input(self.hass, user_input)
+            _LOGGER.debug("Node detected")
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
-            return await self.async_step_discover(user_input)
+            self.host = user_input["host"]
+            self.title = user_input["title"]
+            return await self.async_step_finish(user_input)
             
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
     
-    async def async_step_discover(self, user_input=None):
-        errors = {}
-        if not self.discover_task:
-             _LOGGER.debug('Step 1')
-             try: 
-                 self.discover_task = self.hass.async_create_task(self._async_do_task(discover_devices(self.hass, self.discovery_info)))
-             except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
-             else:
-                 return self.async_show_progress(step_id="discover", progress_action="user")
-        
-        return self.async_show_progress_done(next_step_id="finish")
-        
     async def async_step_finish(self, user_input=None):
-        #_LOGGER.debug("Step 4")
-        return self.async_create_entry(title=self.discovery_info["title"], data=self.discovery_info)
+        return self.async_create_entry(title=self.title, data={"instances": self.instance_list})
 
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
         return OptionsFlowHandler(config_entry)
-
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
@@ -127,7 +129,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         for instance in self._config_entry.data["instances"]:
            if instance['eojgc'] == 0x01 and instance['eojcc'] == 0x30:
                 for option in list(USER_OPTIONS.keys()):
-                    if option in instance['setPropertyMap']:
+                    if option in instance['setmap']:
                        data_schema_structure.update({vol.Optional(
                            USER_OPTIONS[option]['option'],
                            default=self._config_entry.options.get(USER_OPTIONS[option]['option']) if self._config_entry.options.get(USER_OPTIONS[option]['option']) is not None else [] ,
