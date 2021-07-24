@@ -227,7 +227,7 @@ class EchonetClimate(ClimateEntity):
 
 
     async def async_set_hvac_mode(self, hvac_mode):
-        _LOGGER.warning(self._connector._update_data)
+        # _LOGGER.warning(self._connector._update_data)
         """Set new operation mode (including off)"""
         if hvac_mode == "heat_cool":
             await self._connector._instance.setMode("auto")

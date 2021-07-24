@@ -79,19 +79,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if eojci not in list(server._state[host]["instances"][eojgc][eojcc]):
             server._state[host]["instances"][eojgc][eojcc].update({eojci:{ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}})
         
-        # detect HVAC
-        if eojgc == 1 and eojcc == 48:
-            _LOGGER.debug("HVAC being set up..")
-            echonetlite = HVACConnector(instance, hass.data[DOMAIN]['api'], entry)
-        else: 
-            echonetlite = ECHONETConnector(instance, hass.data[DOMAIN]['api'])
+        echonetlite = ECHONETConnector(instance, hass.data[DOMAIN]['api'], entry)
         await echonetlite.async_update()
-        _LOGGER.debug(f"Why is this failing???? {hass.data[DOMAIN]}")
         hass.data[DOMAIN][entry.entry_id].append({"instance": instance, "echonetlite":echonetlite})
                  
-    _LOGGER.debug(f"platform entry data - {entry.data}")
-    _LOGGER.debug(f"HASS Domain Data - {hass.data[DOMAIN]['api']._state}")
-    _LOGGER.debug(f"HASS Domain Entry ID- {hass.data[DOMAIN][entry.entry_id]}")
+    _LOGGER.debug(f"Plaform entry data - {entry.data}")
     
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)
     return True
@@ -114,26 +106,38 @@ async def update_listener(hass, entry):
                 else:
                      instance["echonetlite"]._user_options.update({ENL_FANSPEED : False})
 
-
-"""EchonetHVACAPIConnector is used to centralise API calls for climate entities per node"""
-class HVACConnector():
+"""EchonetAPIConnector is used to centralise API calls for  Echonet devices. API calls are aggregated per instance (not per node!)"""
+class ECHONETConnector():
     def __init__(self, instance, api, entry):
         self._host = instance['host']
+        self._instance = None
         self._eojgc = instance['eojgc']
         self._eojcc = instance['eojcc']
-        self._eojci = instance['eojci']        
+        self._eojci = instance['eojci']
+        self._update_flags = []
         self._update_data = {}
         self._api = api
-        self._getPropertyMap = api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_GETMAP]
-        self._setPropertyMap = api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_SETMAP]
-        self._update_flags = []
-        for value in HVAC_API_CONNECTOR_DEFAULT_FLAGS:
-            if value in self._getPropertyMap:
-                self._update_flags.append(value)
+        self._getPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_GETMAP]
+        self._setPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_SETMAP]
+
+        # Detect HVAC - eventually we will use factory here.
+        if self._eojgc == 1 and self._eojcc == 48:
+            for value in HVAC_API_CONNECTOR_DEFAULT_FLAGS:
+                if value in self._getPropertyMap:
+                    self._update_flags.append(value)
+            self._instance = echonet.HomeAirConditioner(self._host, self._api)
+        else:
+            self._update_flags = [ENL_STATUS]
+            for item in self._getPropertyMap:
+                if item not in list(EPC_SUPER.keys()):
+                   self._update_flags.append(item)
+            self._instance = echonet.EchonetInstance(self._host, self._eojgc, self._eojcc, self._eojci, self._api)
+
+        for item in self._update_flags:
+            self._update_data[item] = False
+                
         self._user_options = {ENL_FANSPEED: False, ENL_AUTO_DIRECTION: False, ENL_SWING_MODE: False, ENL_AIR_VERT: False, ENL_AIR_HORZ: False }
-        
-        
-        # Stich together user selectable options for fan + swing modes for HVAC #TODO - fix code repetition
+        # Stitch together user selectable options for fan + swing modes for HVAC #TODO - fix code repetition
         if entry.options.get("fan_settings") is not None: # check if options has been created
             if len(entry.options.get("fan_settings")) > 0: # if it has been created then check list length. 
                 self._user_options[ENL_FANSPEED] = entry.options.get("fan_settings")
@@ -143,57 +147,21 @@ class HVACConnector():
         if entry.options.get("swing_vert") is not None: # check if options has been created
             if len(entry.options.get("swing_vert")) > 0: 
                 self._user_options[ENL_AIR_VERT] = entry.options.get("swing_vert")
-        
-        for value in self._update_flags:
-            self._update_data[value] = False
-        self._update_data = {ENL_STATUS: 'Off'}
-        self._instance = echonet.HomeAirConditioner(self._host, self._api)
+
         self._uid = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_UID]
         if self._uid == None:
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
-       
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)   
-    async def async_update(self, **kwargs):
-        #_LOGGER.debug(f"commence polling ECHONET HVAC Instance")
-        update_data = await self._instance.update(self._update_flags)
-        if False not in list(update_data.values()):
-           # polling succeded. 
-           self._update_data = update_data
-        else:
-           _LOGGER.debug(f"polling ECHONET Generic Instance host {self._host} failed - data not updated {self._update_data}")
-           _LOGGER.debug(f"message list length is - {len(self._api._message_list)}")
-        return self._update_data
 
-"""EchonetAPIConnector is used to centralise API calls for generic Echonet devices. API calls are aggregated per instance (not per node!)"""
-class ECHONETConnector():
-    def __init__(self, instance, api):
-       self._host = instance['host']
-       self._eojgc = instance['eojgc']
-       self._eojcc = instance['eojcc']
-       self._eojci = instance['eojci'] 
-       self._api = api
-       _LOGGER.debug(f"initialisating generic ECHONET connector for host {self._host} - instanace {self._eojgc}-{self._eojcc}-{self._eojci}")    
-       self._update_data = {}
-       self._getPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_GETMAP]
-       self._setPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_SETMAP]
-       self._instance = echonet.EchonetInstance(self._host, self._eojgc, self._eojcc, self._eojci, self._api)
-       self._update_flags = [ENL_STATUS]
-       for item in self._getPropertyMap:
-            if item not in list(EPC_SUPER.keys()):
-                self._update_flags.append(item)
-                self._update_data[item] = False
-       self._uid = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_UID]
-       if self._uid == None:
-            self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
-          
     @Throttle(MIN_TIME_BETWEEN_UPDATES)   
     async def async_update(self, **kwargs):
-        update_data = await self._instance.update(self._update_flags)
-        if False not in list(update_data.values()):
-           # polling succeded. 
-           self._update_data = update_data
-        else:
-           _LOGGER.debug(f"polling ECHONET Generic Instance host {self._host} failed - data not updated {self._update_data}")
-           _LOGGER.debug(f"message list - {len(self._api._message_list)}")
+        for retry in range(1,4):
+            update_data = await self._instance.update(self._update_flags)
+            if False not in list(update_data.values()):
+               # polling succeded. 
+               self._update_data = update_data
+               return self._update_data
+            else:
+               _LOGGER.debug(f"polling ECHONET Instance host {self._host} timed out - Retry {retry} of 3")
+               _LOGGER.debug(f"message list length is - {len(self._api._message_list)}")
         return self._update_data
     

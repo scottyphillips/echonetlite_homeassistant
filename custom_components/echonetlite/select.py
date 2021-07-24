@@ -50,7 +50,7 @@ class EchonetSelect(SelectEntity):
     def device_info(self):
         return {
             "identifiers": {
-                  (DOMAIN, self._connector._uid, self._connector._eojgc, self._connector._eojgc, self._connector._eojci)
+                  (DOMAIN, self._connector._uid, self._connector._instance._eojgc, self._connector._instance._eojcc, self._connector._instance._eojci)
             },
             "name": EOJX_CLASS[self._connector._eojgc][self._connector._eojcc]
             #"manufacturer": "Mitsubishi",
