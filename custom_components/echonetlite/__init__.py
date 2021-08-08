@@ -158,10 +158,12 @@ class ECHONETConnector():
             update_data = await self._instance.update(self._update_flags)
             if False not in list(update_data.values()):
                # polling succeded. 
+               if retry > 1:
+                    _LOGGER.debug(f"polling ECHONET Instance host {self._host} succeeded - Retry {retry} of 3")
                self._update_data = update_data
                return self._update_data
             else:
                _LOGGER.debug(f"polling ECHONET Instance host {self._host} timed out - Retry {retry} of 3")
-               _LOGGER.debug(f"message list length is - {len(self._api._message_list)}")
+               _LOGGER.debug(f"Number of missed ECHONETLite msssages since reboot is - {len(self._api._message_list)}")
         return self._update_data
     
