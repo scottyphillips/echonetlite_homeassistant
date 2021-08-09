@@ -213,10 +213,10 @@ class EchonetClimate(ClimateEntity):
     def swing_mode(self):
         """Return the swing mode setting."""
         return self._connector._update_data[ENL_AIR_VERT] if ENL_AIR_VERT in self._connector._update_data else "unavailable"
-        
+
     async def async_set_swing_mode(self, swing_mode):
         """Set new swing mode."""
-        await self._connector._api.setAirflowVert(swing_mode)
+        await self._connector._instance.setAirflowVert(swing_mode)
         self._connector._update_data[ENL_AIR_VERT] = swing_mode
 
     async def async_set_temperature(self, **kwargs):
