@@ -198,7 +198,7 @@ class EchonetClimate(ClimateEntity):
 
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode."""
-        await self.hass.async_add_executor_job(self._connector._instance.setFanSpeed, fan_mode)
+        await self._connector._instance.setFanSpeed(fan_mode)
         self._connector._update_data[ENL_FANSPEED] = fan_mode
 
     @property
