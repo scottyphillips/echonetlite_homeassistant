@@ -17,10 +17,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         if entity['instance']['eojgc'] == 1 and entity['instance']['eojcc'] == 48: #Home Air Conditioner
             for op_code in entity['instance']['setmap']:
                 if op_code in HVAC_SELECT_OP_CODES:
-                     entities.append(EchonetSelect(hass, 
-                     entity['echonetlite'], 
-                     config, 
-                     op_code, 
+                     entities.append(EchonetSelect(hass,
+                     entity['echonetlite'],
+                     config,
+                     op_code,
                      HVAC_SELECT_OP_CODES[op_code]))
     async_add_entities(entities, True)
 
@@ -40,12 +40,12 @@ class EchonetSelect(SelectEntity):
         self._attr_current_option = self._connector._update_data[self._code]
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
         self._uid = f'{self._connector._uid}-{self._code}'
-    
+
     @property
     def unique_id(self):
          """Return a unique ID."""
-         return self._uid    
-         
+         return self._uid
+
     @property
     def device_info(self):
         return {
@@ -57,12 +57,12 @@ class EchonetSelect(SelectEntity):
             #"model": "",
             #"sw_version": "",
         }
-    
-    
+
+
     async def async_select_option(self, option: str):
-        await self._connector._instance.setMessage([{'EPC': self._code, 'PDC': 0x01, 'EDT': self._options[option]}])
+        await self._connector._instance.setMessage(self._code, self._options[option])
         self._attr_current_option = option
-        
+
     async def async_update(self):
         """Retrieve latest state."""
         await self._connector.async_update()
