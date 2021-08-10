@@ -7,16 +7,16 @@
 [![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
 
 
-A Home Assistant custom component for use with ECHONETLite compatible HVAC systems.
+A Home Assistant custom component for use with ECHONETLite compatible devices.
 This custom component makes use of the 'pychonet'
 Python library also written by yours truly:
 (https://github.com/scottyphillips/pychonet)
 
-**This component will set up the climate platform.**
+**This component will set up the climate, sensor and select platforms.**
 
 # Current working systems:
 Based upon feedback this custom component works with the following
-compatible ECHONETLite HVACs:
+compatible ECHONETLite Devices:
 
 * Mitsubishi MAC-568IF-E WiFi Adaptor connected to the following systems:
   * GE Series
@@ -30,6 +30,11 @@ compatible ECHONETLite HVACs:
      * MSZ-AP50VGD
   * Ducted
      * PEA-RP140GAA
+* 'MoekadenRoom' ECHONETLite Simulator: https://github.com/SonyCSL/MoekadenRoom
+     * Generic HVAC Climate
+     * Light Sensor
+     * Lock Sensor
+     * Temperature Sensor
 
 ## Installation - Enable ECHONET protocol
 This Custom Component makes use of the official Mitsubishi MAC-568IF-E WiFi
@@ -44,14 +49,21 @@ the 'ECHONET lite' protocol under the 'edit unit' settings.
 ## Installation - Home Assistant
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
 2. If you do not have a `custom_components` directory (folder) there, you need to create it.
-3. In the `custom_components` directory (folder) create a new folder called `mitsubishi`.
+3. In the `custom_components` directory (folder) create a new folder called `echonetlite`.
 4. Download _all_ the files from the `custom_components/echonetlite/` directory (folder) in this repository.
 5. Place the files you downloaded in the new directory (folder) you created.
 6. Restart Home Assistant and clear your browser cache
 7. Go to configuration -> integrations -> ADD INTEGRATION.
 5. Select the 'echonetlite' integration. Enter your IP address in the host field, and give the platform a name.
-6. Platform should automatically configure 'climate', and depending on your system will automatically configure 'sensor' and 'select'
-6. If you have additional HVACs to configure then repeat step 4.
+6. Platform should automatically configure 'climate', and depending on your system will automatically configure 'sensor' and 'select'.
+7. If you have additional HVACs to configure then repeat step 4.
+
+## Configuring Options for Fan and swing mode settings for supported hvac_modes.
+Once you have added the integration, you can go back to configueration -> integrations
+Under your ECHONETLite device click 'configure'
+Fine tune your required fan and swing mode settings. The integration will be able to determine what settings are supported for your system in question.
+NOTE: Selecting which specific options are suitable is a 'trial and errror' process as ECHONETLite does not provide a means of returning permittted values for these settings
+As soon as you configure your options and save, the settings will take effect.
 
 
 ## Hall of Fame
