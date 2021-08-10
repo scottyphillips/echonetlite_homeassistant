@@ -1,6 +1,6 @@
 """Constants for the echonetlite integration."""
 from homeassistant.const import CONF_ICON, CONF_NAME, CONF_TYPE
-from pychonet.HomeAirConditioner import ENL_FANSPEED, ENL_AIR_VERT, ENL_AIR_HORZ, FAN_SPEED, AIRFLOW_VERT, AIRFLOW_HORIZ, AUTO_DIRECTION, SWING_MODE
+from pychonet.HomeAirConditioner import ENL_FANSPEED, ENL_AIR_VERT, ENL_AIR_HORZ, ENL_AUTO_DIRECTION, ENL_SWING_MODE, FAN_SPEED, AIRFLOW_VERT, AIRFLOW_HORIZ, AUTO_DIRECTION, SWING_MODE
 
 DOMAIN = "echonetlite"
 
@@ -78,9 +78,23 @@ AIRFLOW_VERT_OPTIONS = {
     'lower':            'Lower'
 }
 
-USER_OPTIONS = {
-    ENL_FANSPEED: {'option' : 'fan_settings', 'option_list': FAN_SPEED_OPTIONS},
-    ENL_AIR_HORZ: {'option' : 'swing_horiz', 'option_list': AIRFLOW_HORIZ_OPTIONS},
-    ENL_AIR_VERT: {'option' : 'swing_vert', 'option_list': AIRFLOW_VERT_OPTIONS}
+AUTO_DIRECTION_OPTIONS = {
+    'auto':         'Auto',
+    'non-auto':     'Non-Auto',
+    'auto-vert':    'Auto-vert',
+    'auto-horiz':   'Auto-horiz'
 }
 
+SWING_MODE_OPTIONS = {
+    'vert':         'Vertical',
+    'horiz':        'Horizontal',
+    'vert-horiz':   'Vertical-Horizontal'
+}
+
+USER_OPTIONS = {
+    ENL_FANSPEED:   {'option' : 'fan_settings', 'option_list': FAN_SPEED_OPTIONS},
+    ENL_AIR_HORZ:   {'option' : 'swing_horiz', 'option_list': AIRFLOW_HORIZ_OPTIONS},
+    ENL_AIR_VERT:   {'option' : 'swing_vert', 'option_list': AIRFLOW_VERT_OPTIONS},
+    ENL_AUTO_DIRECTION: {'option' : 'auto_direction', 'option_list': AUTO_DIRECTION_OPTIONS},
+    ENL_SWING_MODE:     {'option' : 'swing_mode', 'option_list': SWING_MODE_OPTIONS},
+}

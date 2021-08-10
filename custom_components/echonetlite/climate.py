@@ -205,7 +205,7 @@ class EchonetClimate(ClimateEntity):
     def swing_modes(self):
         """Return the list of available swing modes."""
         if ENL_AIR_VERT in list(self._connector._user_options.keys()):
-           if self._connector._user_options[ENL_AIR_VERT ] is not False:
+           if self._connector._user_options[ENL_AIR_VERT] is not False:
                 return self._connector._user_options[ENL_AIR_VERT]
         return DEFAULT_SWING_MODES
 
