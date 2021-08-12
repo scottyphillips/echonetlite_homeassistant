@@ -86,6 +86,7 @@ AUTO_DIRECTION_OPTIONS = {
 }
 
 SWING_MODE_OPTIONS = {
+    'not-used':     'Not Used (Off)',
     'vert':         'Vertical',
     'horiz':        'Horizontal',
     'vert-horiz':   'Vertical-Horizontal'

@@ -28,13 +28,15 @@
             "init": {
                 "title": "ECHONET Lite HVAC Options",
                 "data": {
-                    "fan_settings": "Configure Fan Settings",
-                    "swing_horiz": "Configure Horizontal Swing Settings",
-                    "swing_vert": "Configure Vertical Swing Settings"
+                   "fan_settings": "Configure Fan settings",
+                   "swing_horiz": "Configure Horizontal Swing Settings",
+                   "swing_vert": "Configure Vertical Swing Settings",
+                   "auto_direction": "Configure Auto Direction",
+                   "swing_mode": "Configure Swing Mode"
                 },
                 "description": "Configure optional fan and swing mode settings"
                 }
             }
         },
-    "title": "ECHONET Lite"
+    "title": "ECHONETLite"
 }

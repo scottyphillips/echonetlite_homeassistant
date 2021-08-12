@@ -1,5 +1,5 @@
 {
-    "title": "echonetlite",
+    "title": "ECHONETLite",
     "description": "ECHONETLite HVAC Integration",
     "config": {
        "step": {
@@ -8,7 +8,7 @@
                  "host": "[%key:common::config_flow::data::host%]",
                  "title": "[%key:common::config_flow::data::title%]"
                }
-           }    
+           }
         },
         "error": {
             "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
@@ -32,7 +32,9 @@
                 "data": {
                    "fan_settings": "Configure fan settings",
                    "swing_horiz": "Configure Horizontal Swing Settings",
-                   "swing_vert": "Configure Vertical Swing Settings"
+                   "swing_vert": "Configure Vertical Swing Settings",
+                   "auto_direction": "Configure Auto Direction",
+                   "swing_mode": "Configure Swing Mode"
                 },
                 "description": "Configure Fan Settings"
             }
