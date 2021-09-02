@@ -1,0 +1,17 @@
+{
+  "domain": "echonetlite",
+  "name": "ECHONET Lite",
+  "config_flow": true,
+  "documentation": "https://www.github.com/scottyphillips/mitsubishi_hass",
+  "issues": "https://www.github.com/scottyphillips/mitsubishi_hass/issues",
+  "requirements": [
+    "pychonet==2.0.8",
+    "aio-udp-server"
+  ],
+  "dependencies": [],
+  "codeowners": [
+    "@scottyphillips"
+  ],
+  "version":  "2.0.0",
+  "iot_class": "local_polling"
+}

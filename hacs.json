@@ -1,6 +1,6 @@
 {
-  "name": "Mitsubishi Echonet Climate and Sensor Component",
-  "domains": ["climate", "sensor"],
-  "homeassistant": "0.110.4",
+  "name": "ECHONETLite Platform",
+  "domains": ["climate", "sensor", "select"],
+  "homeassistant": "core-2021.7.2",
   "iot_class": "Local Polling"
 }

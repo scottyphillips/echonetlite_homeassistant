@@ -1,0 +1,43 @@
+{
+    "title": "ECHONETLite",
+    "description": "ECHONETLite HVAC Integration",
+    "config": {
+       "step": {
+           "user": {
+              "data": {
+                 "host": "[%key:common::config_flow::data::host%]",
+                 "title": "[%key:common::config_flow::data::title%]"
+               }
+           }
+        },
+        "error": {
+            "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+            "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+            "unknown": "[%key:common::config_flow::error::unknown%]"
+        },
+        "abort": {
+             "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+        },
+        "progress": {
+             "discover": "Discovering ECHONETLite devices.."
+        }
+    },
+    "options": {
+            "error": {
+               "invalid_path": "Invalid Setting"
+            },
+        "step": {
+            "init": {
+                "title": "ECHONET Lite HVAC Options",
+                "data": {
+                   "fan_settings": "Configure fan settings",
+                   "swing_horiz": "Configure Horizontal Swing Settings",
+                   "swing_vert": "Configure Vertical Swing Settings",
+                   "auto_direction": "Configure Auto Direction",
+                   "swing_mode": "Configure Swing Mode"
+                },
+                "description": "Configure Fan Settings"
+            }
+        }
+    }
+}

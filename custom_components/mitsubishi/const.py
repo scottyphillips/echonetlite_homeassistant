@@ -20,4 +20,9 @@ SENSOR_TYPES = {
         CONF_ICON: "mdi:thermometer",
         CONF_TYPE: SENSOR_TYPE_TEMPERATURE,
     },
+    ATTR_TARGET_TEMPERATURE: {
+        CONF_NAME: "Target Temperature",
+        CONF_ICON: "mdi:thermometer",
+        CONF_TYPE: SENSOR_TYPE_TEMPERATURE,
+    },
 }
