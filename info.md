@@ -19,8 +19,11 @@ Platform | Description
 ![example][exampleimg]
 
 {% if not installed %}
-## Installation
+## Pre-installation - if previously installed versions prior to 3.0.1
+1. Delete 'mitsubishi' from your 'custom_components' directory
+2. Remove references to 'mitsubishi' from 'configuration.yaml'
 
+## Installation
 1. Click install and then reload Home Assistant.
 2. Platform 'echonetlite' should be added to 'custom_components' directory
 3. You may also need to clear your browser cache.

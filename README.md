@@ -46,6 +46,10 @@ the 'ECHONET lite' protocol under the 'edit unit' settings.
 
 ![echonet][echonetimg]
 
+## Installation - if previously installed versions prior to 3.0.1 (mitsubishi component)
+1. Delete 'mitsubishi' from your 'custom_components' directory
+2. Remove references to 'mitsubishi' from 'configuration.yaml'
+
 ## Installation - Home Assistant
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
 2. If you do not have a `custom_components` directory (folder) there, you need to create it.
