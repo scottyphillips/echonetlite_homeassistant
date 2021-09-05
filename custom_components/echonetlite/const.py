@@ -1,10 +1,10 @@
 """Constants for the echonetlite integration."""
-from homeassistant.const import CONF_ICON, CONF_NAME, CONF_TYPE
+from homeassistant.const import CONF_ICON, CONF_NAME, CONF_TYPE, DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY
+from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL_INCREASING
 from pychonet.HomeAirConditioner import ENL_FANSPEED, ENL_AIR_VERT, ENL_AIR_HORZ, ENL_AUTO_DIRECTION, ENL_SWING_MODE, FAN_SPEED, AIRFLOW_VERT, AIRFLOW_HORIZ, AUTO_DIRECTION, SWING_MODE
 
 DOMAIN = "echonetlite"
-
-SENSOR_TYPE_TEMPERATURE = "temperature"
+CONF_STATE_CLASS = ATTR_STATE_CLASS
 
 HVAC_SELECT_OP_CODES = {
         0xA0: FAN_SPEED,
@@ -17,13 +17,14 @@ HVAC_SELECT_OP_CODES = {
 ENL_SENSOR_OP_CODES = {
         0x00: {
             0x11 : {
-                0xE0: {CONF_ICON: "mdi:thermometer", CONF_TYPE: SENSOR_TYPE_TEMPERATURE},
+                0xE0: {CONF_ICON: "mdi:thermometer", CONF_TYPE: DEVICE_CLASS_TEMPERATURE, CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT},
             }
         },
         0x01: {
             0x30: {
-                0xBE: {CONF_ICON: "mdi:thermometer", CONF_TYPE: SENSOR_TYPE_TEMPERATURE},
-                0xBB: {CONF_ICON: "mdi:thermometer", CONF_TYPE: SENSOR_TYPE_TEMPERATURE}
+                0x85: {CONF_ICON: "mdi:flash", CONF_TYPE: DEVICE_CLASS_ENERGY, CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING},
+                0xBE: {CONF_ICON: "mdi:thermometer", CONF_TYPE: DEVICE_CLASS_TEMPERATURE, CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT},
+                0xBB: {CONF_ICON: "mdi:thermometer", CONF_TYPE: DEVICE_CLASS_TEMPERATURE, CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT}
             }
         },
         'default':  {CONF_ICON: None, CONF_TYPE: None},

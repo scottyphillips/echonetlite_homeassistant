@@ -14,20 +14,22 @@ from pychonet.lib.epc import EPC_CODE
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        if entity['instance']['eojgc'] == 1 and entity['instance']['eojcc'] == 48: #Home Air Conditioner
+        if entity['instance']['eojgc'] == 0x1 and entity['instance']['eojcc'] == 0x30: #Home Air Conditioner
             for op_code in entity['instance']['setmap']:
                 if op_code in HVAC_SELECT_OP_CODES:
                      entities.append(EchonetSelect(hass,
                      entity['echonetlite'],
                      config,
                      op_code,
-                     HVAC_SELECT_OP_CODES[op_code]))
+                     HVAC_SELECT_OP_CODES[op_code],
+                     config.title))
     async_add_entities(entities, True)
 
 class EchonetSelect(SelectEntity):
-    def __init__(self, hass, connector, config, code, options):
+    def __init__(self, hass, connector, config, code, options, name=None):
         """Initialize the select."""
-        self._connector= connector
+        self._device_name = name
+        self._connector = connector
         self._config = config
         self._code = code
         self._optimistic = False
@@ -52,7 +54,7 @@ class EchonetSelect(SelectEntity):
             "identifiers": {
                   (DOMAIN, self._connector._uid, self._connector._instance._eojgc, self._connector._instance._eojcc, self._connector._instance._eojci)
             },
-            "name": EOJX_CLASS[self._connector._eojgc][self._connector._eojcc]
+            "name": self._device_name 
             #"manufacturer": "Mitsubishi",
             #"model": "",
             #"sw_version": "",

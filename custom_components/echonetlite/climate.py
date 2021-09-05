@@ -71,6 +71,7 @@ class EchonetClimate(ClimateEntity):
     def __init__(self, name, connector, units: UnitSystem, fan_modes=None, swing_vert=None):
         """Initialize the climate device."""
         self._name = name
+        self._device_name = name
         self._connector = connector  # new line
         self._uid = self._connector._uid
         self._unit_of_measurement = units.temperature_unit
@@ -108,7 +109,7 @@ class EchonetClimate(ClimateEntity):
             "identifiers": {
                   (DOMAIN, self._connector._uid, self._connector._instance._eojgc, self._connector._instance._eojcc, self._connector._instance._eojci)
             },
-            "name": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc]
+            "name": self._device_name
             #"manufacturer": "Mitsubishi",
             #"model": "",
             #"sw_version": "",

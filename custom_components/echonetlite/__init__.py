@@ -18,7 +18,7 @@ from pychonet import Factory
 from pychonet import ECHONETAPIClient
 from pychonet import HomeAirConditioner
 from pychonet import EchonetInstance
-from pychonet.EchonetInstance import ENL_STATUS, ENL_SETMAP, ENL_GETMAP, ENL_UID
+from pychonet.EchonetInstance import ENL_STATUS, ENL_SETMAP, ENL_GETMAP, ENL_UID #TODO: ENL_CUMULATIVE_POWER
 from pychonet.HomeAirConditioner import (
     ENL_FANSPEED,
     ENL_AUTO_DIRECTION,
@@ -37,7 +37,7 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 
 HVAC_API_CONNECTOR_DEFAULT_FLAGS = [ENL_STATUS,
         ENL_FANSPEED, ENL_AUTO_DIRECTION, ENL_SWING_MODE,
-        ENL_AIR_VERT, ENL_AIR_HORZ, ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP]
+        ENL_AIR_VERT, ENL_AIR_HORZ, ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP] #TODO: ENL_CUMULATIVE_POWER
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -181,7 +181,7 @@ class ECHONETConnector():
                 self._user_options[ENL_SWING_MODE] = entry.options.get("swing_mode")
 
         self._uid = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_UID]
-        if self._uid == None:
+        if self._uid is None:
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
