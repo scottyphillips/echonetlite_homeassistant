@@ -14,7 +14,7 @@ from pychonet.lib.epc import EPC_CODE
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        if entity['instance']['eojgc'] == 0x1 and entity['instance']['eojcc'] == 0x30: #Home Air Conditioner
+        if entity['instance']['eojgc'] == 1 and entity['instance']['eojcc'] == 48: #Home Air Conditioner
             for op_code in entity['instance']['setmap']:
                 if op_code in HVAC_SELECT_OP_CODES:
                      entities.append(EchonetSelect(hass,
