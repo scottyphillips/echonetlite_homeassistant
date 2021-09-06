@@ -18,7 +18,7 @@ from pychonet import Factory
 from pychonet import ECHONETAPIClient
 from pychonet import HomeAirConditioner
 from pychonet import EchonetInstance
-from pychonet.EchonetInstance import ENL_STATUS, ENL_SETMAP, ENL_GETMAP, ENL_UID #TODO: ENL_CUMULATIVE_POWER
+from pychonet.EchonetInstance import ENL_GETMAP, ENL_SETMAP, ENL_UID, ENL_STATUS, ENL_CUMULATIVE_POWER
 from pychonet.HomeAirConditioner import (
     ENL_FANSPEED,
     ENL_AUTO_DIRECTION,
@@ -34,10 +34,12 @@ from pychonet.HomeAirConditioner import (
 PLATFORMS = ["sensor",'climate', 'select']
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
+MAX_UPDATE_BATCH_SIZE = 10
 
-HVAC_API_CONNECTOR_DEFAULT_FLAGS = [ENL_STATUS,
-        ENL_FANSPEED, ENL_AUTO_DIRECTION, ENL_SWING_MODE,
-        ENL_AIR_VERT, ENL_AIR_HORZ, ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP] #TODO: ENL_CUMULATIVE_POWER
+HVAC_API_CONNECTOR_DEFAULT_FLAGS = [
+    ENL_STATUS, ENL_FANSPEED, ENL_AUTO_DIRECTION, ENL_SWING_MODE, ENL_AIR_VERT, ENL_AIR_HORZ, ENL_HVAC_MODE,
+    ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP, ENL_CUMULATIVE_POWER
+]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -140,27 +142,37 @@ class ECHONETConnector():
         self._eojgc = instance['eojgc']
         self._eojcc = instance['eojcc']
         self._eojci = instance['eojci']
-        self._update_flags = []
+        self._update_flag_batches = []
         self._update_data = {}
         self._api = api
         self._getPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_GETMAP]
         self._setPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_SETMAP]
+        self._manufacturer = None
+        if "manufacturer" in instance:
+            self._manufacturer = instance["manufacturer"]
 
         # Detect HVAC - eventually we will use factory here.
+        update_flags_full_list = []
         if self._eojgc == 1 and self._eojcc == 48:
             for value in HVAC_API_CONNECTOR_DEFAULT_FLAGS:
                 if value in self._getPropertyMap:
-                    self._update_flags.append(value)
+                    update_flags_full_list.append(value)
             self._instance = echonet.HomeAirConditioner(self._host, self._api)
         else:
-            self._update_flags = [ENL_STATUS]
+            update_flags_full_list = [ENL_STATUS]
             for item in self._getPropertyMap:
                 if item not in list(EPC_SUPER.keys()):
-                   self._update_flags.append(item)
+                   update_flags_full_list.append(item)
             self._instance = echonet.EchonetInstance(self._host, self._eojgc, self._eojcc, self._eojci, self._api)
 
-        for item in self._update_flags:
-            self._update_data[item] = False
+        # Split list of codes into batches of 10
+        start_index = 0
+        full_list_length = len(update_flags_full_list)
+        
+        while start_index + MAX_UPDATE_BATCH_SIZE < full_list_length:
+            self._update_flag_batches.append(update_flags_full_list[start_index:start_index+MAX_UPDATE_BATCH_SIZE])
+            start_index += MAX_UPDATE_BATCH_SIZE
+        self._update_flag_batches.append(update_flags_full_list[start_index:full_list_length])
 
         self._user_options = {ENL_FANSPEED: False, ENL_AUTO_DIRECTION: False, ENL_SWING_MODE: False, ENL_AIR_VERT: False, ENL_AIR_HORZ: False }
         # Stitch together user selectable options for fan + swing modes for HVAC #TODO - fix code repetition
@@ -187,8 +199,16 @@ class ECHONETConnector():
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self, **kwargs):
         for retry in range(1,4):
-            update_data = await self._instance.update(self._update_flags)
-            if False not in list(update_data.values()):
+            update_data = {}
+            for flags in self._update_flag_batches:
+                batch_data = await self._instance.update(flags)
+                if batch_data is not False:
+                    if isinstance(batch_data, dict):
+                        update_data.update(batch_data)
+                    elif len(flags) == 1:
+                        update_data[flags[0]] = batch_data
+            
+            if len(update_data) > 0 and False not in list(update_data.values()):
                # polling succeded.
                if retry > 1:
                     _LOGGER.debug(f"polling ECHONET Instance host {self._host} succeeded - Retry {retry} of 3")

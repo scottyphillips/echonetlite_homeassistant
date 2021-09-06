@@ -52,7 +52,6 @@ class EchonetSensor(SensorEntity):
 
     def __init__(self, instance, op_code, attributes, name=None) -> None:
         """Initialize the sensor."""
-        self._device_name = name
         self._instance = instance
         self._op_code = op_code
         self._sensor_attributes = attributes
@@ -60,6 +59,7 @@ class EchonetSensor(SensorEntity):
         self._eojcc = self._instance._eojcc
         self._eojci = self._instance._eojci
         self._uid = f'{self._instance._host}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
+        self._device_name = name
         
         #Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
         if self._op_code in EPC_CODE[self._eojgc][self._eojcc].keys():
@@ -97,8 +97,8 @@ class EchonetSensor(SensorEntity):
             "identifiers": {
                 (DOMAIN, self._instance._uid, self._instance._eojgc, self._instance._eojcc, self._instance._eojci)
             },
-            "name": self._device_name
-            #"manufacturer": "Mitsubishi",
+            "name": self._device_name,
+            "manufacturer": self._instance._manufacturer
             #"model": "",
             #"sw_version": "",
         }

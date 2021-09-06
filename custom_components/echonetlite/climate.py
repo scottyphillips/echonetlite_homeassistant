@@ -109,8 +109,8 @@ class EchonetClimate(ClimateEntity):
             "identifiers": {
                   (DOMAIN, self._connector._uid, self._connector._instance._eojgc, self._connector._instance._eojcc, self._connector._instance._eojci)
             },
-            "name": self._device_name
-            #"manufacturer": "Mitsubishi",
+            "name": self._device_name,
+            "manufacturer": self._connector._manufacturer
             #"model": "",
             #"sw_version": "",
         }
