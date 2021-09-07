@@ -21,13 +21,14 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                      entity['echonetlite'],
                      config,
                      op_code,
-                     HVAC_SELECT_OP_CODES[op_code]))
+                     HVAC_SELECT_OP_CODES[op_code],
+                     config.title))
     async_add_entities(entities, True)
 
 class EchonetSelect(SelectEntity):
-    def __init__(self, hass, connector, config, code, options):
+    def __init__(self, hass, connector, config, code, options, name=None):
         """Initialize the select."""
-        self._connector= connector
+        self._connector = connector
         self._config = config
         self._code = code
         self._optimistic = False
@@ -40,6 +41,7 @@ class EchonetSelect(SelectEntity):
         self._attr_current_option = self._connector._update_data[self._code]
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
         self._uid = f'{self._connector._uid}-{self._code}'
+        self._device_name = name
 
     @property
     def unique_id(self):
@@ -52,8 +54,8 @@ class EchonetSelect(SelectEntity):
             "identifiers": {
                   (DOMAIN, self._connector._uid, self._connector._instance._eojgc, self._connector._instance._eojcc, self._connector._instance._eojci)
             },
-            "name": EOJX_CLASS[self._connector._eojgc][self._connector._eojcc]
-            #"manufacturer": "Mitsubishi",
+            "name": self._device_name,
+            "manufacturer": self._connector._manufacturer
             #"model": "",
             #"sw_version": "",
         }

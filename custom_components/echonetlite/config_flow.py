@@ -15,7 +15,7 @@ from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.util import Throttle
 import homeassistant.helpers.config_validation as cv
 from pychonet.HomeAirConditioner import ENL_FANSPEED, ENL_AIR_VERT, ENL_AIR_HORZ
-from pychonet.lib.const import GET, SETC, ENL_SETMAP, ENL_GETMAP, ENL_UID
+from pychonet.lib.const import GET, SETC, ENL_SETMAP, ENL_GETMAP, ENL_UID, ENL_MANUFACTURER
 from aioudp import UDPServer
 from pychonet import Factory
 from pychonet import ECHONETAPIClient
@@ -67,10 +67,12 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
                   _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
                   getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
                   setmap = state['instances'][eojgc][eojcc][instance][ENL_SETMAP]
-                  await server.getIdentificationNumber(host, eojgc, eojcc, instance)
+                  
+                  await server.getIdentificationInformation(host, eojgc, eojcc, instance)
                   uid = state['instances'][eojgc][eojcc][instance][ENL_UID]
+                  manufacturer = 'Mitsubishi' #state['instances'][eojgc][eojcc][instance][ENL_MANUFACTURER]
                   _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} Identification number discovered!")
-                  instance_list.append({"host":host,"eojgc":eojgc,"eojcc":eojcc,"eojci":instance,"getmap":getmap,"setmap":setmap, "uid":uid})
+                  instance_list.append({"host":host,"eojgc":eojgc,"eojcc":eojcc,"eojci":instance,"getmap":getmap,"setmap":setmap,"uid":uid,"manufacturer":manufacturer})
     return instance_list
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
