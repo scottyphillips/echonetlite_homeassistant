@@ -5,7 +5,7 @@
   "documentation": "https://www.github.com/scottyphillips/mitsubishi_hass",
   "issues": "https://www.github.com/scottyphillips/mitsubishi_hass/issues",
   "requirements": [
-    "pychonet==2.0.11",
+    "pychonet==2.0.13",
     "aio-udp-server"
   ],
   "dependencies": [],

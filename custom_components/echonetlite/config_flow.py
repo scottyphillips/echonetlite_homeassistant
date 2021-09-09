@@ -67,10 +67,16 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
                   _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
                   getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
                   setmap = state['instances'][eojgc][eojcc][instance][ENL_SETMAP]
-                  
+
                   await server.getIdentificationInformation(host, eojgc, eojcc, instance)
                   uid = state['instances'][eojgc][eojcc][instance][ENL_UID]
-                  manufacturer = 'Mitsubishi' #state['instances'][eojgc][eojcc][instance][ENL_MANUFACTURER]
+                  manufacturer = state['instances'][eojgc][eojcc][instance][ENL_MANUFACTURER]
+                  if not isinstance(manufacturer, str):
+                      # If unable to resolve the manufacturer,
+                      # the raw identification number will be passed as int.
+                      _LOGGER.warn(f"{host} - Unable to resolve the manufacturer name - {manufacturer}. Please report the manufacturer name of your device at the issue tracker on GitHub!")
+                      manufacturer = None
+
                   _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} Identification number discovered!")
                   instance_list.append({"host":host,"eojgc":eojgc,"eojcc":eojcc,"eojci":instance,"getmap":getmap,"setmap":setmap,"uid":uid,"manufacturer":manufacturer})
     return instance_list
