@@ -1,6 +1,7 @@
 {
   "domain": "echonetlite",
   "name": "ECHONET Lite",
+  "issue_tracker": "https://github.com/scottyphillips/echonetlite_homeassistant/issues",
   "config_flow": true,
   "documentation": "https://www.github.com/scottyphillips/mitsubishi_hass",
   "requirements": [
