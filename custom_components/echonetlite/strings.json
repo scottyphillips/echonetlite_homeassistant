@@ -1,6 +1,5 @@
 {
     "title": "ECHONETLite",
-    "description": "ECHONETLite HVAC Integration",
     "config": {
        "step": {
            "user": {
