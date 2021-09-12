@@ -63,7 +63,7 @@ the 'ECHONET lite' protocol under the 'edit unit' settings.
 7. If you have additional HVACs to configure then repeat step 4.
 
 ## Configuring Options for Fan and swing mode settings for supported hvac_modes.
-Once you have added the integration, you can go back to configueration -> integrations
+Once you have added the integration, you can go back to configuration -> integrations
 Under your ECHONETLite device click 'configure'
 Fine tune your required fan and swing mode settings. The integration will be able to determine what settings are supported for your system in question.
 NOTE: Selecting which specific options are suitable is a 'trial and errror' process as ECHONETLite does not provide a means of returning permittted values for these settings
