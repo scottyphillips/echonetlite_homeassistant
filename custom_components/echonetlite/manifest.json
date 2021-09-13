@@ -3,7 +3,7 @@
   "name": "ECHONET Lite",
   "issue_tracker": "https://github.com/scottyphillips/echonetlite_homeassistant/issues",
   "config_flow": true,
-  "documentation": "https://www.github.com/scottyphillips/mitsubishi_hass",
+  "documentation": "https://www.github.com/scottyphillips/echonetlite_homeassistant",
   "requirements": [
     "pychonet==2.0.13",
     "aio-udp-server"
