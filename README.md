@@ -71,6 +71,8 @@ As soon as you configure your options and save, the settings will take effect.
 
 
 ## Hall of Fame
+Thanks to Jason Nader for all the quality of life updates to the codebase and doco. 
+
 Thanks to khcnz (Karl Chaffey) and gvs for helping refector the old code
 and contributing to testing.
 
