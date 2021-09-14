@@ -1,20 +1,14 @@
-import functools
 import logging
-_LOGGER = logging.getLogger(__name__)
-
-import voluptuous as vol
-
-from homeassistant.components import select
 from homeassistant.components.select import SelectEntity
-from homeassistant.const import CONF_HOST, CONF_IP_ADDRESS, CONF_NAME
 from .const import HVAC_SELECT_OP_CODES, DOMAIN
-from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc import EPC_CODE
+
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        if entity['instance']['eojgc'] == 1 and entity['instance']['eojcc'] == 48: #Home Air Conditioner
+        if entity['instance']['eojgc'] == 1 and entity['instance']['eojcc'] == 48:  # Home Air Conditioner
             for op_code in entity['instance']['setmap']:
                 if op_code in HVAC_SELECT_OP_CODES:
                      entities.append(EchonetSelect(hass,

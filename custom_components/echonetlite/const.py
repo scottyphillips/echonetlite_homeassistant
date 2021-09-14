@@ -4,7 +4,7 @@ from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_MEASUR
 from pychonet.HomeAirConditioner import (
     ENL_FANSPEED,
     ENL_AIR_VERT,
-    ENL_AIR_HORZ, 
+    ENL_AIR_HORZ,
     ENL_AUTO_DIRECTION,
     ENL_SWING_MODE,
     FAN_SPEED,
