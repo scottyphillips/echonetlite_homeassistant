@@ -19,6 +19,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:

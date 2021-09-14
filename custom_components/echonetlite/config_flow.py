@@ -11,16 +11,11 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.util import Throttle
 import homeassistant.helpers.config_validation as cv
-from pychonet.HomeAirConditioner import ENL_FANSPEED, ENL_AIR_VERT, ENL_AIR_HORZ
-from pychonet.lib.const import GET, SETC, ENL_SETMAP, ENL_GETMAP, ENL_UID, ENL_MANUFACTURER
+from pychonet.lib.const import ENL_SETMAP, ENL_GETMAP, ENL_UID, ENL_MANUFACTURER
 from aioudp import UDPServer
-from pychonet import Factory
+# from pychonet import Factory
 from pychonet import ECHONETAPIClient
-from pychonet import HomeAirConditioner
-from pychonet import EchonetInstance
 from .const import DOMAIN, USER_OPTIONS
 
 
@@ -34,12 +29,13 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
+
 async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
     _LOGGER.debug(f"IP address is {user_input['host']}")
     host = user_input['host']
     server = None
-    if DOMAIN in hass.data: # maybe set up by config entry?
+    if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug(f"{hass.data[DOMAIN]} has already been setup..")
         server = hass.data[DOMAIN]['api']
     else:
@@ -62,24 +58,34 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     for eojgc in list(state['instances'].keys()):
         for eojcc in list(state['instances'][eojgc].keys()):
             for instance in list(state['instances'][eojgc][eojcc].keys()):
-                  _LOGGER.debug(f"instance is {instance}")
-                  await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
-                  _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
-                  getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
-                  setmap = state['instances'][eojgc][eojcc][instance][ENL_SETMAP]
+                _LOGGER.debug(f"instance is {instance}")
+                await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
+                _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
+                getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
+                setmap = state['instances'][eojgc][eojcc][instance][ENL_SETMAP]
 
-                  await server.getIdentificationInformation(host, eojgc, eojcc, instance)
-                  uid = state['instances'][eojgc][eojcc][instance][ENL_UID]
-                  manufacturer = state['instances'][eojgc][eojcc][instance][ENL_MANUFACTURER]
-                  if not isinstance(manufacturer, str):
-                      # If unable to resolve the manufacturer,
-                      # the raw identification number will be passed as int.
-                      _LOGGER.warn(f"{host} - Unable to resolve the manufacturer name - {manufacturer}. Please report the manufacturer name of your device at the issue tracker on GitHub!")
-                      manufacturer = None
+                await server.getIdentificationInformation(host, eojgc, eojcc, instance)
+                uid = state['instances'][eojgc][eojcc][instance][ENL_UID]
+                manufacturer = state['instances'][eojgc][eojcc][instance][ENL_MANUFACTURER]
+                if not isinstance(manufacturer, str):
+                    # If unable to resolve the manufacturer,
+                    # the raw identification number will be passed as int.
+                    _LOGGER.warn(f"{host} - Unable to resolve the manufacturer name - {manufacturer}. Please report the manufacturer name of your device at the issue tracker on GitHub!")
+                    manufacturer = None
 
-                  _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} Identification number discovered!")
-                  instance_list.append({"host":host,"eojgc":eojgc,"eojcc":eojcc,"eojci":instance,"getmap":getmap,"setmap":setmap,"uid":uid,"manufacturer":manufacturer})
+                _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} Identification number discovered!")
+                instance_list.append({
+                    "host" :host,
+                    "eojgc": eojgc,
+                    "eojcc": eojcc,
+                    "eojci": instance,
+                    "getmap": getmap,
+                    "setmap": setmap,
+                    "uid": uid,
+                    "manufacturer": manufacturer
+                })
     return instance_list
+
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for echonetlite."""
@@ -122,8 +128,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry):
         return OptionsFlowHandler(config_entry)
 
+
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
+
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config):
@@ -136,19 +144,19 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         # Handle HVAC User configurable options
         for instance in self._config_entry.data["instances"]:
            if instance['eojgc'] == 0x01 and instance['eojcc'] == 0x30:
-                for option in list(USER_OPTIONS.keys()):
-                    if option in instance['setmap']:
-                        default = []
-                        if self._config_entry.options.get(USER_OPTIONS[option]['option']) is not None:
-                            default = self._config_entry.options.get(USER_OPTIONS[option]['option'])
-                        data_schema_structure.update({
-                            vol.Optional(
-                                USER_OPTIONS[option]['option'],
-                                default
-                            ): cv.multi_select(
-                                USER_OPTIONS[option]['option_list']
-                            )
-                        })
+               for option in list(USER_OPTIONS.keys()):
+                   if option in instance['setmap']:
+                       default = []
+                       if self._config_entry.options.get(USER_OPTIONS[option]['option']) is not None:
+                           default = self._config_entry.options.get(USER_OPTIONS[option]['option'])
+                       data_schema_structure.update({
+                           vol.Optional(
+                               USER_OPTIONS[option]['option'],
+                               default
+                           ): cv.multi_select(
+                               USER_OPTIONS[option]['option_list']
+                           )
+                       })
 
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
