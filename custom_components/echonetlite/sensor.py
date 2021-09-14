@@ -30,14 +30,26 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         if eojgc == 1 and eojcc == 48:
             for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity['instance']['getmap']:
-                    entities.append(EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code], config.title))
+                    entities.append(
+                        EchonetSensor(
+                            entity['echonetlite'],
+                            op_code,
+                            ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code],
+                            config.title
+                        )
+                    )
         else:  # handle other ECHONET instances
             for op_code in EPC_CODE[eojgc][eojcc]:
                 if eojgc in ENL_SENSOR_OP_CODES.keys():
                     if eojcc in ENL_SENSOR_OP_CODES[eojgc].keys():
                         if op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
                             entities.append(
-                                EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code], config.title)
+                                EchonetSensor(
+                                    entity['echonetlite'],
+                                    op_code,
+                                    ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code],
+                                    config.title
+                                )
                             )
                         else:
                             entities.append(

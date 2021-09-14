@@ -47,11 +47,11 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
         loop = asyncio.get_event_loop()
         udp.run("0.0.0.0",3610, loop=loop)
         server = ECHONETAPIClient(server=udp,loop=loop)
-    
+
     instance_list = []
     _LOGGER.debug(f"Beginning ECHONET node discovery")
     await server.discover(host)
-    
+
     # Timeout after 3 seconds
     for x in range(0,300):
         await asyncio.sleep(0.01)
@@ -89,7 +89,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     instance_list = None
     instances = None
     VERSION = 1
-            
+
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         errors = {}
         """Handle the initial step."""
@@ -109,11 +109,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.host = user_input["host"]
             self.title = user_input["title"]
             return await self.async_step_finish(user_input)
-            
+
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
-    
+
     async def async_step_finish(self, user_input=None):
         return self.async_create_entry(title=self.title, data={"instances": self.instance_list})
 
@@ -128,21 +128,28 @@ class CannotConnect(HomeAssistantError):
 class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config):
         self._config_entry = config
-        
+
     async def async_step_init(self, user_input=None):
         """Manage the options."""
         data_schema_structure = {}
-        
+
         # Handle HVAC User configurable options
         for instance in self._config_entry.data["instances"]:
            if instance['eojgc'] == 0x01 and instance['eojcc'] == 0x30:
                 for option in list(USER_OPTIONS.keys()):
                     if option in instance['setmap']:
-                       data_schema_structure.update({vol.Optional(
-                           USER_OPTIONS[option]['option'],
-                           default=self._config_entry.options.get(USER_OPTIONS[option]['option']) if self._config_entry.options.get(USER_OPTIONS[option]['option']) is not None else [] ,
-                        ):cv.multi_select(USER_OPTIONS[option]['option_list'])})
-               
+                        default = []
+                        if self._config_entry.options.get(USER_OPTIONS[option]['option']) is not None:
+                            default = self._config_entry.options.get(USER_OPTIONS[option]['option'])
+                        data_schema_structure.update({
+                            vol.Optional(
+                                USER_OPTIONS[option]['option'],
+                                default
+                            ): cv.multi_select(
+                                USER_OPTIONS[option]['option_list']
+                            )
+                        })
+
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
         return self.async_show_form(
