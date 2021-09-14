@@ -26,7 +26,7 @@ from pychonet.HomeAirConditioner import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = ["sensor", 'climate', 'select']
+PLATFORMS = ["sensor", 'climate', 'select', 'light']
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 MAX_UPDATE_BATCH_SIZE = 10
