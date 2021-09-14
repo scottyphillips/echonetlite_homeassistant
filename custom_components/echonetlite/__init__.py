@@ -143,7 +143,7 @@ async def update_listener(hass, entry):
                     instance["echonetlite"]._user_options.update({ENL_FANSPEED: False})
 
             if entry.options.get("swing_horiz") is not None:
-                if len(entry.options.get("swing_horiz")) > 0:  
+                if len(entry.options.get("swing_horiz")) > 0:
                     instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: entry.options.get("swing_horiz")})
                 else:
                     instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: False})

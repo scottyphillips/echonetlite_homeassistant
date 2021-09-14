@@ -2,18 +2,15 @@
 import logging
 
 from homeassistant.const import (
-    CONF_ICON, CONF_NAME, CONF_TYPE, CONF_IP_ADDRESS, CONF_SENSORS,
-    DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, 
+    CONF_ICON, CONF_TYPE,
+    DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY,
     TEMP_CELSIUS, ENERGY_WATT_HOUR,
     STATE_UNAVAILABLE
 )
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import StateType
 
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
-from pychonet.lib.eojx import EOJX_CLASS
-from pychonet.EchonetInstance import ENL_GETMAP
 from .const import (
     DOMAIN,
     ENL_SENSOR_OP_CODES,
@@ -28,22 +25,28 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         _LOGGER.debug(entity)
         eojgc = entity['instance']['eojgc']
         eojcc = entity['instance']['eojcc']
-        
-        #Home Air Conditioner we dont bother exposing all sensors
-        if eojgc == 1 and eojcc == 48: 
+
+        # Home Air Conditioner we dont bother exposing all sensors
+        if eojgc == 1 and eojcc == 48:
             for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity['instance']['getmap']:
                     entities.append(EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code], config.title))
-        else: #handle other ECHONET instances
+        else:  # handle other ECHONET instances
             for op_code in EPC_CODE[eojgc][eojcc]:
                 if eojgc in ENL_SENSOR_OP_CODES.keys():
                     if eojcc in ENL_SENSOR_OP_CODES[eojgc].keys():
                         if op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
-                            entities.append(EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code], config.title))
+                            entities.append(
+                                EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code], config.title)
+                            )
                         else:
-                            entities.append(EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title))
+                            entities.append(
+                                EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
+                            )
                 elif op_code in list(entity['echonetlite']._update_flags):
-                    entities.append(EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title))
+                    entities.append(
+                        EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
+                    )
     async_add_entities(entities, True)
 
 
@@ -60,15 +63,15 @@ class EchonetSensor(SensorEntity):
         self._eojci = self._instance._eojci
         self._uid = f'{self._instance._host}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
         self._device_name = name
-        
-        #Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
+
+        # Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
         if self._op_code in EPC_CODE[self._eojgc][self._eojcc].keys():
             self._name = f"{name} {EPC_CODE[self._eojgc][self._eojcc][self._op_code]}"
         elif self._op_code in EPC_SUPER.keys():
             self._name = f"{name} {EPC_SUPER[self._op_code]}"
         else:
             self._name = f"{name} self._sensor_attributes[CONF_TYPE]"
-        
+
         if self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_TEMPERATURE:
             self._unit_of_measurement = TEMP_CELSIUS
         elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_ENERGY:
@@ -88,8 +91,8 @@ class EchonetSensor(SensorEntity):
 
     @property
     def unique_id(self):
-         """Return a unique ID."""
-         return self._uid
+        """Return a unique ID."""
+        return self._uid
 
     @property
     def device_info(self):
@@ -99,8 +102,8 @@ class EchonetSensor(SensorEntity):
             },
             "name": self._device_name,
             "manufacturer": self._instance._manufacturer
-            #"model": "",
-            #"sw_version": "",
+            # "model": "",
+            # "sw_version": "",
         }
 
     @property
@@ -112,13 +115,13 @@ class EchonetSensor(SensorEntity):
                     return STATE_UNAVAILABLE
                 else:
                     return self._instance._update_data[self._op_code]
-            else: 
+            else:
                 return STATE_UNAVAILABLE
         elif self._op_code in self._instance._update_data:
-            if isinstance(self._instance._update_data[self._op_code], (int,float)):
-                return self._instance._update_data[self._op_code] 
+            if isinstance(self._instance._update_data[self._op_code], (int, float)):
+                return self._instance._update_data[self._op_code]
             if len(self._instance._update_data[self._op_code]) < 255:
-                return self._instance._update_data[self._op_code] 
+                return self._instance._update_data[self._op_code]
             else:
                 return STATE_UNAVAILABLE
         return None
