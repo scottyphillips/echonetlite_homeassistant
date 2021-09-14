@@ -5,14 +5,10 @@ import pychonet as echonet
 from pychonet.lib.epc import EPC_SUPER
 from datetime import timedelta
 import asyncio
-
-_LOGGER = logging.getLogger(__name__)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
-
 from .const import DOMAIN
-
 from aioudp import UDPServer
 from pychonet import Factory
 from pychonet import ECHONETAPIClient
@@ -31,6 +27,7 @@ from pychonet.HomeAirConditioner import (
     ENL_HVAC_OUT_TEMP
 )
 
+_LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["sensor",'climate', 'select']
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
@@ -52,7 +49,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.debug(f"{hass.data[DOMAIN]} has already been setup..")
         server = hass.data[DOMAIN]['api']
         hass.data[DOMAIN].update({entry.entry_id: []})
-    else: #setup API
+    else:  # setup API
         hass.data.setdefault(DOMAIN, {})
         hass.data[DOMAIN].update({entry.entry_id: []})
         udp = UDPServer()
@@ -63,27 +60,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     for instance in entry.data["instances"]:
         echonetlite = None
-        host =   instance["host"]
-        eojgc =  instance["eojgc"]
-        eojcc =  instance["eojcc"]
-        eojci =  instance["eojci"]
+        host = instance["host"]
+        eojgc = instance["eojgc"]
+        eojcc = instance["eojcc"]
+        eojci = instance["eojci"]
         getmap = instance["getmap"]
         setmap = instance["setmap"]
-        uid =    instance["uid"]
+        uid = instance["uid"]
 
         # manually update API states using config entry data
         if host not in list(server._state):
             server._state[host] = {"instances": {eojgc: {eojcc: {eojci: {ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}}}}}
         if eojgc not in list(server._state[host]["instances"]):
-            server._state[host]["instances"].update({eojgc:{eojcc:{eojci:{ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}}}})
+            server._state[host]["instances"].update({eojgc:{eojcc:{eojci: {ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}}}})
         if eojcc not in list(server._state[host]["instances"][eojgc]):
-            server._state[host]["instances"][eojgc].update({eojcc:{eojci:{ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}}})
+            server._state[host]["instances"][eojgc].update({eojcc:{eojci: {ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}}})
         if eojci not in list(server._state[host]["instances"][eojgc][eojcc]):
-            server._state[host]["instances"][eojgc][eojcc].update({eojci:{ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}})
+            server._state[host]["instances"][eojgc][eojcc].update({eojci: {ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}})
 
         echonetlite = ECHONETConnector(instance, hass.data[DOMAIN]['api'], entry)
         await echonetlite.async_update()
-        hass.data[DOMAIN][entry.entry_id].append({"instance": instance, "echonetlite":echonetlite})
+        hass.data[DOMAIN][entry.entry_id].append({"instance": instance, "echonetlite": echonetlite})
 
     _LOGGER.debug(f"Plaform entry data - {entry.data}")
 
@@ -168,14 +165,15 @@ class ECHONETConnector():
         # Split list of codes into batches of 10
         start_index = 0
         full_list_length = len(update_flags_full_list)
-        
+
         while start_index + MAX_UPDATE_BATCH_SIZE < full_list_length:
             self._update_flag_batches.append(update_flags_full_list[start_index:start_index+MAX_UPDATE_BATCH_SIZE])
             start_index += MAX_UPDATE_BATCH_SIZE
         self._update_flag_batches.append(update_flags_full_list[start_index:full_list_length])
 
         self._user_options = {ENL_FANSPEED: False, ENL_AUTO_DIRECTION: False, ENL_SWING_MODE: False, ENL_AIR_VERT: False, ENL_AIR_HORZ: False }
-        # Stitch together user selectable options for fan + swing modes for HVAC #TODO - fix code repetition
+        # Stitch together user selectable options for fan + swing modes for HVAC
+        # TODO - fix code repetition
         if entry.options.get("fan_settings") is not None: # check if options has been created
             if len(entry.options.get("fan_settings")) > 0: # if it has been created then check list length.
                 self._user_options[ENL_FANSPEED] = entry.options.get("fan_settings")
@@ -207,14 +205,14 @@ class ECHONETConnector():
                         update_data.update(batch_data)
                     elif len(flags) == 1:
                         update_data[flags[0]] = batch_data
-            
+
             if len(update_data) > 0 and False not in list(update_data.values()):
-               # polling succeded.
-               if retry > 1:
+                # polling succeded.
+                if retry > 1:
                     _LOGGER.debug(f"polling ECHONET Instance host {self._host} succeeded - Retry {retry} of 3")
-               self._update_data = update_data
-               return self._update_data
+                self._update_data = update_data
+                return self._update_data
             else:
-               _LOGGER.debug(f"polling ECHONET Instance host {self._host} timed out - Retry {retry} of 3")
-               _LOGGER.debug(f"Number of missed ECHONETLite msssages since reboot is - {len(self._api._message_list)}")
+                _LOGGER.debug(f"polling ECHONET Instance host {self._host} timed out - Retry {retry} of 3")
+                _LOGGER.debug(f"Number of missed ECHONETLite msssages since reboot is - {len(self._api._message_list)}")
         return self._update_data

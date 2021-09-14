@@ -52,7 +52,7 @@ class EchonetSelect(SelectEntity):
     def device_info(self):
         return {
             "identifiers": {(
-                DOMAIN, 
+                DOMAIN,
                 self._connector._uid,
                 self._connector._instance._eojgc,
                 self._connector._instance._eojcc,
@@ -63,7 +63,6 @@ class EchonetSelect(SelectEntity):
             # "model": "",
             # "sw_version": "",
         }
-
 
     async def async_select_option(self, option: str):
         await self._connector._instance.setMessage(self._code, self._options[option])
