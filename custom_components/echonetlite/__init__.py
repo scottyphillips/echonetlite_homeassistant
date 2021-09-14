@@ -53,9 +53,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].update({entry.entry_id: []})
         udp = UDPServer()
         loop = asyncio.get_event_loop()
-        udp.run("0.0.0.0",3610, loop=loop)
-        server = ECHONETAPIClient(server=udp,loop=loop)
-        hass.data[DOMAIN].update({"api":server})
+        udp.run("0.0.0.0", 3610, loop=loop)
+        server = ECHONETAPIClient(server=udp, loop=loop)
+        hass.data[DOMAIN].update({"api": server})
 
     for instance in entry.data["instances"]:
         echonetlite = None
@@ -100,7 +100,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     eojci: {
                         ENL_SETMAP: setmap,
                         ENL_GETMAP: getmap,
-                        ENL_UID:uid
+                        ENL_UID: uid
                     }
                 }
             })
@@ -135,36 +135,36 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 # TODO FIX CODE REPETITION
 async def update_listener(hass, entry):
     for instance in hass.data[DOMAIN][entry.entry_id]:
-       if instance['instance']['eojgc'] == 1 and instance['instance']['eojcc'] == 48:
+        if instance['instance']['eojgc'] == 1 and instance['instance']['eojcc'] == 48:
             if entry.options.get("fan_settings") is not None: # check if options has been created
                 if len(entry.options.get("fan_settings")) > 0: # if it has been created then check list length.
-                     instance["echonetlite"]._user_options.update({ENL_FANSPEED: entry.options.get("fan_settings")})
+                    instance["echonetlite"]._user_options.update({ENL_FANSPEED: entry.options.get("fan_settings")})
                 else:
-                     instance["echonetlite"]._user_options.update({ENL_FANSPEED: False})
+                    instance["echonetlite"]._user_options.update({ENL_FANSPEED: False})
 
             if entry.options.get("swing_horiz") is not None: # check if options has been created
                 if len(entry.options.get("swing_horiz")) > 0: # if it has been created then check list length.
-                     instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: entry.options.get("swing_horiz")})
+                    instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: entry.options.get("swing_horiz")})
                 else:
-                     instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: False})
+                    instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: False})
 
             if entry.options.get("swing_vert") is not None: # check if options has been created
                 if len(entry.options.get("swing_vert")) > 0: # if it has been created then check list length.
-                     instance["echonetlite"]._user_options.update({ENL_AIR_VERT: entry.options.get("swing_vert")})
+                    instance["echonetlite"]._user_options.update({ENL_AIR_VERT: entry.options.get("swing_vert")})
                 else:
-                     instance["echonetlite"]._user_options.update({ENL_AIR_VERT: False})
+                    instance["echonetlite"]._user_options.update({ENL_AIR_VERT: False})
 
             if entry.options.get("auto_direction") is not None: # check if options has been created
                 if len(entry.options.get("auto_direction")) > 0: # if it has been created then check list length.
-                     instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION: entry.options.get("auto_direction")})
+                    instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION: entry.options.get("auto_direction")})
                 else:
-                     instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION: False})
+                    instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION: False})
 
             if entry.options.get("swing_mode") is not None: # check if options has been created
                 if len(entry.options.get("swing_mode")) > 0: # if it has been created then check list length.
-                     instance["echonetlite"]._user_options.update({ENL_SWING_MODE: entry.options.get("swing_mode")})
+                    instance["echonetlite"]._user_options.update({ENL_SWING_MODE: entry.options.get("swing_mode")})
                 else:
-                     instance["echonetlite"]._user_options.update({ENL_SWING_MODE: False})
+                    instance["echonetlite"]._user_options.update({ENL_SWING_MODE: False})
 
 
 class ECHONETConnector():
@@ -196,7 +196,7 @@ class ECHONETConnector():
             update_flags_full_list = [ENL_STATUS]
             for item in self._getPropertyMap:
                 if item not in list(EPC_SUPER.keys()):
-                   update_flags_full_list.append(item)
+                    update_flags_full_list.append(item)
             self._instance = echonet.EchonetInstance(self._host, self._eojgc, self._eojcc, self._eojci, self._api)
 
         # Split list of codes into batches of 10
@@ -208,22 +208,28 @@ class ECHONETConnector():
             start_index += MAX_UPDATE_BATCH_SIZE
         self._update_flag_batches.append(update_flags_full_list[start_index:full_list_length])
 
-        self._user_options = {ENL_FANSPEED: False, ENL_AUTO_DIRECTION: False, ENL_SWING_MODE: False, ENL_AIR_VERT: False, ENL_AIR_HORZ: False }
+        self._user_options = {
+            ENL_FANSPEED: False,
+            ENL_AUTO_DIRECTION: False,
+            ENL_SWING_MODE: False,
+            ENL_AIR_VERT: False,
+            ENL_AIR_HORZ: False
+        }
         # Stitch together user selectable options for fan + swing modes for HVAC
         # TODO - fix code repetition
-        if entry.options.get("fan_settings") is not None: # check if options has been created
-            if len(entry.options.get("fan_settings")) > 0: # if it has been created then check list length.
+        if entry.options.get("fan_settings") is not None:  # check if options has been created
+            if len(entry.options.get("fan_settings")) > 0:  # if it has been created then check list length.
                 self._user_options[ENL_FANSPEED] = entry.options.get("fan_settings")
         if entry.options.get("swing_horiz") is not None:
             if len(entry.options.get("swing_horiz")) > 0:
                 self._user_options[ENL_AIR_HORZ] = entry.options.get("swing_horiz")
-        if entry.options.get("swing_vert") is not None: # check if options has been created
+        if entry.options.get("swing_vert") is not None:  # check if options has been created
             if len(entry.options.get("swing_vert")) > 0:
                 self._user_options[ENL_AIR_VERT] = entry.options.get("swing_vert")
-        if entry.options.get("auto_direction") is not None: # check if options has been created
+        if entry.options.get("auto_direction") is not None:  # check if options has been created
             if len(entry.options.get("auto_direction")) > 0:
                 self._user_options[ENL_AUTO_DIRECTION] = entry.options.get("auto_direction")
-        if entry.options.get("swing_mode") is not None: # check if options has been created
+        if entry.options.get("swing_mode") is not None:  # check if options has been created
             if len(entry.options.get("swing_mode")) > 0:
                 self._user_options[ENL_SWING_MODE] = entry.options.get("swing_mode")
 
@@ -233,7 +239,7 @@ class ECHONETConnector():
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self, **kwargs):
-        for retry in range(1,4):
+        for retry in range(1, 4):
             update_data = {}
             for flags in self._update_flag_batches:
                 batch_data = await self._instance.update(flags)
