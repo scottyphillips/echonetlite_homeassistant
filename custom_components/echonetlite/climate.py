@@ -48,8 +48,8 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     """Set up entry."""
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
-        if entity['instance']['eojgc'] == 0x01 and  entity['instance']['eojcc'] == 0x30: #Home Air Conditioner
-             entities.append(EchonetClimate(config_entry.title, entity['echonetlite'], hass.config.units))
+        if entity['instance']['eojgc'] == 0x01 and entity['instance']['eojcc'] == 0x30:  # Home Air Conditioner
+            entities.append(EchonetClimate(config_entry.title, entity['echonetlite'], hass.config.units))
     async_add_devices(entities, True)
 
 
@@ -70,7 +70,7 @@ class EchonetClimate(ClimateEntity):
             self._support_flags = self._support_flags | SUPPORT_FAN_MODE
         if ENL_AIR_VERT in list(self._connector._setPropertyMap):
             self._support_flags = self._support_flags | SUPPORT_SWING_MODE
-        self._hvac_modes =  DEFAULT_HVAC_MODES
+        self._hvac_modes = DEFAULT_HVAC_MODES
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
@@ -93,9 +93,12 @@ class EchonetClimate(ClimateEntity):
     @property
     def device_info(self):
         return {
-            "identifiers": {
-                  (DOMAIN, self._connector._uid, self._connector._instance._eojgc, self._connector._instance._eojcc, self._connector._instance._eojci)
-            },
+            "identifiers": {(
+                DOMAIN, self._connector._uid,
+                self._connector._instance._eojgc,
+                self._connector._instance._eojcc,
+                self._connector._instance._eojci
+            )},
             "name": self._device_name,
             "manufacturer": self._connector._manufacturer
             #"model": "",
