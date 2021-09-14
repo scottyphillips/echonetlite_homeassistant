@@ -10,10 +10,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
 from .const import DOMAIN
 from aioudp import UDPServer
-from pychonet import Factory
+# from pychonet import Factory
 from pychonet import ECHONETAPIClient
-from pychonet import HomeAirConditioner
-from pychonet import EchonetInstance
 from pychonet.EchonetInstance import ENL_GETMAP, ENL_SETMAP, ENL_UID, ENL_STATUS, ENL_CUMULATIVE_POWER
 from pychonet.HomeAirConditioner import (
     ENL_FANSPEED,
@@ -28,7 +26,7 @@ from pychonet.HomeAirConditioner import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = ["sensor",'climate', 'select']
+PLATFORMS = ["sensor", 'climate', 'select']
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 MAX_UPDATE_BATCH_SIZE = 10
@@ -38,6 +36,7 @@ HVAC_API_CONNECTOR_DEFAULT_FLAGS = [
     ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP, ENL_CUMULATIVE_POWER
 ]
 
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
     host = None
@@ -45,7 +44,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     loop = None
     server = None
 
-    if DOMAIN in hass.data: # maybe set up by config entry?
+    if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug(f"{hass.data[DOMAIN]} has already been setup..")
         server = hass.data[DOMAIN]['api']
         hass.data[DOMAIN].update({entry.entry_id: []})
@@ -70,13 +69,49 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         # manually update API states using config entry data
         if host not in list(server._state):
-            server._state[host] = {"instances": {eojgc: {eojcc: {eojci: {ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}}}}}
+            server._state[host] = {
+                "instances": {
+                    eojgc: {
+                        eojcc: {
+                            eojci: {
+                                ENL_SETMAP: setmap,
+                                ENL_GETMAP: getmap,
+                                ENL_UID: uid
+                            }
+                        }
+                    }
+                }
+            }
         if eojgc not in list(server._state[host]["instances"]):
-            server._state[host]["instances"].update({eojgc:{eojcc:{eojci: {ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}}}})
+            server._state[host]["instances"].update({
+                eojgc: {
+                    eojcc: {
+                        eojci: {
+                            ENL_SETMAP: setmap,
+                            ENL_GETMAP: getmap,
+                            ENL_UID: uid
+                        }
+                    }
+                }
+            })
         if eojcc not in list(server._state[host]["instances"][eojgc]):
-            server._state[host]["instances"][eojgc].update({eojcc:{eojci: {ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}}})
+            server._state[host]["instances"][eojgc].update({
+                eojcc: {
+                    eojci: {
+                        ENL_SETMAP: setmap,
+                        ENL_GETMAP: getmap,
+                        ENL_UID:uid
+                    }
+                }
+            })
         if eojci not in list(server._state[host]["instances"][eojgc][eojcc]):
-            server._state[host]["instances"][eojgc][eojcc].update({eojci: {ENL_SETMAP:setmap, ENL_GETMAP:getmap, ENL_UID:uid}})
+            server._state[host]["instances"][eojgc][eojcc].update({
+                eojci: {
+                    ENL_SETMAP: setmap,
+                    ENL_GETMAP: getmap,
+                    ENL_UID: uid
+                }
+            })
 
         echonetlite = ECHONETConnector(instance, hass.data[DOMAIN]['api'], entry)
         await echonetlite.async_update()
@@ -103,36 +138,38 @@ async def update_listener(hass, entry):
        if instance['instance']['eojgc'] == 1 and instance['instance']['eojcc'] == 48:
             if entry.options.get("fan_settings") is not None: # check if options has been created
                 if len(entry.options.get("fan_settings")) > 0: # if it has been created then check list length.
-                     instance["echonetlite"]._user_options.update({ENL_FANSPEED : entry.options.get("fan_settings")})
+                     instance["echonetlite"]._user_options.update({ENL_FANSPEED: entry.options.get("fan_settings")})
                 else:
-                     instance["echonetlite"]._user_options.update({ENL_FANSPEED : False})
+                     instance["echonetlite"]._user_options.update({ENL_FANSPEED: False})
 
             if entry.options.get("swing_horiz") is not None: # check if options has been created
                 if len(entry.options.get("swing_horiz")) > 0: # if it has been created then check list length.
-                     instance["echonetlite"]._user_options.update({ENL_AIR_HORZ : entry.options.get("swing_horiz")})
+                     instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: entry.options.get("swing_horiz")})
                 else:
-                     instance["echonetlite"]._user_options.update({ENL_AIR_HORZ : False})
+                     instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: False})
 
             if entry.options.get("swing_vert") is not None: # check if options has been created
                 if len(entry.options.get("swing_vert")) > 0: # if it has been created then check list length.
-                     instance["echonetlite"]._user_options.update({ENL_AIR_VERT : entry.options.get("swing_vert")})
+                     instance["echonetlite"]._user_options.update({ENL_AIR_VERT: entry.options.get("swing_vert")})
                 else:
-                     instance["echonetlite"]._user_options.update({ENL_AIR_VERT : False})
+                     instance["echonetlite"]._user_options.update({ENL_AIR_VERT: False})
 
             if entry.options.get("auto_direction") is not None: # check if options has been created
                 if len(entry.options.get("auto_direction")) > 0: # if it has been created then check list length.
-                     instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION : entry.options.get("auto_direction")})
+                     instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION: entry.options.get("auto_direction")})
                 else:
-                     instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION : False})
+                     instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION: False})
 
             if entry.options.get("swing_mode") is not None: # check if options has been created
                 if len(entry.options.get("swing_mode")) > 0: # if it has been created then check list length.
-                     instance["echonetlite"]._user_options.update({ENL_SWING_MODE : entry.options.get("swing_mode")})
+                     instance["echonetlite"]._user_options.update({ENL_SWING_MODE: entry.options.get("swing_mode")})
                 else:
-                     instance["echonetlite"]._user_options.update({ENL_SWING_MODE : False})
+                     instance["echonetlite"]._user_options.update({ENL_SWING_MODE: False})
 
-"""EchonetAPIConnector is used to centralise API calls for  Echonet devices. API calls are aggregated per instance (not per node!)"""
+
 class ECHONETConnector():
+    """EchonetAPIConnector is used to centralise API calls for  Echonet devices.
+    API calls are aggregated per instance (not per node!)"""
     def __init__(self, instance, api, entry):
         self._host = instance['host']
         self._instance = None
