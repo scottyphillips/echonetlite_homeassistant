@@ -155,7 +155,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         data_schema_structure.update({
                             vol.Optional(
                                 USER_OPTIONS[option]['option'],
-                                default = option_default
+                                default=option_default
                             ): cv.multi_select(
                                 USER_OPTIONS[option]['option_list']
                             )
