@@ -136,32 +136,32 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def update_listener(hass, entry):
     for instance in hass.data[DOMAIN][entry.entry_id]:
         if instance['instance']['eojgc'] == 1 and instance['instance']['eojcc'] == 48:
-            if entry.options.get("fan_settings") is not None: # check if options has been created
-                if len(entry.options.get("fan_settings")) > 0: # if it has been created then check list length.
+            if entry.options.get("fan_settings") is not None:  # check if options has been created
+                if len(entry.options.get("fan_settings")) > 0:  # if it has been created then check list length.
                     instance["echonetlite"]._user_options.update({ENL_FANSPEED: entry.options.get("fan_settings")})
                 else:
                     instance["echonetlite"]._user_options.update({ENL_FANSPEED: False})
 
-            if entry.options.get("swing_horiz") is not None: # check if options has been created
-                if len(entry.options.get("swing_horiz")) > 0: # if it has been created then check list length.
+            if entry.options.get("swing_horiz") is not None:
+                if len(entry.options.get("swing_horiz")) > 0:  
                     instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: entry.options.get("swing_horiz")})
                 else:
                     instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: False})
 
-            if entry.options.get("swing_vert") is not None: # check if options has been created
-                if len(entry.options.get("swing_vert")) > 0: # if it has been created then check list length.
+            if entry.options.get("swing_vert") is not None:
+                if len(entry.options.get("swing_vert")) > 0:
                     instance["echonetlite"]._user_options.update({ENL_AIR_VERT: entry.options.get("swing_vert")})
                 else:
                     instance["echonetlite"]._user_options.update({ENL_AIR_VERT: False})
 
-            if entry.options.get("auto_direction") is not None: # check if options has been created
-                if len(entry.options.get("auto_direction")) > 0: # if it has been created then check list length.
+            if entry.options.get("auto_direction") is not None:
+                if len(entry.options.get("auto_direction")) > 0:
                     instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION: entry.options.get("auto_direction")})
                 else:
                     instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION: False})
 
-            if entry.options.get("swing_mode") is not None: # check if options has been created
-                if len(entry.options.get("swing_mode")) > 0: # if it has been created then check list length.
+            if entry.options.get("swing_mode") is not None:
+                if len(entry.options.get("swing_mode")) > 0:
                     instance["echonetlite"]._user_options.update({ENL_SWING_MODE: entry.options.get("swing_mode")})
                 else:
                     instance["echonetlite"]._user_options.update({ENL_SWING_MODE: False})
