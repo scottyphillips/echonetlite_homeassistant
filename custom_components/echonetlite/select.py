@@ -5,19 +5,22 @@ from pychonet.lib.epc import EPC_CODE
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
         if entity['instance']['eojgc'] == 1 and entity['instance']['eojcc'] == 48:  # Home Air Conditioner
             for op_code in entity['instance']['setmap']:
                 if op_code in HVAC_SELECT_OP_CODES:
-                     entities.append(EchonetSelect(hass,
-                     entity['echonetlite'],
-                     config,
-                     op_code,
-                     HVAC_SELECT_OP_CODES[op_code],
-                     config.title))
+                    entities.append(EchonetSelect(hass,
+                        entity['echonetlite'],
+                        config,
+                        op_code,
+                        HVAC_SELECT_OP_CODES[op_code],
+                        config.title)
+                    )
     async_add_entities(entities, True)
+
 
 class EchonetSelect(SelectEntity):
     def __init__(self, hass, connector, config, code, options, name=None):
@@ -39,8 +42,8 @@ class EchonetSelect(SelectEntity):
 
     @property
     def unique_id(self):
-         """Return a unique ID."""
-         return self._uid
+        """Return a unique ID."""
+        return self._uid
 
     @property
     def device_info(self):
@@ -50,8 +53,8 @@ class EchonetSelect(SelectEntity):
             },
             "name": self._device_name,
             "manufacturer": self._connector._manufacturer
-            #"model": "",
-            #"sw_version": "",
+            # "model": "",
+            # "sw_version": "",
         }
 
 
