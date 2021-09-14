@@ -41,19 +41,19 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     else:
         udp = UDPServer()
         loop = asyncio.get_event_loop()
-        udp.run("0.0.0.0",3610, loop=loop)
-        server = ECHONETAPIClient(server=udp,loop=loop)
+        udp.run("0.0.0.0", 3610, loop=loop)
+        server = ECHONETAPIClient(server=udp, loop=loop)
 
     instance_list = []
-    _LOGGER.debug(f"Beginning ECHONET node discovery")
+    _LOGGER.debug("Beginning ECHONET node discovery")
     await server.discover(host)
 
     # Timeout after 3 seconds
-    for x in range(0,300):
+    for x in range(0, 300):
         await asyncio.sleep(0.01)
         if 'discovered' in list(server._state[host]):
-             _LOGGER.debug(f"ECHONET Node Discovery Successful!")
-             break
+            _LOGGER.debug("ECHONET Node Discovery Successful!")
+            break
     state = server._state[host]
     for eojgc in list(state['instances'].keys()):
         for eojcc in list(state['instances'][eojgc].keys()):
@@ -70,12 +70,15 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
                 if not isinstance(manufacturer, str):
                     # If unable to resolve the manufacturer,
                     # the raw identification number will be passed as int.
-                    _LOGGER.warn(f"{host} - Unable to resolve the manufacturer name - {manufacturer}. Please report the manufacturer name of your device at the issue tracker on GitHub!")
+                    _LOGGER.warn(
+                        f"{host} - Unable to resolve the manufacturer name - {manufacturer}. " +
+                        "Please report the manufacturer name of your device at the issue tracker on GitHub!"
+                    )
                     manufacturer = None
 
                 _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} Identification number discovered!")
                 instance_list.append({
-                    "host" :host,
+                    "host": host,
                     "eojgc": eojgc,
                     "eojcc": eojcc,
                     "eojci": instance,
@@ -143,20 +146,20 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         # Handle HVAC User configurable options
         for instance in self._config_entry.data["instances"]:
-           if instance['eojgc'] == 0x01 and instance['eojcc'] == 0x30:
-               for option in list(USER_OPTIONS.keys()):
-                   if option in instance['setmap']:
-                       default = []
-                       if self._config_entry.options.get(USER_OPTIONS[option]['option']) is not None:
-                           default = self._config_entry.options.get(USER_OPTIONS[option]['option'])
-                       data_schema_structure.update({
-                           vol.Optional(
-                               USER_OPTIONS[option]['option'],
-                               default
-                           ): cv.multi_select(
-                               USER_OPTIONS[option]['option_list']
-                           )
-                       })
+            if instance['eojgc'] == 0x01 and instance['eojcc'] == 0x30:
+                for option in list(USER_OPTIONS.keys()):
+                    if option in instance['setmap']:
+                        default = []
+                        if self._config_entry.options.get(USER_OPTIONS[option]['option']) is not None:
+                            default = self._config_entry.options.get(USER_OPTIONS[option]['option'])
+                        data_schema_structure.update({
+                            vol.Optional(
+                                USER_OPTIONS[option]['option'],
+                                default
+                            ): cv.multi_select(
+                                USER_OPTIONS[option]['option_list']
+                            )
+                        })
 
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
