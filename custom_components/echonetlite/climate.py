@@ -1,57 +1,42 @@
 import logging
 
-_LOGGER = logging.getLogger(__name__)
-
 from pychonet.HomeAirConditioner import (
     ENL_STATUS,
     ENL_FANSPEED,
-    ENL_AUTO_DIRECTION,
-    ENL_SWING_MODE,
     ENL_AIR_VERT,
-    ENL_AIR_HORZ,
     ENL_HVAC_MODE,
     ENL_HVAC_SET_TEMP,
     ENL_HVAC_ROOM_TEMP,
-    ENL_HVAC_OUT_TEMP
 )
 
-from pychonet.EchonetInstance import ENL_SETMAP, ENL_GETMAP
-from pychonet.lib.eojx import EOJX_CLASS
+from pychonet.EchonetInstance import ENL_GETMAP
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.util.unit_system import UnitSystem
 from homeassistant.components.climate.const import (
-    ATTR_TARGET_TEMP_HIGH,
-    ATTR_TARGET_TEMP_LOW,
     SUPPORT_TARGET_TEMPERATURE,
     SUPPORT_FAN_MODE,
     SUPPORT_SWING_MODE,
-    ATTR_FAN_MODES,
-    ATTR_SWING_MODES,
     CURRENT_HVAC_OFF,
     CURRENT_HVAC_HEAT,
     CURRENT_HVAC_COOL,
     CURRENT_HVAC_DRY,
     CURRENT_HVAC_IDLE,
     CURRENT_HVAC_FAN,
-    HVAC_MODE_OFF,
     HVAC_MODE_HEAT,
     HVAC_MODE_COOL,
     HVAC_MODE_HEAT_COOL,
-    HVAC_MODE_AUTO,
     HVAC_MODE_DRY,
     HVAC_MODE_FAN_ONLY,
 )
 from homeassistant.const import (
-    TEMP_CELSIUS,
-    TEMP_FAHRENHEIT,
     ATTR_TEMPERATURE,
-    CONF_HOST,
-    CONF_IP_ADDRESS,
-    CONF_NAME,
     PRECISION_WHOLE,
 )
 from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
+
 SUPPORT_FLAGS = 0
 
 DEFAULT_FAN_MODES = ['auto', 'minimum', 'low', 'medium-low', 'medium', 'medium-high', 'high', 'very-high', 'max']
