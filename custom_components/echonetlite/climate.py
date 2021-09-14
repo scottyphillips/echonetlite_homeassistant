@@ -40,19 +40,21 @@ _LOGGER = logging.getLogger(__name__)
 SUPPORT_FLAGS = 0
 
 DEFAULT_FAN_MODES = ['auto', 'minimum', 'low', 'medium-low', 'medium', 'medium-high', 'high', 'very-high', 'max']
-DEFAULT_HVAC_MODES = ["heat", "cool", "dry", "fan_only", "heat_cool", "off"]
-DEFAULT_SWING_MODES = ['upper', 'upper-central','central', 'lower-central', 'lower']
+DEFAULT_HVAC_MODES = ['heat', 'cool', 'dry', 'fan_only', 'heat_cool', 'off']
+DEFAULT_SWING_MODES = ['upper', 'upper-central', 'central', 'lower-central', 'lower']
+
 
 async def async_setup_entry(hass, config_entry, async_add_devices):
     """Set up entry."""
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
-        if entity['instance']['eojgc'] == 0x01 and  entity['instance']['eojcc'] == 0x30 : #Home Air Conditioner
+        if entity['instance']['eojgc'] == 0x01 and  entity['instance']['eojcc'] == 0x30: #Home Air Conditioner
              entities.append(EchonetClimate(config_entry.title, entity['echonetlite'], hass.config.units))
     async_add_devices(entities, True)
 
-"""Representation of an ECHONETLite climate device."""
+
 class EchonetClimate(ClimateEntity):
+    """Representation of an ECHONETLite climate device."""
     def __init__(self, name, connector, units: UnitSystem, fan_modes=None, swing_vert=None):
         """Initialize the climate device."""
         self._name = name
@@ -210,7 +212,6 @@ class EchonetClimate(ClimateEntity):
         if kwargs.get(ATTR_TEMPERATURE) is not None:
             await self._connector._instance.setOperationalTemperature(kwargs.get(ATTR_TEMPERATURE))
             self._connector._update_data[ENL_HVAC_SET_TEMP] =  kwargs.get(ATTR_TEMPERATURE)
-
 
     async def async_set_hvac_mode(self, hvac_mode):
         # _LOGGER.warning(self._connector._update_data)
