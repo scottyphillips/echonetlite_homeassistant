@@ -125,14 +125,20 @@ class EchonetClimate(ClimateEntity):
         """Return the current temperature."""
         getmap = self._connector._api._state[self._connector._instance._host]['instances'][1][48][1][ENL_GETMAP]
         if ENL_HVAC_ROOM_TEMP in getmap:
-            return self._connector._update_data[ENL_HVAC_ROOM_TEMP] if ENL_HVAC_ROOM_TEMP in self._connector._update_data else 'unavailable'
+            if ENL_HVAC_ROOM_TEMP in self._connector._update_data:
+                return self._connector._update_data[ENL_HVAC_ROOM_TEMP]
+            else:
+                return 'unavailable'
         else:
             return self._connector._update_data[ENL_HVAC_SET_TEMP]
 
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        return self._connector._update_data[ENL_HVAC_SET_TEMP] if ENL_HVAC_SET_TEMP in self._connector._update_data else 'unavailable'
+        if ENL_HVAC_SET_TEMP in self._connector._update_data:
+            return self._connector._update_data[ENL_HVAC_SET_TEMP]
+        else:
+            return 'unavailable'
 
     @property
     def target_temperature_step(self):
