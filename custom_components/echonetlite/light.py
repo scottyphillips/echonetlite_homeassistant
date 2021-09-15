@@ -37,6 +37,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     """Set up entry."""
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
+        _LOGGER.debug("Found ECHONET Light")
         if entity['instance']['eojgc'] == 0x02 and  entity['instance']['eojcc'] == 0x90 : #General Lighting
              entities.append(EchonetLight(config_entry.title, entity['echonetlite']))
     async_add_devices(entities, True)
@@ -80,7 +81,7 @@ class EchonetLight(LightEntity):
             "identifiers": {
                   (DOMAIN, self._connector._uid, self._connector._instance._eojgc, self._connector._instance._eojcc, self._connector._instance._eojci)
             },
-            "name": self._device_name,
+            "name": self._name,
             "manufacturer": self._connector._manufacturer
             #"model": "",
             #"sw_version": "",
@@ -101,7 +102,7 @@ class EchonetLight(LightEntity):
         """Return true if the device is on."""
         return True if self._connector._update_data[ENL_STATUS] == "On" else False
 
-    async def async_turn_on(self, kwargs):
+    async def async_turn_on(self, **kwargs):
         """Turn on."""
         await self._connector._instance.on()
 
