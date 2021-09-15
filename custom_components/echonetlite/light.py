@@ -27,6 +27,7 @@ from homeassistant.const import (
 from .const import DOMAIN
 SUPPORT_FLAGS = 0
 
+DEFAULT_BRIGHTNESS_SCALE = 255
 MIN_MIREDS = 153
 MAX_MIREDS = 500
 DEVICE_SCALE = 100
@@ -150,7 +151,7 @@ class EchonetLight(LightEntity):
         mired_steps = ( self.max_mireds() - self.min_mireds() ) / float(len(self._echonet_mireds))
         
         # get the current echonet mireds
-        color_temp = self._connector._update_data[ENL_COLOR_TEMP] if ENL_COLOR_TEMP in selmired_stepsf._connector._update_data else 0
+        color_temp = self._connector._update_data[ENL_COLOR_TEMP] if ENL_COLOR_TEMP in self._connector._update_data else 0
         if color_temp in self._echonet_mireds:
             self._attr_color_temp = round( self._echonet_mireds.index(color_temp) * mired_steps ) + MIN_MIREDS
         else:
