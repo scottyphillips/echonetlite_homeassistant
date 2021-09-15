@@ -153,6 +153,6 @@ class EchonetLight(LightEntity):
         color_temp = self._connector._update_data[ENL_COLOR_TEMP] if ENL_COLOR_TEMP in selmired_stepsf._connector._update_data else 0
         if color_temp in self._echonet_mireds:
             self._attr_color_temp = round( self._echonet_mireds.index(color_temp) * mired_steps ) + MIN_MIREDS
-        else
+        else:
             self._attr_color_temp = MIN_MIREDS
         return self._attr_color_temp
