@@ -57,7 +57,7 @@ class EchonetLight(LightEntity):
         if ENL_COLOR_TEMP in list(self._connector._setPropertyMap):
             self._support_flags = self._support_flags | COLOR_MODE_COLOR_TEMP
         
-        self._echonet_mireds = [68, 67, 66, 64, 65] coolest to warmest
+        self._echonet_mireds = [68, 67, 66, 64, 65]  # coolest to warmest
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
