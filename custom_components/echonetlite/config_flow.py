@@ -74,7 +74,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
                         f"{host} - Unable to resolve the manufacturer name - {manufacturer}. " +
                         "Please report the manufacturer name of your device at the issue tracker on GitHub!"
                     )
-                    manufacturer = None
+                    manufacturer = "ECHONETLite"
 
                 _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} Identification number discovered!")
                 instance_list.append({
@@ -155,7 +155,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         data_schema_structure.update({
                             vol.Optional(
                                 USER_OPTIONS[option]['option'],
-                                default=option_default
+                                default = option_default
                             ): cv.multi_select(
                                 USER_OPTIONS[option]['option_list']
                             )

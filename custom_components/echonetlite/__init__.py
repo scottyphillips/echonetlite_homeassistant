@@ -66,6 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         getmap = instance["getmap"]
         setmap = instance["setmap"]
         uid = instance["uid"]
+        _LOGGER.debug(f'{instance["uid"]} is the UID..')
 
         # manually update API states using config entry data
         if host not in list(server._state):
@@ -186,27 +187,27 @@ class ECHONETConnector():
             self._manufacturer = instance["manufacturer"]
 
         # Detect HVAC - eventually we will use factory here.
-        update_flags_full_list = []
+        self._update_flags_full_list = []
         if self._eojgc == 1 and self._eojcc == 48:
             for value in HVAC_API_CONNECTOR_DEFAULT_FLAGS:
                 if value in self._getPropertyMap:
-                    update_flags_full_list.append(value)
+                    self._update_flags_full_list.append(value)
             self._instance = echonet.HomeAirConditioner(self._host, self._api)
         else:
-            update_flags_full_list = [ENL_STATUS]
+            self._update_flags_full_list = [ENL_STATUS]
             for item in self._getPropertyMap:
                 if item not in list(EPC_SUPER.keys()):
-                    update_flags_full_list.append(item)
-            self._instance = echonet.EchonetInstance(self._host, self._eojgc, self._eojcc, self._eojci, self._api)
+                    self._update_flags_full_list.append(item)
+            self._instance = echonet.Factory(self._host, self._api, self._eojgc, self._eojcc, self._eojci)
 
         # Split list of codes into batches of 10
         start_index = 0
-        full_list_length = len(update_flags_full_list)
+        full_list_length = len(self._update_flags_full_list)
 
         while start_index + MAX_UPDATE_BATCH_SIZE < full_list_length:
-            self._update_flag_batches.append(update_flags_full_list[start_index:start_index+MAX_UPDATE_BATCH_SIZE])
+            self._update_flag_batches.append(self._update_flags_full_list[start_index:start_index+MAX_UPDATE_BATCH_SIZE])
             start_index += MAX_UPDATE_BATCH_SIZE
-        self._update_flag_batches.append(update_flags_full_list[start_index:full_list_length])
+        self._update_flag_batches.append(self._update_flags_full_list[start_index:full_list_length])
 
         self._user_options = {
             ENL_FANSPEED: False,
@@ -234,6 +235,7 @@ class ECHONETConnector():
                 self._user_options[ENL_SWING_MODE] = entry.options.get("swing_mode")
 
         self._uid = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_UID]
+        _LOGGER.debug(f'{self._uid} is the UID in ECHONET connector..')
         if self._uid is None:
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
 
@@ -248,7 +250,7 @@ class ECHONETConnector():
                         update_data.update(batch_data)
                     elif len(flags) == 1:
                         update_data[flags[0]] = batch_data
-
+            _LOGGER.debug(f"{list(update_data.values())}")
             if len(update_data) > 0 and False not in list(update_data.values()):
                 # polling succeded.
                 if retry > 1:

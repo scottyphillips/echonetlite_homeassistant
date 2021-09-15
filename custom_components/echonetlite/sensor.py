@@ -56,7 +56,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             entities.append(
                                 EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
                             )
-                elif op_code in list(entity['echonetlite']._update_flags):
+                elif op_code in list(entity['echonetlite']._update_flags_full_list):
                     entities.append(
                         EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
                     )
