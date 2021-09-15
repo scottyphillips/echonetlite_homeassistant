@@ -54,6 +54,9 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
         if 'discovered' in list(server._state[host]):
             _LOGGER.debug("ECHONET Node Discovery Successful!")
             break
+    if 'discovered' not in list(server._state[host]):
+        _LOGGER.debug("ECHONET Node Discovery Failed!")
+        raise CannotConnect("ECHONET node is not online")
     state = server._state[host]
     for eojgc in list(state['instances'].keys()):
         for eojcc in list(state['instances'][eojgc].keys()):
