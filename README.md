@@ -35,6 +35,10 @@ compatible ECHONETLite Devices:
      * Light Sensor
      * Lock Sensor
      * Temperature Sensor
+* Sharp AC
+     * AY-J22H
+     * AY-L40P
+
 
 ## Installation - Enable ECHONET protocol
 This Custom Component makes use of the official Mitsubishi MAC-568IF-E WiFi
@@ -71,7 +75,7 @@ As soon as you configure your options and save, the settings will take effect.
 
 
 ## Hall of Fame
-Thanks to Jason Nader for all the quality of life updates to the codebase and doco. 
+Thanks to Jason Nader for all the quality of life updates to the codebase and doco.
 
 Thanks to khcnz (Karl Chaffey) and gvs for helping refector the old code
 and contributing to testing.
