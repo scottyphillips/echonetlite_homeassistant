@@ -94,7 +94,7 @@ class EchonetLight(LightEntity):
 
     @property
     def name(self):
-        """Return the name of the climate device."""
+        """Return the name of the light device."""
         return self._name
 
     @property
@@ -105,6 +105,7 @@ class EchonetLight(LightEntity):
     async def async_turn_on(self, **kwargs):
         """Turn on."""
         await self._connector._instance.on()
+        self._connector._update_data[ENL_STATUS] == "On"
 
         if ATTR_BRIGHTNESS in kwargs and self._brightness is not None:
             normalized_brightness = float(kwargs[ATTR_BRIGHTNESS]) / DEFAULT_BRIGHTNESS_SCALE
@@ -133,6 +134,7 @@ class EchonetLight(LightEntity):
     async def async_turn_off(self):
         """Turn off."""
         await self._connector._instance.off()
+        self._connector._update_data[ENL_STATUS] == "Off"
 
     @property
     def brightness(self):

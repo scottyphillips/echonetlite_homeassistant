@@ -55,6 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         loop = asyncio.get_event_loop()
         udp.run("0.0.0.0", 3610, loop=loop)
         server = ECHONETAPIClient(server=udp, loop=loop)
+        server._message_timeout = 300
         hass.data[DOMAIN].update({"api": server})
 
     for instance in entry.data["instances"]:
