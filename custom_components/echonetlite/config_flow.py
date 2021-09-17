@@ -35,6 +35,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     _LOGGER.debug(f"IP address is {user_input['host']}")
     host = user_input['host']
     server = None
+    finished_instances = {}
     if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug(f"{hass.data[DOMAIN]} has already been setup..")
         server = hass.data[DOMAIN]['api']
@@ -61,35 +62,50 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     for eojgc in list(state['instances'].keys()):
         for eojcc in list(state['instances'][eojgc].keys()):
             for instance in list(state['instances'][eojgc][eojcc].keys()):
-                _LOGGER.debug(f"instance is {instance}")
-                await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
-                _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
-                getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
-                setmap = state['instances'][eojgc][eojcc][instance][ENL_SETMAP]
+                if host not in finished_instances:
+                    finished_instances[host] = {}
+                if eojgc not in finished_instances[host]:
+                    finished_instances[host][eojgc] = {}
+                if eojcc not in finished_instances[host][eojgc]:
+                    finished_instances[host][eojgc][eojcc] = []
+                if instance not in finished_instances[host][eojgc][eojcc]:
+                    finished_instances[host][eojgc][eojcc].append(instance)
+                    _LOGGER.debug(f"{finished_instances}")
+                    
+                    if eojcc == 163:
+                        continue
+                    
+                    _LOGGER.debug(f"instance is {instance}")
+                
+                    await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
+                    _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
+                    getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
+                    setmap = state['instances'][eojgc][eojcc][instance][ENL_SETMAP]
 
-                await server.getIdentificationInformation(host, eojgc, eojcc, instance)
-                uid = state['instances'][eojgc][eojcc][instance][ENL_UID]
-                manufacturer = state['instances'][eojgc][eojcc][instance][ENL_MANUFACTURER]
-                if not isinstance(manufacturer, str):
-                    # If unable to resolve the manufacturer,
-                    # the raw identification number will be passed as int.
-                    _LOGGER.warn(
-                        f"{host} - Unable to resolve the manufacturer name - {manufacturer}. " +
-                        "Please report the manufacturer name of your device at the issue tracker on GitHub!"
-                    )
-                    manufacturer = "ECHONETLite"
+                    await server.getIdentificationInformation(host, eojgc, eojcc, instance)
+                    uid = state['instances'][eojgc][eojcc][instance][ENL_UID]
+                    manufacturer = state['instances'][eojgc][eojcc][instance][ENL_MANUFACTURER]
+                    if not isinstance(manufacturer, str):
+                        # If unable to resolve the manufacturer,
+                        # the raw identification number will be passed as int.
+                        _LOGGER.warn(
+                            f"{host} - Unable to resolve the manufacturer name - {manufacturer}. " +
+                            "Please report the manufacturer name of your device at the issue tracker on GitHub!"
+                        )
+                        manufacturer = "ECHONETLite"
 
-                _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} Identification number discovered!")
-                instance_list.append({
-                    "host": host,
-                    "eojgc": eojgc,
-                    "eojcc": eojcc,
-                    "eojci": instance,
-                    "getmap": getmap,
-                    "setmap": setmap,
-                    "uid": uid,
-                    "manufacturer": manufacturer
-                })
+                    _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} Identification number discovered!")
+                    instance_list.append({
+                        "host": host,
+                        "eojgc": eojgc,
+                        "eojcc": eojcc,
+                        "eojci": instance,
+                        "getmap": getmap,
+                        "setmap": setmap,
+                        "uid": uid,
+                        "manufacturer": manufacturer
+                    })
+                
     return instance_list
 
 
@@ -110,6 +126,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA
             )
         try:
+            _LOGGER.debug("Validate input")
             self.instance_list = await validate_input(self.hass, user_input)
             _LOGGER.debug("Node detected")
         except CannotConnect:

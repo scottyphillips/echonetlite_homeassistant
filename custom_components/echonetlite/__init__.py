@@ -25,6 +25,11 @@ from pychonet.HomeAirConditioner import (
     ENL_HVAC_OUT_TEMP
 )
 
+from pychonet.GeneralLighting import (
+    ENL_BRIGHTNESS,
+    ENL_COLOR_TEMP
+)
+
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["sensor", 'climate', 'select', 'light']
 PARALLEL_UPDATES = 0
@@ -36,6 +41,9 @@ HVAC_API_CONNECTOR_DEFAULT_FLAGS = [
     ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP, ENL_CUMULATIVE_POWER
 ]
 
+LIGHT_API_CONNECTOR_DEFAULT_FLAGS = [
+    ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
+]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -190,11 +198,19 @@ class ECHONETConnector():
         # Detect HVAC - eventually we will use factory here.
         self._update_flags_full_list = []
         if self._eojgc == 1 and self._eojcc == 48:
+            _LOGGER.debug(f"Create new HomeAirConditioner instance for: {self._eojgc}-{self._eojcc}-{self._eojci}")
             for value in HVAC_API_CONNECTOR_DEFAULT_FLAGS:
                 if value in self._getPropertyMap:
                     self._update_flags_full_list.append(value)
             self._instance = echonet.HomeAirConditioner(self._host, self._api)
+        elif self._eojgc == 2 and self._eojcc == 144:
+            _LOGGER.debug(f"Create new GeneralLighting instance for: {self._eojgc}-{self._eojcc}-{self._eojci}")
+            for value in LIGHT_API_CONNECTOR_DEFAULT_FLAGS:
+                if value in self._getPropertyMap:
+                    self._update_flags_full_list.append(value)
+            self._instance = echonet.GeneralLighting(self._host, self._api, self._eojci)
         else:
+            _LOGGER.debug(f"Create new default instance for: {self._eojgc}-{self._eojcc}-{self._eojci}")
             self._update_flags_full_list = [ENL_STATUS]
             for item in self._getPropertyMap:
                 if item not in list(EPC_SUPER.keys()):
