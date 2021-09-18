@@ -39,7 +39,8 @@ compatible ECHONETLite Devices:
      * AY-J22H
      * AY-L40P
 * Daikin (ECHONETLite enabled models)
-
+* Koizumi
+     * Lighting system AE50264E bridge (https://www.koizumi-lt.co.jp/product/jyutaku/tree/ )
 
 ## Installation - Enable ECHONET protocol
 This Custom Component makes use of the official Mitsubishi MAC-568IF-E WiFi

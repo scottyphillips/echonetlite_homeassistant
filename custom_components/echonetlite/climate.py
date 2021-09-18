@@ -10,6 +10,7 @@ from pychonet.HomeAirConditioner import (
 )
 
 from pychonet.EchonetInstance import ENL_GETMAP
+from pychonet.lib.eojx import EOJX_CLASS
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.util.unit_system import UnitSystem
@@ -100,8 +101,8 @@ class EchonetClimate(ClimateEntity):
                 self._connector._instance._eojci
             )},
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            # "model": "",
+            "manufacturer": self._connector._manufacturer,
+            "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc]
             # "sw_version": "",
         }
 

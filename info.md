@@ -15,6 +15,7 @@ Platform | Description
 `climate` | Interface to ECHONETLite API to control your ECHONETLite compatible HVAC (Commonly found in Asia-Pacific regions)
 `sensor`  | Interface to ECHONETLite API to poll indoor and outdoor temperature sensors
 `select`  | Interface to ECHONETLite API to provide drop down menus for swing modes
+`light`   | Interface to ECHONETLite API to provide light functionality for supported devices. 
 
 ![example][exampleimg]
 

@@ -55,7 +55,7 @@ ENL_SENSOR_OP_CODES = {
         }
     },
     'default':  {
-        CONF_ICON: None,
+        CONF_ICON: None, 
         CONF_TYPE: None,
         CONF_STATE_CLASS: None,
     },

@@ -2,6 +2,7 @@ import logging
 from homeassistant.components.select import SelectEntity
 from .const import HVAC_SELECT_OP_CODES, DOMAIN
 from pychonet.lib.epc import EPC_CODE
+from pychonet.lib.eojx import EOJX_CLASS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,8 +60,8 @@ class EchonetSelect(SelectEntity):
                 self._connector._instance._eojci
             )},
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            # "model": "",
+            "manufacturer": self._connector._manufacturer,
+            "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc]
             # "sw_version": "",
         }
 

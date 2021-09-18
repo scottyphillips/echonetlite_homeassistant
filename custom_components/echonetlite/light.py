@@ -93,8 +93,8 @@ class EchonetLight(LightEntity):
                   (DOMAIN, self._connector._uid, self._connector._instance._eojgc, self._connector._instance._eojcc, self._connector._instance._eojci)
             },
             "name": self._name,
-            "manufacturer": self._connector._manufacturer
-            #"model": "",
+            "manufacturer": self._connector._manufacturer,
+            "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc]
             #"sw_version": "",
         }
 

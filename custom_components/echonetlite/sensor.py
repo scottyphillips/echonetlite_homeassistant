@@ -11,6 +11,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.typing import StateType
 
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
+from pychonet.lib.eojx import EOJX_CLASS
 from .const import (
     DOMAIN,
     ENL_SENSOR_OP_CODES,
@@ -114,8 +115,8 @@ class EchonetSensor(SensorEntity):
                 (DOMAIN, self._instance._uid, self._instance._eojgc, self._instance._eojcc, self._instance._eojci)
             },
             "name": self._device_name,
-            "manufacturer": self._instance._manufacturer
-            # "model": "",
+            "manufacturer": self._instance._manufacturer,
+            "model": EOJX_CLASS[self._eojgc][self._eojcc]
             # "sw_version": "",
         }
 
