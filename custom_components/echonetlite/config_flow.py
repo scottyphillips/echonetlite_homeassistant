@@ -64,9 +64,9 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
             for instance in list(state['instances'][eojgc][eojcc].keys()):
                 if eojcc == 163:
                     continue
-                
+
                 _LOGGER.debug(f"instance is {instance}")
-                
+
                 await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
                 _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
                 getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
@@ -95,7 +95,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
                     "uid": uid,
                     "manufacturer": manufacturer
                 })
-                
+
     return instance_list
 
 
@@ -161,7 +161,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         data_schema_structure.update({
                             vol.Optional(
                                 USER_OPTIONS[option]['option'],
-                                default = option_default
+                                default=option_default
                             ): cv.multi_select(
                                 USER_OPTIONS[option]['option_list']
                             )

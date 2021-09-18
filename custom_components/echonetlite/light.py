@@ -1,14 +1,11 @@
 import logging
 
-_LOGGER = logging.getLogger(__name__)
-
 from pychonet.GeneralLighting import (
     ENL_STATUS,
     ENL_BRIGHTNESS,
     ENL_COLOR_TEMP
 )
 
-from pychonet.EchonetInstance import ENL_SETMAP, ENL_GETMAP
 from pychonet.lib.eojx import EOJX_CLASS
 
 from homeassistant.components.light import LightEntity
@@ -36,8 +33,8 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         _LOGGER.debug("Found ECHONET Light")
-        if entity['instance']['eojgc'] == 0x02 and  entity['instance']['eojcc'] == 0x90 : #General Lighting
-             entities.append(EchonetLight(config_entry.title, entity['echonetlite']))
+        if entity['instance']['eojgc'] == 0x02 and entity['instance']['eojcc'] == 0x90:  # General Lighting
+            entities.append(EchonetLight(config_entry.title, entity['echonetlite']))
     _LOGGER.debug(f"Number of light devices to be added: {len(entities)}")
     async_add_devices(entities, True)
 
@@ -50,7 +47,7 @@ class EchonetLight(LightEntity):
 
         """Initialize the climate device."""
         self._name = name
-        self._connector = connector #new line
+        self._connector = connector  # new line
         self._uid = self._connector._uid
         self._support_flags = SUPPORT_FLAGS
         self._supported_color_modes = set()
@@ -68,9 +65,9 @@ class EchonetLight(LightEntity):
         if ENL_COLOR_TEMP in list(self._connector._setPropertyMap):
             self._supported_color_modes.add(COLOR_MODE_COLOR_TEMP)
 
-        self._echonet_mireds = ['daylight_color', 'daylight_white', 'white', 'other', 'incandescent_lamp_color']  # coolest to warmest
+        self._echonet_mireds = ['daylight_color',
+            'daylight_white', 'white', 'other', 'incandescent_lamp_color']  # coolest to warmest
         self._echonet_mireds_int = [68, 67, 66, 64, 65]  # coolest to warmest
-
 
     async def async_update(self):
         """Get the latest state from the Light."""
@@ -95,7 +92,7 @@ class EchonetLight(LightEntity):
             "name": self._name,
             "manufacturer": self._connector._manufacturer,
             "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc]
-            #"sw_version": "",
+            # "sw_version": "",
         }
 
     @property
@@ -167,12 +164,12 @@ class EchonetLight(LightEntity):
         _LOGGER.debug(f"Current color temp of light: {self._connector._update_data[ENL_COLOR_TEMP]}")
 
         # calculate some helper
-        mired_steps = ( self._max_mireds - self._min_mireds ) / float(len(self._echonet_mireds))
+        mired_steps = (self._max_mireds - self._min_mireds) / float(len(self._echonet_mireds))
 
         # get the current echonet mireds
         color_temp = self._connector._update_data[ENL_COLOR_TEMP] if ENL_COLOR_TEMP in self._connector._update_data else 0
         if color_temp in self._echonet_mireds:
-            self._attr_color_temp = round( self._echonet_mireds.index(color_temp) * mired_steps ) + MIN_MIREDS
+            self._attr_color_temp = round(self._echonet_mireds.index(color_temp) * mired_steps) + MIN_MIREDS
         else:
             self._attr_color_temp = MIN_MIREDS
         return self._attr_color_temp
