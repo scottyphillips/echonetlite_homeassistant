@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import pychonet as echonet
 from pychonet.lib.epc import EPC_SUPER
+from pychonet.const import VERSION
 from datetime import timedelta
 import asyncio
 from homeassistant.config_entries import ConfigEntry
@@ -65,6 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         server = ECHONETAPIClient(server=udp, loop=loop)
         server._message_timeout = 300
         hass.data[DOMAIN].update({"api": server})
+    _LOGGER.debug(f"pychonet version in use {server.} has already been setup..")
 
     for instance in entry.data["instances"]:
         echonetlite = None
