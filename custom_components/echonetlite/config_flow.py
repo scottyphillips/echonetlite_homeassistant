@@ -35,6 +35,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     _LOGGER.debug(f"IP address is {user_input['host']}")
     host = user_input['host']
     server = None
+    finished_instances = {}
     if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug(f"{hass.data[DOMAIN]} has already been setup..")
         server = hass.data[DOMAIN]['api']
@@ -61,7 +62,11 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     for eojgc in list(state['instances'].keys()):
         for eojcc in list(state['instances'][eojgc].keys()):
             for instance in list(state['instances'][eojgc][eojcc].keys()):
+                if eojcc == 163:
+                    continue
+                
                 _LOGGER.debug(f"instance is {instance}")
+                
                 await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
                 _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
                 getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
@@ -90,6 +95,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
                     "uid": uid,
                     "manufacturer": manufacturer
                 })
+                
     return instance_list
 
 
