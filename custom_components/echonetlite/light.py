@@ -62,7 +62,7 @@ class EchonetLight(LightEntity):
         self._color_mode: str | None = None
         self._color_temp: int | None = None
         self._min_mireds = MIN_MIREDS
-        self._max_mireds = MAX_MIREDS 
+        self._max_mireds = MAX_MIREDS
         if ENL_BRIGHTNESS in list(self._connector._setPropertyMap):
             self._supported_color_modes.add(COLOR_MODE_BRIGHTNESS)
         if ENL_COLOR_TEMP in list(self._connector._setPropertyMap):
@@ -139,7 +139,7 @@ class EchonetLight(LightEntity):
             echonet_idx = round(color_scale_echonet)
             color_temp = self._echonet_mireds[echonet_idx]
             color_temp_int = self._echonet_mireds_int[echonet_idx]
-                    
+
             _LOGGER.debug(f"New color temp of light: {color_temp} - {color_temp_int}")
             await self._connector._instance.setColorTemperature(color_temp_int)
             self._connector._update_data[ENL_COLOR_TEMP] = color_temp
@@ -181,7 +181,7 @@ class EchonetLight(LightEntity):
     def color_mode(self) -> str:
         """Return the color mode of the light."""
         return self._color_mode
-    
+
     @property
     def min_mireds(self) -> int:
         """Return the coldest color_temp that this light supports."""
@@ -196,6 +196,3 @@ class EchonetLight(LightEntity):
     def supported_color_modes(self) -> set:
         """Flag supported features."""
         return self._supported_color_modes
-    
-    
-
