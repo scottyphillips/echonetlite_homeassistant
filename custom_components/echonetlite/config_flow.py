@@ -37,7 +37,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     server = None
     finished_instances = {}
     if DOMAIN in hass.data:  # maybe set up by config entry?
-        _LOGGER.debug(f"{hass.data[DOMAIN]} has already been setup..")
+        _LOGGER.debug("API listener has already been setup previously..")
         server = hass.data[DOMAIN]['api']
     else:
         udp = UDPServer()
