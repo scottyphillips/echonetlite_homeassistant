@@ -31,6 +31,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 
         # Home Air Conditioner we dont bother exposing all sensors
         if eojgc == 1 and eojcc == 48:
+            _LOGGER.debug("This is an ECHONET climate device so only a few sensors will be created")
             for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity['instance']['getmap']:
                     entities.append(
@@ -42,6 +43,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         )
                     )
         else:  # handle other ECHONET instances
+            _LOGGER.debug("Configuring ECHONETlite sensor..")
             for op_code in EPC_CODE[eojgc][eojcc]:
                 if eojgc in ENL_SENSOR_OP_CODES.keys():
                     if eojcc in ENL_SENSOR_OP_CODES[eojgc].keys():
