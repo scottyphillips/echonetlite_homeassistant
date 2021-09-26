@@ -24,7 +24,8 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        _LOGGER.debug(entity)
+        _LOGGER.debug(f"setting up sensor {entity}")
+        _LOGGER.debug(f"update flags for this sensor are {entity['echonetlite']._update_flags_full_list}")
         eojgc = entity['instance']['eojgc']
         eojcc = entity['instance']['eojcc']
 

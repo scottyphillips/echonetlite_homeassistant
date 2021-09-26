@@ -149,7 +149,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         # Handle HVAC User configurable options
         for instance in self._config_entry.data["instances"]:
-            if instance['eojgc'] == 0x01 and instance['eojcc'] == 0x30:
+            if instance['eojgc'] == 0x01 and instance['eojcc'] == 0x30:  # HomeAirConditioner
                 for option in list(USER_OPTIONS.keys()):
                     if option in instance['setmap']:
                         option_default = []
