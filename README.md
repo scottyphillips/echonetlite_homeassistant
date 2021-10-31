@@ -22,8 +22,10 @@ compatible ECHONETLite Devices:
   * GE Series
      * MSZ-GE42VAD
      * MSZ-GE24VAD
+     * MSZ-GL71VGD
      * MSZ-GL50VGD
      * MSZ-GL35VGD
+     * MSZ-GL25VGD
   * AP Series
      * MSZ-AP22VGD
      * MSZ-AP25VGD
