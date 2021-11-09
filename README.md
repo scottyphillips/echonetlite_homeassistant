@@ -32,6 +32,11 @@ compatible ECHONETLite Devices:
      * MSZ-AP50VGD
   * Ducted
      * PEA-RP140GAA
+
+* Mitsubishi HM-W002-AC WiFi Adaptor connected to the following systems:
+  * JXV Series
+     * MSZ-JXV4018S
+
 * 'MoekadenRoom' ECHONETLite Simulator: https://github.com/SonyCSL/MoekadenRoom
      * Generic HVAC Climate
      * Light Sensor
