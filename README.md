@@ -31,6 +31,7 @@ compatible ECHONETLite Devices:
      * MSZ-AP25VGD
      * MSZ-AP50VGD
   * Ducted
+     * PEA-M100GAA
      * PEA-RP140GAA
 
 * Mitsubishi HM-W002-AC WiFi Adaptor connected to the following systems:
