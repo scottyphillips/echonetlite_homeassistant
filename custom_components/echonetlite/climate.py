@@ -163,12 +163,16 @@ class EchonetClimate(ClimateEntity):
                 return CURRENT_HVAC_DRY
             elif self._connector._update_data[ENL_HVAC_MODE] == HVAC_MODE_FAN_ONLY:
                 return CURRENT_HVAC_FAN
-            elif self._connector._update_data[ENL_HVAC_MODE] == HVAC_MODE_HEAT_COOL:
+            elif (self._connector._update_data[ENL_HVAC_MODE] == HVAC_MODE_HEAT_COOL or 
+                self._connector._update_data[ENL_HVAC_MODE] == "auto"):
                 if ENL_HVAC_ROOM_TEMP in self._connector._update_data:
                     if self._connector._update_data[ENL_HVAC_SET_TEMP] < self._connector._update_data[ENL_HVAC_ROOM_TEMP]:
                         return CURRENT_HVAC_COOL
                     elif self._connector._update_data[ENL_HVAC_SET_TEMP] > self._connector._update_data[ENL_HVAC_ROOM_TEMP]:
                         return CURRENT_HVAC_HEAT
+                return CURRENT_HVAC_IDLE
+            else:
+                _LOGGER.warning(f"Unknown HVAC mode {self._connector._update_data[ENL_HVAC_MODE]}")
                 return CURRENT_HVAC_IDLE
         return CURRENT_HVAC_OFF
 
