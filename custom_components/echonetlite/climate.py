@@ -127,6 +127,8 @@ class EchonetClimate(ClimateEntity):
         getmap = self._connector._api._state[self._connector._instance._host]['instances'][1][48][1][ENL_GETMAP]
         if ENL_HVAC_ROOM_TEMP in getmap:
             if ENL_HVAC_ROOM_TEMP in self._connector._update_data:
+                if self._connector._update_data[ENL_HVAC_ROOM_TEMP] == 126:
+                    return 'unavailable'
                 return self._connector._update_data[ENL_HVAC_ROOM_TEMP]
             else:
                 return 'unavailable'
@@ -163,7 +165,7 @@ class EchonetClimate(ClimateEntity):
                 return CURRENT_HVAC_DRY
             elif self._connector._update_data[ENL_HVAC_MODE] == HVAC_MODE_FAN_ONLY:
                 return CURRENT_HVAC_FAN
-            elif (self._connector._update_data[ENL_HVAC_MODE] == HVAC_MODE_HEAT_COOL or 
+            elif (self._connector._update_data[ENL_HVAC_MODE] == HVAC_MODE_HEAT_COOL or
                 self._connector._update_data[ENL_HVAC_MODE] == "auto"):
                 if ENL_HVAC_ROOM_TEMP in self._connector._update_data:
                     if self._connector._update_data[ENL_HVAC_SET_TEMP] < self._connector._update_data[ENL_HVAC_ROOM_TEMP]:
