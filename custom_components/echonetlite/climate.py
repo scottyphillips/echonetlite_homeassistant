@@ -128,7 +128,7 @@ class EchonetClimate(ClimateEntity):
         if ENL_HVAC_ROOM_TEMP in getmap:
             if ENL_HVAC_ROOM_TEMP in self._connector._update_data:
                 if self._connector._update_data[ENL_HVAC_ROOM_TEMP] == 126:
-                    return 'unavailable'
+                    return None
                 return self._connector._update_data[ENL_HVAC_ROOM_TEMP]
             else:
                 return 'unavailable'
