@@ -2,7 +2,7 @@
 from __future__ import annotations
 import logging
 import pychonet as echonet
-from pychonet.lib.epc import EPC_SUPER
+from pychonet.lib.epc import EPC_SUPER, EPC_CODE
 from pychonet.lib.const import VERSION
 from datetime import timedelta
 import asyncio
@@ -225,7 +225,8 @@ class ECHONETConnector():
             self._update_flags_full_list = [ENL_STATUS]
             for item in self._getPropertyMap:
                 if item not in list(EPC_SUPER.keys()):
-                    self._update_flags_full_list.append(item)
+                    if item in list(EPC_CODE[self._eojgc][self._eojcc].keys()):
+                        self._update_flags_full_list.append(item)
             self._instance = echonet.Factory(self._host, self._api, self._eojgc, self._eojcc, self._eojci)
 
         # Split list of codes into batches of 10
