@@ -55,6 +55,10 @@ LIGHT_API_CONNECTOR_DEFAULT_FLAGS = [
     ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
 ]
 
+POWER_RELATE_FLAGS = [
+    ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER
+]
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
     host = None
@@ -227,6 +231,8 @@ class ECHONETConnector():
                 if item not in list(EPC_SUPER.keys()):
                     if item in list(EPC_CODE[self._eojgc][self._eojcc].keys()):
                         self._update_flags_full_list.append(item)
+                if item in POWER_RELATE_FLAGS:
+                    self._update_flags_full_list.append(item)
             self._instance = echonet.Factory(self._host, self._api, self._eojgc, self._eojcc, self._eojci)
 
         # Split list of codes into batches of 10
