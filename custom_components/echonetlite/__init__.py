@@ -40,7 +40,7 @@ from pychonet.GeneralLighting import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = ["sensor", 'climate', 'select', 'light']
+PLATFORMS = ["sensor", 'climate', 'select', 'light', 'fan']
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 MAX_UPDATE_BATCH_SIZE = 10
@@ -54,6 +54,8 @@ HVAC_API_CONNECTOR_DEFAULT_FLAGS = [
 LIGHT_API_CONNECTOR_DEFAULT_FLAGS = [
     ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
 ]
+
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -227,6 +229,7 @@ class ECHONETConnector():
                 if item not in list(EPC_SUPER.keys()):
                     if item in list(EPC_CODE[self._eojgc][self._eojcc].keys()):
                         self._update_flags_full_list.append(item)
+
             self._instance = echonet.Factory(self._host, self._api, self._eojgc, self._eojcc, self._eojci)
 
         # Split list of codes into batches of 10

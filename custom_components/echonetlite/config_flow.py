@@ -163,6 +163,20 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                                 USER_OPTIONS[option]['option_list']
                             )
                         })
+            elif instance['eojgc'] == 0x01 and instance['eojcc'] == 0x35:  # HomeAirConditioner
+                for option in list(USER_OPTIONS.keys()):
+                    if option in instance['setmap']:
+                        option_default = []
+                        if self._config_entry.options.get(USER_OPTIONS[option]['option']) is not None:
+                            option_default = self._config_entry.options.get(USER_OPTIONS[option]['option'])
+                        data_schema_structure.update({
+                            vol.Optional(
+                                USER_OPTIONS[option]['option'],
+                                default=option_default
+                            ): cv.multi_select(
+                                USER_OPTIONS[option]['option_list']
+                            )
+                        })
 
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)

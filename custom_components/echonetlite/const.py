@@ -25,6 +25,10 @@ HVAC_SELECT_OP_CODES = {
     0xA4: AIRFLOW_VERT
 }
 
+FAN_SELECT_OP_CODES = {
+    0xA0: FAN_SPEED
+}
+
 ENL_SENSOR_OP_CODES = {
     0x00: {
         0x11: {
@@ -61,6 +65,18 @@ ENL_SENSOR_OP_CODES = {
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: DEVICE_CLASS_TEMPERATURE,
                 CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+            }
+        },
+        0x35: {
+            0x84: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+            },
+            0x85: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
             }
         }
     },

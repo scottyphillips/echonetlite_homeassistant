@@ -42,6 +42,18 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             config.title
                         )
                     )
+        elif eojgc == 1 and eojcc == 53:
+            _LOGGER.debug("This is an ECHONET fan device so only a few sensors will be created")
+            for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
+                if op_code in entity['instance']['getmap']:
+                    entities.append(
+                        EchonetSensor(
+                            entity['echonetlite'],
+                            op_code,
+                            ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code],
+                            config.title
+                        )
+                    )
         else:  # handle other ECHONET instances
             _LOGGER.debug("Configuring ECHONETlite sensor..")
             for op_code in EPC_CODE[eojgc][eojcc]:
