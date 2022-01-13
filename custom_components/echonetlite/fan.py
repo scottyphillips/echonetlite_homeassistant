@@ -24,7 +24,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         if entity['instance']['eojgc'] == 0x01 and entity['instance']['eojcc'] == 0x35:  # Home Air Cleaner
-            entities.append(EchonetFan(config_entry.title, entity['echonetlite'], hass.config.units))
+            entities.append(EchonetFan(config_entry.title, entity['echonetlite']))
     async_add_devices(entities, True)
 
 
@@ -87,7 +87,18 @@ class EchonetFan(FanEntity):
         """Return the name of the climate device."""
         return self._name
 
-    async def async_turn_on(self):
+    @property
+    def is_on(self):
+        """Return true if the device is on."""
+        return True if self._connector._update_data[0x80] == "On" else False
+
+    async def async_turn_on(
+        self,
+        speed: str = None,
+        percentage: int = None,
+        preset_mode: str = None,
+        **kwargs,
+    ):
         """Turn on."""
         await self._connector._instance.on()
 
@@ -108,7 +119,7 @@ class EchonetFan(FanEntity):
                 return self._connector._user_options[ENL_FANSPEED]
         return DEFAULT_FAN_MODES
 
-    async def async_set_preset_mode(self, fan_mode):
+    async def async_set_preset_mode(self, preset_mode: str):
         """Set new fan mode."""
-        await self._connector._instance.setFanSpeed(fan_mode)
-        self._connector._update_data[ENL_FANSPEED] = fan_mode
+        await self._connector._instance.setFanSpeed(preset_mode)
+        self._connector._update_data[ENL_FANSPEED] = preset_mode
