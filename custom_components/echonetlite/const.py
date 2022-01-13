@@ -62,6 +62,18 @@ ENL_SENSOR_OP_CODES = {
                 CONF_TYPE: DEVICE_CLASS_TEMPERATURE,
                 CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
             }
+        },
+        0x35: {
+            0x84: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+            },
+            0x85: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+            }
         }
     },
     'default':  {
