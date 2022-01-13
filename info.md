@@ -13,9 +13,10 @@ _Component to integrate ECHONETLite compatable HVAC systems using the [pychonet]
 Platform | Description
 -- | --
 `climate` | Interface to ECHONETLite API to control your ECHONETLite compatible HVAC (Commonly found in Asia-Pacific regions)
-`sensor`  | Interface to ECHONETLite API to poll indoor and outdoor temperature sensors
-`select`  | Interface to ECHONETLite API to provide drop down menus for swing modes
-`light`   | Interface to ECHONETLite API to provide light functionality for supported devices. 
+`sensor`  | Interface to ECHONETLite API to poll indoor and outdoor temperature sensors.
+`select`  | Interface to ECHONETLite API to provide drop down menus for swing modes.
+`light`   | Interface to ECHONETLite API to provide light functionality for supported devices.
+`light`   | Interface to ECHONETLite API to provide fan functionality for supported devices.
 
 ![example][exampleimg]
 
@@ -35,12 +36,46 @@ Platform | Description
 
 {% endif %}
 
-## Enable ECHONETLite protocol
-This Custom Component has been designed to be compatable with the following HVAC systems:  
-Mitsubishi MAC-568IF-E WiFi adaptor
-MoekadenRoom ECHONETLite Emulator (https://github.com/SonyCSL/MoekadenRoom)
+# Current working systems:
+Based upon feedback this custom component works with the following
+compatible ECHONETLite Devices:
 
-Other vendor HVAC systems may work, but they must support the 'ECHONETlite' protocol.
+* Mitsubishi MAC-568IF-E WiFi Adaptor connected to the following systems:
+  * GE Series
+     * MSZ-GE42VAD
+     * MSZ-GE24VAD
+     * MSZ-GL71VGD
+     * MSZ-GL50VGD
+     * MSZ-GL35VGD
+     * MSZ-GL25VGD
+  * AP Series
+     * MSZ-AP22VGD
+     * MSZ-AP25VGD
+     * MSZ-AP50VGD
+  * Ducted
+     * PEA-M100GAA
+     * PEA-RP140GAA
+
+* Mitsubishi HM-W002-AC WiFi Adaptor connected to the following systems:
+  * JXV Series
+     * MSZ-JXV4018S
+
+* 'MoekadenRoom' ECHONETLite Simulator: https://github.com/SonyCSL/MoekadenRoom
+     * Generic HVAC Climate
+     * Light Sensor
+     * Lock Sensor
+     * Temperature Sensor
+
+* Sharp
+     * Air Conditioners
+         * AY-J22H
+         * AY-L40P
+     * Air Purifier
+         * KI-HS70
+
+* Daikin (ECHONETLite enabled models)
+* Koizumi
+     * Lighting system AE50264E bridge (https://www.koizumi-lt.co.jp/product/jyutaku/tree/ )
 
 ## Mitsubishi MAC-568IF-E
 From the official Mitsubishi AU/NZ Wifi App, you will need to enable

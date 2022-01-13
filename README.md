@@ -5,14 +5,14 @@
 [![hacs][hacsbadge]][hacs]
 ![Project Maintenance][maintenance-shield]
 [![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
-
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 
 A Home Assistant custom component for use with ECHONETLite compatible devices.
 This custom component makes use of the 'pychonet'
 Python library also written by yours truly:
 (https://github.com/scottyphillips/pychonet)
 
-**This component will set up the climate, sensor and select platforms.**
+**This component will set up the climate, fan, sensor and select platforms.**
 
 # Current working systems:
 Based upon feedback this custom component works with the following
@@ -43,9 +43,14 @@ compatible ECHONETLite Devices:
      * Light Sensor
      * Lock Sensor
      * Temperature Sensor
-* Sharp AC
-     * AY-J22H
-     * AY-L40P
+
+* Sharp 
+     * Air Conditioners
+         * AY-J22H
+         * AY-L40P
+     * Air Purifier
+         * KI-HS70
+
 * Daikin (ECHONETLite enabled models)
 * Koizumi
      * Lighting system AE50264E bridge (https://www.koizumi-lt.co.jp/product/jyutaku/tree/ )
@@ -76,7 +81,7 @@ the 'ECHONET lite' protocol under the 'edit unit' settings.
 6. Platform should automatically configure 'climate', and depending on your system will automatically configure 'sensor' and 'select'.
 7. If you have additional HVACs to configure then repeat step 4.
 
-## Configuring Options for Fan and swing mode settings for supported hvac_modes.
+## Configuring Options for Fan and swing mode settings for supported HVAC and Air Purifiers.
 Once you have added the integration, you can go back to configuration -> integrations
 Under your ECHONETLite device click 'configure'
 Fine tune your required fan and swing mode settings. The integration will be able to determine what settings are supported for your system in question.
