@@ -25,6 +25,10 @@ HVAC_SELECT_OP_CODES = {
     0xA4: AIRFLOW_VERT
 }
 
+FAN_SELECT_OP_CODES = {
+    0xA0: FAN_SPEED
+}
+
 ENL_SENSOR_OP_CODES = {
     0x00: {
         0x11: {
