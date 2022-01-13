@@ -155,7 +155,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-# TODO FIX CODE REPETITION
+# TODO FIX CODE REPETITION and update for Air Cleaner
 async def update_listener(hass, entry):
     for instance in hass.data[DOMAIN][entry.entry_id]:
         if instance['instance']['eojgc'] == 1 and instance['instance']['eojcc'] == 48:

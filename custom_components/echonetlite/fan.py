@@ -29,7 +29,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
 
 class EchonetFan(FanEntity):
-    """Representation of an ECHONETLite climate device."""
+    """Representation of an ECHONETLite Fan device (eg Air purifier)."""
     def __init__(self, name, connector):
         """Initialize the climate device."""
         self._name = name

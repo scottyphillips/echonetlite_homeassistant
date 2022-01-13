@@ -147,7 +147,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Manage the options."""
         data_schema_structure = {}
 
-        # Handle HVAC User configurable options
+        # Handle HVAC and Air Cleaner User configurable options
         for instance in self._config_entry.data["instances"]:
             if instance['eojgc'] == 0x01 and instance['eojcc'] == 0x30:  # HomeAirConditioner
                 for option in list(USER_OPTIONS.keys()):
@@ -163,7 +163,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                                 USER_OPTIONS[option]['option_list']
                             )
                         })
-            elif instance['eojgc'] == 0x01 and instance['eojcc'] == 0x35:  # HomeAirConditioner
+            elif instance['eojgc'] == 0x01 and instance['eojcc'] == 0x35:  # AirCleaner
                 for option in list(USER_OPTIONS.keys()):
                     if option in instance['setmap']:
                         option_default = []
