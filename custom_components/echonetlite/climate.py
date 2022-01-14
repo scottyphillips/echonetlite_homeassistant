@@ -151,7 +151,12 @@ class EchonetClimate(ClimateEntity):
     @property
     def hvac_mode(self):
         """Return current operation ie. heat, cool, idle."""
-        return self._connector._update_data[ENL_HVAC_MODE] if self._connector._update_data[ENL_STATUS] == "On" else "off"
+        if self._connector._update_data[ENL_STATUS] == "On":
+            if self._connector._update_data[ENL_HVAC_MODE] == 'auto':
+                return HVAC_MODE_HEAT_COOL
+            else:
+                return self._connector._update_data[ENL_HVAC_MODE]
+        return "off"
 
     @property
     def hvac_action(self):

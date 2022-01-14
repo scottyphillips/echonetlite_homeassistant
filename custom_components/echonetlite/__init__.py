@@ -210,27 +210,26 @@ class ECHONETConnector():
 
         # Detect HVAC - eventually we will use factory here.
         self._update_flags_full_list = []
+        flags = []
         if self._eojgc == 1 and self._eojcc == 48:
-            _LOGGER.debug(f"Create new HomeAirConditioner instance for: {self._eojgc}-{self._eojcc}-{self._eojci}")
-            for value in HVAC_API_CONNECTOR_DEFAULT_FLAGS:
-                if value in self._getPropertyMap:
-                    self._update_flags_full_list.append(value)
-            self._instance = echonet.HomeAirConditioner(self._host, self._api)
+            _LOGGER.debug(f"Create new HomeAirConditioner instance at: {self._host}")
+            flags = HVAC_API_CONNECTOR_DEFAULT_FLAGS
         elif self._eojgc == 2 and self._eojcc == 144:
-            _LOGGER.debug(f"Create new GeneralLighting instance for: {self._eojgc}-{self._eojcc}-{self._eojci}")
-            for value in LIGHT_API_CONNECTOR_DEFAULT_FLAGS:
-                if value in self._getPropertyMap:
-                    self._update_flags_full_list.append(value)
-            self._instance = echonet.GeneralLighting(self._host, self._api, self._eojci)
+            _LOGGER.debug(f"Create new GeneralLighting instance at: {self._host}")
+            flags = LIGHT_API_CONNECTOR_DEFAULT_FLAGS
         else:
-            _LOGGER.debug(f"Create new default instance for: {self._eojgc}-{self._eojcc}-{self._eojci}")
-            self._update_flags_full_list = [ENL_STATUS]
+            _LOGGER.debug(f"Create new Generic instance for {self._eojgc}-{self._eojcc}-{self._eojci} at {self._host}")
+            flags = [ENL_STATUS]
             for item in self._getPropertyMap:
                 if item not in list(EPC_SUPER.keys()):
                     if item in list(EPC_CODE[self._eojgc][self._eojcc].keys()):
-                        self._update_flags_full_list.append(item)
+                        flags.append(item)
 
-            self._instance = echonet.Factory(self._host, self._api, self._eojgc, self._eojcc, self._eojci)
+        for value in flags:
+            if value in self._getPropertyMap:
+                self._update_flags_full_list.append(value)
+                self._update_data[value] = None
+        self._instance = echonet.Factory(self._host, self._api, self._eojgc, self._eojcc, self._eojci)
 
         # Split list of codes into batches of 10
         start_index = 0

@@ -138,9 +138,11 @@ class EchonetSensor(SensorEntity):
     @property
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
-        if self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_TEMPERATURE:
+        if self._instance._update_data[self._op_code] is None:
+            return STATE_UNAVAILABLE
+        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_TEMPERATURE:
             if self._op_code in self._instance._update_data:
-                if self._instance._update_data[self._op_code] == 126 or self._instance._update_data[self._op_code] is None:
+                if self._instance._update_data[self._op_code] == 126:
                     return STATE_UNAVAILABLE
                 else:
                     return self._instance._update_data[self._op_code]
