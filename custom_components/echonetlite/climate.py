@@ -139,9 +139,10 @@ class EchonetClimate(ClimateEntity):
     def target_temperature(self):
         """Return the temperature we try to reach."""
         if ENL_HVAC_SET_TEMP in self._connector._update_data:
-            return self._connector._update_data[ENL_HVAC_SET_TEMP]
-        else:
-            return 'unavailable'
+            temp = self._connector._update_data[ENL_HVAC_SET_TEMP]
+            if temp != -3:
+                return temp
+        return None
 
     @property
     def target_temperature_step(self):
