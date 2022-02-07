@@ -131,7 +131,7 @@ class EchonetClimate(ClimateEntity):
                     return None
                 return self._connector._update_data[ENL_HVAC_ROOM_TEMP]
             else:
-                return 'unavailable'
+                return None
         else:
             return self._connector._update_data[ENL_HVAC_SET_TEMP]
 
@@ -139,9 +139,10 @@ class EchonetClimate(ClimateEntity):
     def target_temperature(self):
         """Return the temperature we try to reach."""
         if ENL_HVAC_SET_TEMP in self._connector._update_data:
-            return self._connector._update_data[ENL_HVAC_SET_TEMP]
-        else:
-            return 'unavailable'
+            temp = self._connector._update_data[ENL_HVAC_SET_TEMP]
+            if temp != -3:
+                return temp
+        return None
 
     @property
     def target_temperature_step(self):
@@ -196,7 +197,7 @@ class EchonetClimate(ClimateEntity):
     @property
     def fan_mode(self):
         """Return the fan setting."""
-        return self._connector._update_data[ENL_FANSPEED] if ENL_FANSPEED in self._connector._update_data else "unavailable"
+        return self._connector._update_data[ENL_FANSPEED] if ENL_FANSPEED in self._connector._update_data else None
 
     @property
     def fan_modes(self):
@@ -222,7 +223,7 @@ class EchonetClimate(ClimateEntity):
     @property
     def swing_mode(self):
         """Return the swing mode setting."""
-        return self._connector._update_data[ENL_AIR_VERT] if ENL_AIR_VERT in self._connector._update_data else "unavailable"
+        return self._connector._update_data[ENL_AIR_VERT] if ENL_AIR_VERT in self._connector._update_data else None
 
     async def async_set_swing_mode(self, swing_mode):
         """Set new swing mode."""

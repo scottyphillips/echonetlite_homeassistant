@@ -2,8 +2,8 @@
 import logging
 
 from homeassistant.const import (
-    CONF_ICON, CONF_TYPE,
-    DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY,
+    CONF_ICON, CONF_TYPE, DEVICE_CLASS_HUMIDITY, DEVICE_CLASS_POWER,
+    DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, PERCENTAGE, POWER_WATT,
     TEMP_CELSIUS, ENERGY_WATT_HOUR,
     STATE_UNAVAILABLE
 )
@@ -105,6 +105,10 @@ class EchonetSensor(SensorEntity):
             self._unit_of_measurement = TEMP_CELSIUS
         elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_ENERGY:
             self._unit_of_measurement = ENERGY_WATT_HOUR
+        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_POWER:
+            self._unit_of_measurement = POWER_WATT
+        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_HUMIDITY:
+            self._unit_of_measurement = PERCENTAGE
         else:
             self._unit_of_measurement = None
 
@@ -140,10 +144,21 @@ class EchonetSensor(SensorEntity):
         """Return the state of the sensor."""
         if self._instance._update_data[self._op_code] is None:
             return STATE_UNAVAILABLE
-        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_TEMPERATURE:
+        elif self._sensor_attributes[CONF_TYPE] in [
+                DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_HUMIDITY
+        ]:
             if self._op_code in self._instance._update_data:
-                if self._instance._update_data[self._op_code] == 126:
+                if self._instance._update_data[self._op_code] in [126, 253]:
                     return STATE_UNAVAILABLE
+                else:
+                    return self._instance._update_data[self._op_code]
+            else:
+                return STATE_UNAVAILABLE
+        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_POWER:
+            if self._op_code in self._instance._update_data:
+                # Underflow (less than 1 W)
+                if self._instance._update_data[self._op_code] == 65534:
+                    return 1
                 else:
                     return self._instance._update_data[self._op_code]
             else:

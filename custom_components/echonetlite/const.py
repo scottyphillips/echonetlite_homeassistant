@@ -1,5 +1,5 @@
 """Constants for the echonetlite integration."""
-from homeassistant.const import CONF_ICON, CONF_TYPE, DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, DEVICE_CLASS_HUMIDITY
+from homeassistant.const import CONF_ICON, CONF_TYPE, DEVICE_CLASS_POWER, DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, DEVICE_CLASS_HUMIDITY
 from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL_INCREASING
 from pychonet.HomeAirConditioner import (
     ENL_FANSPEED,
@@ -43,7 +43,7 @@ ENL_SENSOR_OP_CODES = {
         0x30: {
             0x84: {
                 CONF_ICON: "mdi:flash",
-                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_TYPE: DEVICE_CLASS_POWER,
                 CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
             },
             0x85: {
@@ -70,7 +70,7 @@ ENL_SENSOR_OP_CODES = {
         0x35: {
             0x84: {
                 CONF_ICON: "mdi:flash",
-                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_TYPE: DEVICE_CLASS_POWER,
                 CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
             },
             0x85: {
