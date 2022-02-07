@@ -144,9 +144,11 @@ class EchonetSensor(SensorEntity):
         """Return the state of the sensor."""
         if self._instance._update_data[self._op_code] is None:
             return STATE_UNAVAILABLE
-        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_TEMPERATURE:
+        elif self._sensor_attributes[CONF_TYPE] in [
+                DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_HUMIDITY
+        ]:
             if self._op_code in self._instance._update_data:
-                if self._instance._update_data[self._op_code] == 126:
+                if self._instance._update_data[self._op_code] in [126, 253]:
                     return STATE_UNAVAILABLE
                 else:
                     return self._instance._update_data[self._op_code]
