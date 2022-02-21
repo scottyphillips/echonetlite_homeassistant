@@ -142,34 +142,35 @@ class EchonetSensor(SensorEntity):
     @property
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
-        if self._instance._update_data[self._op_code] is None:
-            return STATE_UNAVAILABLE
-        elif self._sensor_attributes[CONF_TYPE] in [
-                DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_HUMIDITY
-        ]:
-            if self._op_code in self._instance._update_data:
-                if self._instance._update_data[self._op_code] in [126, 253]:
+        if self._op_code in self._instance._update_data:
+            if self._instance._update_data[self._op_code] is None:
+                return STATE_UNAVAILABLE
+            elif self._sensor_attributes[CONF_TYPE] in [
+                    DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_HUMIDITY
+            ]:
+                if self._op_code in self._instance._update_data:
+                    if self._instance._update_data[self._op_code] in [126, 253]:
+                        return STATE_UNAVAILABLE
+                    else:
+                        return self._instance._update_data[self._op_code]
+                else:
                     return STATE_UNAVAILABLE
+            elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_POWER:
+                if self._op_code in self._instance._update_data:
+                    # Underflow (less than 1 W)
+                    if self._instance._update_data[self._op_code] == 65534:
+                        return 1
+                    else:
+                        return self._instance._update_data[self._op_code]
                 else:
+                    return STATE_UNAVAILABLE
+            elif self._op_code in self._instance._update_data:
+                if isinstance(self._instance._update_data[self._op_code], (int, float)):
                     return self._instance._update_data[self._op_code]
-            else:
-                return STATE_UNAVAILABLE
-        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_POWER:
-            if self._op_code in self._instance._update_data:
-                # Underflow (less than 1 W)
-                if self._instance._update_data[self._op_code] == 65534:
-                    return 1
+                if len(self._instance._update_data[self._op_code]) < 255:
+                    return self._instance._update_data[self._op_code]
                 else:
-                    return self._instance._update_data[self._op_code]
-            else:
-                return STATE_UNAVAILABLE
-        elif self._op_code in self._instance._update_data:
-            if isinstance(self._instance._update_data[self._op_code], (int, float)):
-                return self._instance._update_data[self._op_code]
-            if len(self._instance._update_data[self._op_code]) < 255:
-                return self._instance._update_data[self._op_code]
-            else:
-                return STATE_UNAVAILABLE
+                    return STATE_UNAVAILABLE
         return None
 
     @property

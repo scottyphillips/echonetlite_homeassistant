@@ -286,7 +286,7 @@ class ECHONETConnector():
                 # polling succeded.
                 if retry > 1:
                     _LOGGER.debug(f"polling ECHONET Instance host {self._host} succeeded - Retry {retry} of 3")
-                self._update_data = update_data
+                self._update_data.update(update_data)
                 return self._update_data
             else:
                 _LOGGER.debug(f"polling ECHONET Instance host {self._host} timed out - Retry {retry} of 3")
