@@ -16,7 +16,7 @@ from pychonet.lib.const import ENL_SETMAP, ENL_GETMAP, ENL_UID, ENL_MANUFACTURER
 from aioudp import UDPServer
 # from pychonet import Factory
 from pychonet import ECHONETAPIClient
-from .const import DOMAIN, USER_OPTIONS
+from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -163,6 +163,19 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                                 USER_OPTIONS[option]['option_list']
                             )
                         })
+
+                # Handle setting temperature ranges for various modes of operation
+                for option in list(TEMP_OPTIONS.keys()):
+                    default_temp = TEMP_OPTIONS[option]['min']
+                    if self._config_entry.options.get(option) is not None:
+                        default_temp = self._config_entry.options.get(option)
+                    data_schema_structure.update({
+                            vol.Required(
+                                option,
+                                default=default_temp
+                            ): vol.All(vol.Coerce(int), vol.Range(min=TEMP_OPTIONS[option]['min'], max=TEMP_OPTIONS[option]['max']))
+                    })
+
             elif instance['eojgc'] == 0x01 and instance['eojcc'] == 0x35:  # AirCleaner
                 for option in list(USER_OPTIONS.keys()):
                     if option in instance['setmap']:

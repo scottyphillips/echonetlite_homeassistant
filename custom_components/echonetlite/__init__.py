@@ -9,9 +9,9 @@ import asyncio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
-from .const import DOMAIN
+from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS
 from aioudp import UDPServer
-# from pychonet import Factory
+
 from pychonet import ECHONETAPIClient
 from pychonet.EchonetInstance import (
     ENL_GETMAP,
@@ -55,8 +55,6 @@ LIGHT_API_CONNECTOR_DEFAULT_FLAGS = [
     ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
 ]
 
-
-
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
     host = None
@@ -64,8 +62,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     loop = None
     server = None
 
+    _LOGGER.debug(f"pychonet version {VERSION}")
     if DOMAIN in hass.data:  # maybe set up by config entry?
-        _LOGGER.debug(f"{hass.data[DOMAIN]} has already been setup..")
+        _LOGGER.debug(f"{hass.data[DOMAIN]} is already running.")
         server = hass.data[DOMAIN]['api']
         hass.data[DOMAIN].update({entry.entry_id: []})
     else:  # setup API
@@ -77,7 +76,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         server = ECHONETAPIClient(server=udp, loop=loop)
         server._message_timeout = 300
         hass.data[DOMAIN].update({"api": server})
-    _LOGGER.debug(f"pychonet version in use is {VERSION}")
+
 
     for instance in entry.data["instances"]:
         echonetlite = None
@@ -88,7 +87,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         getmap = instance["getmap"]
         setmap = instance["setmap"]
         uid = instance["uid"]
-        _LOGGER.debug(f'{instance["uid"]} is the UID..')
 
         # manually update API states using config entry data
         if host not in list(server._state):
@@ -155,40 +153,19 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-# TODO FIX CODE REPETITION and update for Air Cleaner
+# TODO update for Air Cleaner
 async def update_listener(hass, entry):
     for instance in hass.data[DOMAIN][entry.entry_id]:
         if instance['instance']['eojgc'] == 1 and instance['instance']['eojcc'] == 48:
-            if entry.options.get("fan_settings") is not None:  # check if options has been created
-                if len(entry.options.get("fan_settings")) > 0:  # if it has been created then check list length.
-                    instance["echonetlite"]._user_options.update({ENL_FANSPEED: entry.options.get("fan_settings")})
-                else:
-                    instance["echonetlite"]._user_options.update({ENL_FANSPEED: False})
-
-            if entry.options.get("swing_horiz") is not None:
-                if len(entry.options.get("swing_horiz")) > 0:
-                    instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: entry.options.get("swing_horiz")})
-                else:
-                    instance["echonetlite"]._user_options.update({ENL_AIR_HORZ: False})
-
-            if entry.options.get("swing_vert") is not None:
-                if len(entry.options.get("swing_vert")) > 0:
-                    instance["echonetlite"]._user_options.update({ENL_AIR_VERT: entry.options.get("swing_vert")})
-                else:
-                    instance["echonetlite"]._user_options.update({ENL_AIR_VERT: False})
-
-            if entry.options.get("auto_direction") is not None:
-                if len(entry.options.get("auto_direction")) > 0:
-                    instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION: entry.options.get("auto_direction")})
-                else:
-                    instance["echonetlite"]._user_options.update({ENL_AUTO_DIRECTION: False})
-
-            if entry.options.get("swing_mode") is not None:
-                if len(entry.options.get("swing_mode")) > 0:
-                    instance["echonetlite"]._user_options.update({ENL_SWING_MODE: entry.options.get("swing_mode")})
-                else:
-                    instance["echonetlite"]._user_options.update({ENL_SWING_MODE: False})
-
+            for option in USER_OPTIONS.keys():
+                if entry.options.get(USER_OPTIONS[option]["option"]) is not None:  # check if options has been created
+                    if len(entry.options.get(USER_OPTIONS[option]["option"])) > 0:  # if it has been created then check list length.
+                        instance["echonetlite"]._user_options.update({option: entry.options.get(USER_OPTIONS[option]["option"])})
+                    else:
+                        instance["echonetlite"]._user_options.update({option: False})
+            for option in TEMP_OPTIONS.keys():
+                if entry.options.get(option) is not None:
+                        instance["echonetlite"]._user_options.update({option: entry.options.get(option)})
 
 class ECHONETConnector():
     """EchonetAPIConnector is used to centralise API calls for  Echonet devices.
@@ -212,13 +189,13 @@ class ECHONETConnector():
         self._update_flags_full_list = []
         flags = []
         if self._eojgc == 1 and self._eojcc == 48:
-            _LOGGER.debug(f"Create new HomeAirConditioner instance at: {self._host}")
+            _LOGGER.debug(f"Starting ECHONETLite HomeAirConditioner instance at {self._host}")
             flags = HVAC_API_CONNECTOR_DEFAULT_FLAGS
         elif self._eojgc == 2 and self._eojcc == 144:
-            _LOGGER.debug(f"Create new GeneralLighting instance at: {self._host}")
+            _LOGGER.debug(f"Starting ECHONETLite GeneralLighting instance at {self._host}")
             flags = LIGHT_API_CONNECTOR_DEFAULT_FLAGS
         else:
-            _LOGGER.debug(f"Create new Generic instance for {self._eojgc}-{self._eojcc}-{self._eojci} at {self._host}")
+            _LOGGER.debug(f"Starting ECHONETLite Generic instance for {self._eojgc}-{self._eojcc}-{self._eojci} at {self._host}")
             flags = [ENL_STATUS]
             for item in self._getPropertyMap:
                 if item not in list(EPC_SUPER.keys()):
@@ -240,33 +217,33 @@ class ECHONETConnector():
             start_index += MAX_UPDATE_BATCH_SIZE
         self._update_flag_batches.append(self._update_flags_full_list[start_index:full_list_length])
 
+        # TODO this looks messy.
         self._user_options = {
             ENL_FANSPEED: False,
             ENL_AUTO_DIRECTION: False,
             ENL_SWING_MODE: False,
             ENL_AIR_VERT: False,
-            ENL_AIR_HORZ: False
+            ENL_AIR_HORZ: False,
+            'min_temp_heat': 15,
+            'max_temp_heat': 35,
+            'min_temp_cool': 15,
+            'max_temp_cool': 35,
+            'min_temp_auto': 15,
+            'max_temp_auto': 35,
         }
-        # Stitch together user selectable options for fan + swing modes for HVAC
-        # TODO - fix code repetition
-        if entry.options.get("fan_settings") is not None:  # check if options has been created
-            if len(entry.options.get("fan_settings")) > 0:  # if it has been created then check list length.
-                self._user_options[ENL_FANSPEED] = entry.options.get("fan_settings")
-        if entry.options.get("swing_horiz") is not None:
-            if len(entry.options.get("swing_horiz")) > 0:
-                self._user_options[ENL_AIR_HORZ] = entry.options.get("swing_horiz")
-        if entry.options.get("swing_vert") is not None:  # check if options has been created
-            if len(entry.options.get("swing_vert")) > 0:
-                self._user_options[ENL_AIR_VERT] = entry.options.get("swing_vert")
-        if entry.options.get("auto_direction") is not None:  # check if options has been created
-            if len(entry.options.get("auto_direction")) > 0:
-                self._user_options[ENL_AUTO_DIRECTION] = entry.options.get("auto_direction")
-        if entry.options.get("swing_mode") is not None:  # check if options has been created
-            if len(entry.options.get("swing_mode")) > 0:
-                self._user_options[ENL_SWING_MODE] = entry.options.get("swing_mode")
+        # User selectable options for fan + swing modes for HVAC
+        for option in USER_OPTIONS.keys():
+            if entry.options.get(USER_OPTIONS[option]['option']) is not None:  # check if options has been created
+                if len(entry.options.get(USER_OPTIONS[option]['option'])) > 0:  # if it has been created then check list length.
+                    self._user_options[option] = entry.options.get(USER_OPTIONS[option]['option'])
+
+        # Temperature range options for heat, cool and auto modes
+        for option in TEMP_OPTIONS.keys():
+            if entry.options.get(option) is not None:
+                self._user_options[option] = entry.options.get(option)
 
         self._uid = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_UID]
-        _LOGGER.debug(f'{self._uid} is the UID in ECHONET connector..')
+        _LOGGER.debug(f'ECHONET instance UID is {self._uid}')
         if self._uid is None:
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
 
@@ -281,14 +258,14 @@ class ECHONETConnector():
                         update_data.update(batch_data)
                     elif len(flags) == 1:
                         update_data[flags[0]] = batch_data
-            _LOGGER.debug(f"{list(update_data.values())}")
+            _LOGGER.debug(f"ECHONETlite polling update data - {list(update_data.values())}")
             if len(update_data) > 0 and False not in list(update_data.values()):
                 # polling succeded.
                 if retry > 1:
-                    _LOGGER.debug(f"polling ECHONET Instance host {self._host} succeeded - Retry {retry} of 3")
+                    _LOGGER.debug(f"Polling ECHONET Instance host {self._host} succeeded. Retry {retry} of 3")
                 self._update_data.update(update_data)
                 return self._update_data
             else:
-                _LOGGER.debug(f"polling ECHONET Instance host {self._host} timed out - Retry {retry} of 3")
-                _LOGGER.debug(f"Number of missed ECHONETLite msssages since reboot is - {len(self._api._message_list)}")
+                _LOGGER.debug(f"Polling ECHONET Instance host {self._host} timed out. Retry {retry} of 3")
+                _LOGGER.debug(f"Number of missed ECHONETLite msssages since reboot is {len(self._api._message_list)}")
         return self._update_data

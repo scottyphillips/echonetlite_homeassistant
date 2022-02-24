@@ -72,6 +72,9 @@ class EchonetClimate(ClimateEntity):
         if ENL_AIR_VERT in list(self._connector._setPropertyMap):
             self._support_flags = self._support_flags | SUPPORT_SWING_MODE
         self._hvac_modes = DEFAULT_HVAC_MODES
+        self._min_temp = self._connector._user_options['min_temp_auto']
+        self._max_temp = self._connector._user_options['max_temp_auto']
+
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
@@ -257,3 +260,25 @@ class EchonetClimate(ClimateEntity):
     async def async_turn_off(self):
         """Turn off."""
         await self._connector._instance.off()
+
+    @property
+    def min_temp(self) -> int:
+        """Return the minimum temperature supported by the HVAC."""
+        if self.hvac_mode == HVAC_MODE_HEAT:
+            self._min_temp = self._connector._user_options['min_temp_heat']
+        if self.hvac_mode == HVAC_MODE_COOL:
+            self._min_temp = self._connector._user_options['min_temp_cool']
+        if self.hvac_mode == HVAC_MODE_HEAT_COOL:
+            self._min_temp = self._connector._user_options['min_temp_auto']
+        return self._min_temp
+
+    @property
+    def max_temp(self) -> int:
+        """Return the maximum temperature supported by the HVAC."""
+        if self.hvac_mode == HVAC_MODE_HEAT:
+            self._max_temp = self._connector._user_options['max_temp_heat']
+        if self.hvac_mode == HVAC_MODE_COOL:
+            self._max_temp = self._connector._user_options['max_temp_cool']
+        if self.hvac_mode == HVAC_MODE_HEAT_COOL:
+            self._max_temp = self._connector._user_options['max_temp_auto']
+        return self._max_temp

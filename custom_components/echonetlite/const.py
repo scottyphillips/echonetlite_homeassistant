@@ -81,7 +81,7 @@ ENL_SENSOR_OP_CODES = {
         }
     },
     'default':  {
-        CONF_ICON: None, 
+        CONF_ICON: None,
         CONF_TYPE: None,
         CONF_STATE_CLASS: None,
     },
@@ -156,4 +156,12 @@ USER_OPTIONS = {
     ENL_AIR_VERT:   {'option': 'swing_vert', 'option_list': AIRFLOW_VERT_OPTIONS},
     ENL_AUTO_DIRECTION: {'option': 'auto_direction', 'option_list': AUTO_DIRECTION_OPTIONS},
     ENL_SWING_MODE:     {'option': 'swing_mode', 'option_list': SWING_MODE_OPTIONS},
+}
+
+TEMP_OPTIONS = {"min_temp_heat": {"min":15, "max":20},
+                "max_temp_heat": {"min":25, "max":35},
+                "min_temp_cool": {"min":15, "max":20},
+                "max_temp_cool": {"min":25, "max":35},
+                "min_temp_auto": {"min":15, "max":20},
+                "max_temp_auto": {"min":25, "max":35},
 }

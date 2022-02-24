@@ -33,7 +33,13 @@
                    "swing_horiz": "Configure Horizontal Swing Settings",
                    "swing_vert": "Configure Vertical Swing Settings",
                    "auto_direction": "Configure Auto Direction",
-                   "swing_mode": "Configure Swing Mode"
+                   "swing_mode": "Configure Swing Mode",
+                   "min_temp_heat": "Configure Minimum Temperature for Heating Operation",
+                   "max_temp_heat": "Configure Maximum Temperature for Heating Operation",
+                   "min_temp_cool": "Configure Minimum Temperature for Cooling Operation",
+                   "max_temp_cool": "Configure Maximum Temperature for Cooling Operation",
+                   "min_temp_auto": "Configure Minimum Temperature for Automatic Operation",
+                   "max_temp_auto": "Configure Maximum Temperature for Automatic Operation"
                 },
                 "description": "Configure Fan Settings"
             }

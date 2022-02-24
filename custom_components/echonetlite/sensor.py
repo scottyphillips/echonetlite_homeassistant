@@ -24,14 +24,14 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        _LOGGER.debug(f"setting up sensor {entity}")
-        _LOGGER.debug(f"update flags for this sensor are {entity['echonetlite']._update_flags_full_list}")
+        _LOGGER.debug(f"Configuring ECHONETLite sensor {entity}")
+        _LOGGER.debug(f"Update flags for this sensor are {entity['echonetlite']._update_flags_full_list}")
         eojgc = entity['instance']['eojgc']
         eojcc = entity['instance']['eojcc']
 
         # Home Air Conditioner we dont bother exposing all sensors
         if eojgc == 1 and eojcc == 48:
-            _LOGGER.debug("This is an ECHONET climate device so only a few sensors will be created")
+            _LOGGER.debug("This is an ECHONET climate device so not all sensors will be configured.")
             for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity['instance']['getmap']:
                     entities.append(
@@ -43,7 +43,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         )
                     )
         elif eojgc == 1 and eojcc == 53:
-            _LOGGER.debug("This is an ECHONET fan device so only a few sensors will be created")
+            _LOGGER.debug("This is an ECHONET fan device so not all sensors will be configured.")
             for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity['instance']['getmap']:
                     entities.append(
@@ -55,7 +55,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         )
                     )
         else:  # handle other ECHONET instances
-            _LOGGER.debug("Configuring ECHONETlite sensor..")
             for op_code in EPC_CODE[eojgc][eojcc]:
                 if eojgc in ENL_SENSOR_OP_CODES.keys():
                     if eojcc in ENL_SENSOR_OP_CODES[eojgc].keys():
@@ -171,7 +170,7 @@ class EchonetSensor(SensorEntity):
                     return self._instance._update_data[self._op_code]
                 else:
                     return STATE_UNAVAILABLE
-        return None
+        return STATE_UNAVAILABLE
 
     @property
     def native_unit_of_measurement(self):

@@ -33,7 +33,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         if entity['instance']['eojgc'] == 0x02 and entity['instance']['eojcc'] == 0x90:  # General Lighting
-            _LOGGER.debug("Found ECHONET Light")
+            _LOGGER.debug("Configuring ECHONETlite Light entity")
             entities.append(EchonetLight(config_entry.title, entity['echonetlite']))
     _LOGGER.debug(f"Number of light devices to be added: {len(entities)}")
     async_add_devices(entities, True)
@@ -129,7 +129,7 @@ class EchonetLight(LightEntity):
         if ATTR_COLOR_TEMP in kwargs and COLOR_MODE_COLOR_TEMP in self._supported_color_modes:
             # bring the selected color to something we can calculate on
             color_scale = (float(kwargs[ATTR_COLOR_TEMP]) - float(self._min_mireds)) / float(self._max_mireds - self._min_mireds)
-            _LOGGER.debug(f"set color to : {color_scale}")
+            _LOGGER.debug(f"Set color to : {color_scale}")
             # bring the color to
             color_scale_echonet = color_scale * (len(self._echonet_mireds) - 1)
             # round it to an index
