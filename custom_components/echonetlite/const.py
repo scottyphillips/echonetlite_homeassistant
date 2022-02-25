@@ -159,9 +159,9 @@ USER_OPTIONS = {
 }
 
 TEMP_OPTIONS = {"min_temp_heat": {"min":15, "max":20},
-                "max_temp_heat": {"min":25, "max":35},
+                "max_temp_heat": {"min":20, "max":30},
                 "min_temp_cool": {"min":15, "max":20},
-                "max_temp_cool": {"min":25, "max":35},
+                "max_temp_cool": {"min":20, "max":30},
                 "min_temp_auto": {"min":15, "max":20},
-                "max_temp_auto": {"min":25, "max":35},
+                "max_temp_auto": {"min":20, "max":30},
 }
