@@ -158,10 +158,10 @@ USER_OPTIONS = {
     ENL_SWING_MODE:     {'option': 'swing_mode', 'option_list': SWING_MODE_OPTIONS},
 }
 
-TEMP_OPTIONS = {"min_temp_heat": {"min":15, "max":20},
-                "max_temp_heat": {"min":20, "max":30},
-                "min_temp_cool": {"min":15, "max":20},
-                "max_temp_cool": {"min":20, "max":30},
-                "min_temp_auto": {"min":15, "max":20},
-                "max_temp_auto": {"min":20, "max":30},
+TEMP_OPTIONS = {"min_temp_heat": {"min":15, "max":25},
+                "max_temp_heat": {"min":18, "max":30},
+                "min_temp_cool": {"min":15, "max":25},
+                "max_temp_cool": {"min":18, "max":30},
+                "min_temp_auto": {"min":15, "max":25},
+                "max_temp_auto": {"min":18, "max":30},
 }
