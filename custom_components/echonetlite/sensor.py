@@ -108,6 +108,8 @@ class EchonetSensor(SensorEntity):
             self._unit_of_measurement = POWER_WATT
         elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_HUMIDITY:
             self._unit_of_measurement = PERCENTAGE
+        elif self._sensor_attributes[CONF_TYPE] == PERCENTAGE:
+            self._unit_of_measurement = PERCENTAGE
         else:
             self._unit_of_measurement = None
 

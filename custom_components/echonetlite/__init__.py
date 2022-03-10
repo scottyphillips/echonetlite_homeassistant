@@ -55,6 +55,9 @@ LIGHT_API_CONNECTOR_DEFAULT_FLAGS = [
     ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
 ]
 
+# fix later
+_0287_API_CONNECTOR_DEFAULT_FLAGS = [ENL_STATUS, 0xC0, 0xC1, 0xC2, 0xC5, 0xC6, 0xC7, 0xC8]
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
     host = None
@@ -188,12 +191,15 @@ class ECHONETConnector():
         # Detect HVAC - eventually we will use factory here.
         self._update_flags_full_list = []
         flags = []
-        if self._eojgc == 1 and self._eojcc == 48:
+        if self._eojgc == 0x01 and self._eojcc == 0x30:
             _LOGGER.debug(f"Starting ECHONETLite HomeAirConditioner instance at {self._host}")
             flags = HVAC_API_CONNECTOR_DEFAULT_FLAGS
-        elif self._eojgc == 2 and self._eojcc == 144:
+        elif self._eojgc == 0x02 and self._eojcc == 0x90:
             _LOGGER.debug(f"Starting ECHONETLite GeneralLighting instance at {self._host}")
             flags = LIGHT_API_CONNECTOR_DEFAULT_FLAGS
+        elif self._eojgc == 0x02 and self._eojcc == 0x87:
+            _LOGGER.debug(f"Starting ECHONETLite DistributionPanelMeter instance at {self._host}")
+            flags = _0287_API_CONNECTOR_DEFAULT_FLAGS
         else:
             _LOGGER.debug(f"Starting ECHONETLite Generic instance for {self._eojgc}-{self._eojcc}-{self._eojci} at {self._host}")
             flags = [ENL_STATUS]

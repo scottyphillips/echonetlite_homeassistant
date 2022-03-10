@@ -5,13 +5,13 @@
   "config_flow": true,
   "documentation": "https://www.github.com/scottyphillips/echonetlite_homeassistant",
   "requirements": [
-    "pychonet==2.1.1",
+    "pychonet==2.1.6",
     "aio-udp-server"
   ],
   "dependencies": [],
   "codeowners": [
     "@scottyphillips"
   ],
-  "version":  "3.4.1",
+  "version":  "3.4.2",
   "iot_class": "local_polling"
 }

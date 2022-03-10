@@ -1,5 +1,5 @@
 """Constants for the echonetlite integration."""
-from homeassistant.const import CONF_ICON, CONF_TYPE, DEVICE_CLASS_POWER, DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, DEVICE_CLASS_HUMIDITY
+from homeassistant.const import CONF_ICON, CONF_TYPE, DEVICE_CLASS_POWER, DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, DEVICE_CLASS_HUMIDITY, PERCENTAGE
 from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL_INCREASING
 from pychonet.HomeAirConditioner import (
     ENL_FANSPEED,
@@ -80,6 +80,40 @@ ENL_SENSOR_OP_CODES = {
             }
         }
     },
+    0x02: {
+        0x87:{
+            0xE0: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+            },
+            0xE1: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+            },
+            0xE5: {
+                CONF_ICON: "mdi:percent",
+                CONF_TYPE: PERCENTAGE,
+                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+            },
+            0xE6: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+            },
+            0xE8: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+            },
+            0xE9: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+            }
+        }
+    }
     'default':  {
         CONF_ICON: None,
         CONF_TYPE: None,
