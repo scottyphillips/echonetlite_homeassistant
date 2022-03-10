@@ -113,7 +113,7 @@ ENL_SENSOR_OP_CODES = {
                 CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
             }
         }
-    }
+    },
     'default':  {
         CONF_ICON: None,
         CONF_TYPE: None,
