@@ -148,6 +148,11 @@ class EchonetSensor(SensorEntity):
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
         if self._op_code in self._instance._update_data:
+            if self._op_code == 0xC0 or self._op_code == 0xC1: # kludge for distribution panel meter.
+               if self._eojgc == 0x02 and self._eojcc == 0x87 and 0xC2 in self._instance._update_data:
+                   if self._instance._update_data[0xC2] is not None and self._instance._update_data[self._op_code] is not None:
+                        return self._instance._update_data[self._op_code] * self._instance._update_data[0xC2] * 1000 # value in Wh
+
             if self._instance._update_data[self._op_code] is None:
                 return STATE_UNAVAILABLE
             elif self._sensor_attributes[CONF_TYPE] in [
