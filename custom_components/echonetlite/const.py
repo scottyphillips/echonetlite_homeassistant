@@ -81,7 +81,7 @@ ENL_SENSOR_OP_CODES = {
         }
     },
     0x02: {
-        0x87:{
+        0x79:{
             0xE0: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_POWER,
