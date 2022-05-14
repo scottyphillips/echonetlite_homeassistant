@@ -39,12 +39,12 @@ compatible ECHONETLite Devices:
      * MSZ-JXV4018S
 
 * Mitsubishi MAC-578IF2-E WiFi Adaptor connected to the following systems:
-* AP Series
-   * MSZ-AP22VGD
-   * MSZ-AP35VGD
-   * MSZ-AP50VGD
-* Ducted
-   * PEAD-RP71
+  * AP Series
+     * MSZ-AP22VGD
+     * MSZ-AP35VGD
+     * MSZ-AP50VGD
+  * Ducted
+     * PEAD-RP71
 
 
 * 'MoekadenRoom' ECHONETLite Simulator: https://github.com/SonyCSL/MoekadenRoom
@@ -63,7 +63,7 @@ compatible ECHONETLite Devices:
 * Daikin (ECHONETLite enabled models)
 * Koizumi
      * Lighting system AE50264E bridge (https://www.koizumi-lt.co.jp/product/jyutaku/tree/ )
-* Rinnai How water system (ECHONETLite enabled models)
+* Rinnai Hot water system (ECHONETLite enabled models)
 
 ## Installation - Enable ECHONET protocol
 This Custom Component makes use of the official Mitsubishi MAC-568IF-E WiFi
