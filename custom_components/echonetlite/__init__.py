@@ -64,7 +64,7 @@ def polling_update_debug_log(values, eojgc, eojcc):
         if value in EPC_CODE[eojgc][eojcc]:
              debug_log = debug_log + f' - {EPC_CODE[eojgc][eojcc][value]} ({value:#x}): {values[value]}\n'
         if value in EPC_SUPER:
-             debug_log = debug_log + f' - {EPC_SUPER} ({value:#x}): {values[value]}\n'
+             debug_log = debug_log + f' - {EPC_SUPER[value]} ({value:#x}): {values[value]}\n'
     return debug_log
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
