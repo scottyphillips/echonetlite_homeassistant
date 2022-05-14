@@ -58,6 +58,12 @@ LIGHT_API_CONNECTOR_DEFAULT_FLAGS = [
 # fix later
 _0287_API_CONNECTOR_DEFAULT_FLAGS = [ENL_STATUS, 0xC0, 0xC1, 0xC2, 0xC5, 0xC6, 0xC7, 0xC8]
 
+def polling_update_debug_log(values, eojgc, eojcc):
+    debug_log = f"\nECHONETlite polling update data:\n"
+    for value in list(values.keys()):
+        debug_log = debug_log + f' - {EPC_CODE[eojgc][eojcc][value]} ({value:#x}): {values[value]}\n'
+    return debug_log
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
     host = None
@@ -65,12 +71,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     loop = None
     server = None
 
-    _LOGGER.debug(f"pychonet version {VERSION}")
     if DOMAIN in hass.data:  # maybe set up by config entry?
-        _LOGGER.debug(f"{hass.data[DOMAIN]} is already running.")
+        _LOGGER.debug(f"ECHONETlite platform is already started.")
         server = hass.data[DOMAIN]['api']
         hass.data[DOMAIN].update({entry.entry_id: []})
     else:  # setup API
+        _LOGGER.debug(f"Starting up ECHONETlite platform..")
+        _LOGGER.debug(f"pychonet version is {VERSION}")
         hass.data.setdefault(DOMAIN, {})
         hass.data[DOMAIN].update({entry.entry_id: []})
         udp = UDPServer()
@@ -249,7 +256,7 @@ class ECHONETConnector():
                 self._user_options[option] = entry.options.get(option)
 
         self._uid = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_UID]
-        _LOGGER.debug(f'ECHONET instance UID is {self._uid}')
+        _LOGGER.debug(f'UID for ECHONETLite instance at {self._host}  is {self._uid}.')
         if self._uid is None:
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
 
@@ -264,14 +271,20 @@ class ECHONETConnector():
                         update_data.update(batch_data)
                     elif len(flags) == 1:
                         update_data[flags[0]] = batch_data
-            _LOGGER.debug(f"ECHONETlite polling update data - {list(update_data.values())}")
-            if len(update_data) > 0 and False not in list(update_data.values()):
+            _LOGGER.debug(polling_update_debug_log(update_data, self._eojgc, self._eojcc))
+            # check if polling succeeded
+            polling_succeeded = False
+            for value in list(update_data.values()):
+                if value is not None:
+                    polling_succeeded = True
+            if len(update_data) > 0 and polling_succeeded == True:
                 # polling succeded.
                 if retry > 1:
-                    _LOGGER.debug(f"Polling ECHONET Instance host {self._host} succeeded. Retry {retry} of 3")
+                    _LOGGER.debug(f"Polling ECHONET Instance host at {self._host} succeeded. Retry {retry} of 3")
                 self._update_data.update(update_data)
                 return self._update_data
             else:
                 _LOGGER.debug(f"Polling ECHONET Instance host {self._host} timed out. Retry {retry} of 3")
                 _LOGGER.debug(f"Number of missed ECHONETLite msssages since reboot is {len(self._api._message_list)}")
+        self._update_data.update(update_data)
         return self._update_data
