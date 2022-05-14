@@ -61,7 +61,10 @@ _0287_API_CONNECTOR_DEFAULT_FLAGS = [ENL_STATUS, 0xC0, 0xC1, 0xC2, 0xC5, 0xC6, 0
 def polling_update_debug_log(values, eojgc, eojcc):
     debug_log = f"\nECHONETlite polling update data:\n"
     for value in list(values.keys()):
-        debug_log = debug_log + f' - {EPC_CODE[eojgc][eojcc][value]} ({value:#x}): {values[value]}\n'
+        if value in EPC_CODE[eojgc][eojcc]:
+             debug_log = debug_log + f' - {EPC_CODE[eojgc][eojcc][value]} ({value:#x}): {values[value]}\n'
+        if value in EPC_SUPER:
+             debug_log = debug_log + f' - {EPC_SUPER} ({value:#x}): {values[value]}\n'
     return debug_log
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
