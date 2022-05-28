@@ -7,6 +7,7 @@ from pychonet.HomeAirConditioner import (
     ENL_HVAC_MODE,
     ENL_HVAC_SET_TEMP,
     ENL_HVAC_ROOM_TEMP,
+    ENL_HVAC_SILENT_MODE
 )
 
 from pychonet.EchonetInstance import ENL_GETMAP
@@ -18,6 +19,7 @@ from homeassistant.components.climate.const import (
     SUPPORT_TARGET_TEMPERATURE,
     SUPPORT_FAN_MODE,
     SUPPORT_SWING_MODE,
+    SUPPORT_PRESET_MODE,
     CURRENT_HVAC_OFF,
     CURRENT_HVAC_HEAT,
     CURRENT_HVAC_COOL,
@@ -34,7 +36,7 @@ from homeassistant.const import (
     ATTR_TEMPERATURE,
     PRECISION_WHOLE,
 )
-from .const import DOMAIN
+from .const import DOMAIN, SILENT_MODE_OPTIONS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,6 +45,7 @@ SUPPORT_FLAGS = 0
 DEFAULT_FAN_MODES = ['auto', 'minimum', 'low', 'medium-low', 'medium', 'medium-high', 'high', 'very-high', 'max']
 DEFAULT_HVAC_MODES = ['heat', 'cool', 'dry', 'fan_only', 'heat_cool', 'off']
 DEFAULT_SWING_MODES = ['upper', 'upper-central', 'central', 'lower-central', 'lower']
+DEFAULT_PRESET_MODES = ['normal', 'high-speed', 'silent']
 
 
 async def async_setup_entry(hass, config_entry, async_add_devices):
@@ -71,6 +74,8 @@ class EchonetClimate(ClimateEntity):
             self._support_flags = self._support_flags | SUPPORT_FAN_MODE
         if ENL_AIR_VERT in list(self._connector._setPropertyMap):
             self._support_flags = self._support_flags | SUPPORT_SWING_MODE
+        if ENL_HVAC_SILENT_MODE in list(self._connector._setPropertyMap):
+            self._support_flags = self._support_flags | SUPPORT_PRESET_MODE
         self._hvac_modes = DEFAULT_HVAC_MODES
         self._min_temp = self._connector._user_options['min_temp_auto']
         self._max_temp = self._connector._user_options['max_temp_auto']
@@ -223,6 +228,19 @@ class EchonetClimate(ClimateEntity):
             if self._connector._user_options[ENL_AIR_VERT] is not False:
                 return self._connector._user_options[ENL_AIR_VERT]
         return DEFAULT_SWING_MODES
+
+    @property
+    def preset_modes(self):
+        return DEFAULT_PRESET_MODES
+
+    @property
+    def preset_mode(self):
+        return self._connector._update_data[ENL_HVAC_SILENT_MODE] if ENL_HVAC_SILENT_MODE in self._connector._update_data else None
+
+    async def async_set_preset_mode(self, preset_mode):
+        """Set new preset mode - This is normal/high-speed/silent"""
+        await self._connector._instance.setSilentMode(preset_mode)
+        self._connector._update_data[ENL_HVAC_SILENT_MODE] = preset_mode
 
     @property
     def swing_mode(self):
