@@ -5,7 +5,7 @@ from homeassistant.const import (
     CONF_ICON, CONF_TYPE, DEVICE_CLASS_HUMIDITY, DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, PERCENTAGE, POWER_WATT,
     TEMP_CELSIUS, ENERGY_WATT_HOUR, VOLUME_CUBIC_METERS,
-    STATE_UNAVAILABLE
+    STATE_UNAVAILABLE, DEVICE_CLASS_GAS
 )
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.typing import StateType
