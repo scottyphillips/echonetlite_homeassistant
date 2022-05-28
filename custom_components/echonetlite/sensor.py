@@ -164,7 +164,11 @@ class EchonetSensor(SensorEntity):
 
                if self._eojgc == 0x02 and self._eojcc == 0x81 and 0xE1 in self._instance._update_data: # water flow
                    if self._instance._update_data[0xE1] is not None and self._instance._update_data[self._op_code] is not None:
-                       return self._instance._update_data[self._op_code] * self._instance._update_data[0xE1] * 0.001 # value in m3
+                       return self._instance._update_data[self._op_code] * self._instance._update_data[0xE1]
+
+               if self._eojgc == 0x02 and self._eojcc == 0x82:  # GAS
+                   if self._instance._update_data[self._op_code] is not None:
+                       return self._instance._update_data[self._op_code] * 0.001
 
             if self._instance._update_data[self._op_code] is None:
                 return STATE_UNAVAILABLE
