@@ -54,7 +54,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             config.title
                         )
                     )
-        else:  # This routine is an absolute mess...
+        else:  # For all other devices, sensors will be configured but customise if applicable.
             for op_code in list(entity['echonetlite']._update_flags_full_list):
                 if eojgc in ENL_SENSOR_OP_CODES.keys():
                     if eojcc in ENL_SENSOR_OP_CODES[eojgc].keys():
