@@ -55,10 +55,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         )
                     )
         else:  # This routine is an absolute mess...
-            for op_code in EPC_CODE[eojgc][eojcc]:
+            for op_code in list(entity['echonetlite']._update_flags_full_list):
                 if eojgc in ENL_SENSOR_OP_CODES.keys():
                     if eojcc in ENL_SENSOR_OP_CODES[eojgc].keys():
-                        if op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys() and op_code in list(entity['echonetlite']._update_flags_full_list):
+                        if op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
                             entities.append(
                                 EchonetSensor(
                                     entity['echonetlite'],
@@ -67,18 +67,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                     config.title
                                 )
                             )
-                        elif op_code in list(entity['echonetlite']._update_flags_full_list):
-                            entities.append(
-                                EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
-                            )
-                    elif op_code in list(entity['echonetlite']._update_flags_full_list):
-                        entities.append(
-                            EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
-                        )
-                elif op_code in list(entity['echonetlite']._update_flags_full_list):
-                    entities.append(
-                        EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
-                    )
+                            continue
+                entities.append(
+                    EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
+                )
     async_add_entities(entities, True)
 
 
