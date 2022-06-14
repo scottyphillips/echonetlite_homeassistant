@@ -1,5 +1,5 @@
 """Constants for the echonetlite integration."""
-from homeassistant.const import CONF_ICON, CONF_TYPE, DEVICE_CLASS_POWER, DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, DEVICE_CLASS_HUMIDITY, PERCENTAGE
+from homeassistant.const import CONF_ICON, CONF_TYPE, DEVICE_CLASS_POWER, DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, DEVICE_CLASS_HUMIDITY, PERCENTAGE, CONF_SERVICE_DATA
 from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL_INCREASING
 from pychonet.HomeAirConditioner import (
     ENL_FANSPEED,
@@ -16,6 +16,16 @@ from pychonet.HomeAirConditioner import (
 
 DOMAIN = "echonetlite"
 CONF_STATE_CLASS = ATTR_STATE_CLASS
+DATA_STATE_ON = "On"
+DATA_STATE_OFF = "Off"
+SWITH_POWER = {
+    DATA_STATE_ON: 0x30,
+    DATA_STATE_OFF: 0x31
+}
+SWITH_BINALY = {
+    DATA_STATE_ON: 0x41,
+    DATA_STATE_OFF: 0x42
+}
 
 HVAC_SELECT_OP_CODES = {
     0xA0: FAN_SPEED,
@@ -27,6 +37,25 @@ HVAC_SELECT_OP_CODES = {
 
 FAN_SELECT_OP_CODES = {
     0xA0: FAN_SPEED
+}
+
+HOTWATER_SWITCH_CODES = {
+    0x80: {
+        CONF_ICON: "mdi:power-settings",
+        CONF_SERVICE_DATA: SWITH_POWER
+    },
+    0x90: {
+        CONF_ICON: "mdi:timer",
+        CONF_SERVICE_DATA: SWITH_BINALY
+    },
+    0xE3: {
+        CONF_ICON: "mdi:bathtub-outline",
+        CONF_SERVICE_DATA: SWITH_BINALY
+    },
+    0xE4: {
+        CONF_ICON: "mdi:heat-wave",
+        CONF_SERVICE_DATA: SWITH_BINALY
+    }
 }
 
 ENL_SENSOR_OP_CODES = {
