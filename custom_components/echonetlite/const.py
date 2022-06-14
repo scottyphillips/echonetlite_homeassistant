@@ -27,6 +27,7 @@ from pychonet.HomeAirConditioner import (
 
 DOMAIN = "echonetlite"
 CONF_STATE_CLASS = ATTR_STATE_CLASS
+CONF_ENSURE_ON = "ensureon"
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 SWITCH_POWER = {
@@ -57,15 +58,18 @@ HOTWATER_SWITCH_CODES = {
     },
     0x90: {
         CONF_ICON: "mdi:timer",
-        CONF_SERVICE_DATA: SWITCH_BINARY
+        CONF_SERVICE_DATA: SWITCH_BINARY,
+        CONF_ENSURE_ON: 0x80
     },
     0xE3: {
         CONF_ICON: "mdi:bathtub-outline",
-        CONF_SERVICE_DATA: SWITCH_BINARY
+        CONF_SERVICE_DATA: SWITCH_BINARY,
+        CONF_ENSURE_ON: 0x80
     },
     0xE4: {
         CONF_ICON: "mdi:heat-wave",
-        CONF_SERVICE_DATA: SWITCH_BINARY
+        CONF_SERVICE_DATA: SWITCH_BINARY,
+        CONF_ENSURE_ON: 0x80
     }
 }
 

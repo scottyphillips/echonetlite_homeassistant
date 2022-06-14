@@ -2,12 +2,11 @@ import time
 import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA
 from homeassistant.components.switch import SwitchEntity
-from .const import DOMAIN, HOTWATER_SWITCH_CODES, DATA_STATE_ON, DATA_STATE_OFF, SWITCH_POWER
+from .const import DOMAIN, HOTWATER_SWITCH_CODES, DATA_STATE_ON, DATA_STATE_OFF, SWITCH_POWER, CONF_ENSURE_ON
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
 
 _LOGGER = logging.getLogger(__name__)
-MAIN_POWER_CODE = 0x80
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
@@ -68,16 +67,22 @@ class EchonetSwitch(SwitchEntity):
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn switch on."""
-        isMainPower = self._code == MAIN_POWER_CODE
-        if not isMainPower and self._connector._update_data[MAIN_POWER_CODE] != DATA_STATE_ON:
-            if await self._connector._instance.setMessage(MAIN_POWER_CODE, SWITCH_POWER[DATA_STATE_ON]):
-                self._connector._update_data[MAIN_POWER_CODE] = DATA_STATE_ON
-                time.sleep(5)
+        main_sw_code = None
+        # Check ensure turn on switch
+        if (CONF_ENSURE_ON in self._options):
+            main_sw_code = self._options[CONF_ENSURE_ON]
+        # Turn on the specified switch
+        if main_sw_code is not None and self._connector._update_data[main_sw_code] != DATA_STATE_ON:
+            if await self._connector._instance.setMessage(main_sw_code, SWITCH_POWER[DATA_STATE_ON]):
+                self._connector._update_data[main_sw_code] = DATA_STATE_ON
+                # Wait for it to be reflected on the device
+                time.sleep(3)
 
-        if (isMainPower or self._connector._update_data[MAIN_POWER_CODE] == DATA_STATE_ON) and await self._connector._instance.setMessage(self._code, self._options[DATA_STATE_ON]):
-            self._connector._update_data[self._code] = DATA_STATE_ON
-            self._attr_is_on = True
-            self.async_write_ha_state()
+        if main_sw_code is None or self._connector._update_data[main_sw_code] == DATA_STATE_ON:
+            if await self._connector._instance.setMessage(self._code, self._options[DATA_STATE_ON]):
+                self._connector._update_data[self._code] = DATA_STATE_ON
+                self._attr_is_on = True
+                self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn switch off."""
