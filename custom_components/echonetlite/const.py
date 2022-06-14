@@ -29,11 +29,11 @@ DOMAIN = "echonetlite"
 CONF_STATE_CLASS = ATTR_STATE_CLASS
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
-SWITH_POWER = {
+SWITCH_POWER = {
     DATA_STATE_ON: 0x30,
     DATA_STATE_OFF: 0x31
 }
-SWITH_BINALY = {
+SWITCH_BINALY = {
     DATA_STATE_ON: 0x41,
     DATA_STATE_OFF: 0x42
 }
@@ -53,19 +53,19 @@ FAN_SELECT_OP_CODES = {
 HOTWATER_SWITCH_CODES = {
     0x80: {
         CONF_ICON: "mdi:power-settings",
-        CONF_SERVICE_DATA: SWITH_POWER
+        CONF_SERVICE_DATA: SWITCH_POWER
     },
     0x90: {
         CONF_ICON: "mdi:timer",
-        CONF_SERVICE_DATA: SWITH_BINALY
+        CONF_SERVICE_DATA: SWITCH_BINALY
     },
     0xE3: {
         CONF_ICON: "mdi:bathtub-outline",
-        CONF_SERVICE_DATA: SWITH_BINALY
+        CONF_SERVICE_DATA: SWITCH_BINALY
     },
     0xE4: {
         CONF_ICON: "mdi:heat-wave",
-        CONF_SERVICE_DATA: SWITH_BINALY
+        CONF_SERVICE_DATA: SWITCH_BINALY
     }
 }
 
