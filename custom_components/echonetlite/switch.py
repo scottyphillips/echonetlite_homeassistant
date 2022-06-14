@@ -1,11 +1,13 @@
+import time
 import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA
 from homeassistant.components.switch import SwitchEntity
-from .const import DOMAIN, HOTWATER_SWITCH_CODES, DATA_STATE_ON, DATA_STATE_OFF
+from .const import DOMAIN, HOTWATER_SWITCH_CODES, DATA_STATE_ON, DATA_STATE_OFF, SWITCH_POWER
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
 
 _LOGGER = logging.getLogger(__name__)
+MAIN_POWER_CODE = 0x80
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
@@ -66,7 +68,13 @@ class EchonetSwitch(SwitchEntity):
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn switch on."""
-        if await self._connector._instance.setMessage(self._code, self._options[DATA_STATE_ON]):
+        isMainPower = self._code == MAIN_POWER_CODE
+        if not isMainPower and self._connector._update_data[MAIN_POWER_CODE] != DATA_STATE_ON:
+            if await self._connector._instance.setMessage(MAIN_POWER_CODE, SWITCH_POWER[DATA_STATE_ON]):
+                self._connector._update_data[MAIN_POWER_CODE] = DATA_STATE_ON
+                time.sleep(5)
+
+        if (isMainPower or self._connector._update_data[MAIN_POWER_CODE] == DATA_STATE_ON) and await self._connector._instance.setMessage(self._code, self._options[DATA_STATE_ON]):
             self._connector._update_data[self._code] = DATA_STATE_ON
             self._attr_is_on = True
             self.async_write_ha_state()
