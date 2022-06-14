@@ -20,7 +20,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                            entity['echonetlite'],
                            config,
                            op_code,
-                           HOTWATER_SWITCH_CODES[op_code][CONF_SERVICE_DATA],
+                           HOTWATER_SWITCH_CODES[op_code],
                            config.title
                         )
                     )
@@ -79,14 +79,14 @@ class EchonetSwitch(SwitchEntity):
                 time.sleep(3)
 
         if main_sw_code is None or self._connector._update_data[main_sw_code] == DATA_STATE_ON:
-            if await self._connector._instance.setMessage(self._code, self._options[DATA_STATE_ON]):
+            if await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_ON]):
                 self._connector._update_data[self._code] = DATA_STATE_ON
                 self._attr_is_on = True
                 self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn switch off."""
-        if await self._connector._instance.setMessage(self._code, self._options[DATA_STATE_OFF]):
+        if await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_OFF]):
             self._connector._update_data[self._code] = DATA_STATE_OFF
             self._attr_is_on = False
             self.async_write_ha_state()
