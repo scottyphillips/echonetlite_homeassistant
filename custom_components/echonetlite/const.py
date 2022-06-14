@@ -33,7 +33,7 @@ SWITCH_POWER = {
     DATA_STATE_ON: 0x30,
     DATA_STATE_OFF: 0x31
 }
-SWITCH_BINALY = {
+SWITCH_BINARY = {
     DATA_STATE_ON: 0x41,
     DATA_STATE_OFF: 0x42
 }
@@ -57,15 +57,15 @@ HOTWATER_SWITCH_CODES = {
     },
     0x90: {
         CONF_ICON: "mdi:timer",
-        CONF_SERVICE_DATA: SWITCH_BINALY
+        CONF_SERVICE_DATA: SWITCH_BINARY
     },
     0xE3: {
         CONF_ICON: "mdi:bathtub-outline",
-        CONF_SERVICE_DATA: SWITCH_BINALY
+        CONF_SERVICE_DATA: SWITCH_BINARY
     },
     0xE4: {
         CONF_ICON: "mdi:heat-wave",
-        CONF_SERVICE_DATA: SWITCH_BINALY
+        CONF_SERVICE_DATA: SWITCH_BINARY
     }
 }
 
