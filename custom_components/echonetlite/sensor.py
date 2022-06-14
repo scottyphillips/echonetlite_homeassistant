@@ -4,8 +4,8 @@ import logging
 from homeassistant.const import (
     CONF_ICON, CONF_TYPE, DEVICE_CLASS_HUMIDITY, DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, PERCENTAGE, POWER_WATT,
-    TEMP_CELSIUS, ENERGY_WATT_HOUR,
-    STATE_UNAVAILABLE
+    TEMP_CELSIUS, ENERGY_WATT_HOUR, VOLUME_CUBIC_METERS,
+    STATE_UNAVAILABLE, DEVICE_CLASS_GAS
 )
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.typing import StateType
@@ -54,8 +54,8 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             config.title
                         )
                     )
-        else:  # handle other ECHONET instances
-            for op_code in EPC_CODE[eojgc][eojcc]:
+        else:  # For all other devices, sensors will be configured but customise if applicable.
+            for op_code in list(entity['echonetlite']._update_flags_full_list):
                 if eojgc in ENL_SENSOR_OP_CODES.keys():
                     if eojcc in ENL_SENSOR_OP_CODES[eojgc].keys():
                         if op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
@@ -67,18 +67,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                     config.title
                                 )
                             )
-                        else:
-                            entities.append(
-                                EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
-                            )
-                    elif op_code in list(entity['echonetlite']._update_flags_full_list):
-                        entities.append(
-                            EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
-                        )
-                elif op_code in list(entity['echonetlite']._update_flags_full_list):
-                    entities.append(
-                        EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
-                    )
+                            continue
+                entities.append(
+                    EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
+                )
     async_add_entities(entities, True)
 
 
@@ -114,6 +106,10 @@ class EchonetSensor(SensorEntity):
             self._unit_of_measurement = PERCENTAGE
         elif self._sensor_attributes[CONF_TYPE] == PERCENTAGE:
             self._unit_of_measurement = PERCENTAGE
+        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_GAS:
+            self._unit_of_measurement = VOLUME_CUBIC_METERS
+        elif self._sensor_attributes[CONF_TYPE] == VOLUME_CUBIC_METERS:
+            self._unit_of_measurement = VOLUME_CUBIC_METERS
         else:
             self._unit_of_measurement = None
 
@@ -152,6 +148,19 @@ class EchonetSensor(SensorEntity):
                if self._eojgc == 0x02 and self._eojcc == 0x87 and 0xC2 in self._instance._update_data:
                    if self._instance._update_data[0xC2] is not None and self._instance._update_data[self._op_code] is not None:
                         return self._instance._update_data[self._op_code] * self._instance._update_data[0xC2] * 1000 # value in Wh
+
+            if self._op_code == 0xE0: # kludge for electric energy meter and water volume meters
+               if self._eojgc == 0x02 and self._eojcc == 0x80 and 0xE2 in self._instance._update_data:
+                   if self._instance._update_data[0xE2] is not None and self._instance._update_data[self._op_code] is not None: # electric energy
+                       return self._instance._update_data[self._op_code] * self._instance._update_data[0xE2] * 1000 # value in Wh
+
+               if self._eojgc == 0x02 and self._eojcc == 0x81 and 0xE1 in self._instance._update_data: # water flow
+                   if self._instance._update_data[0xE1] is not None and self._instance._update_data[self._op_code] is not None:
+                       return self._instance._update_data[self._op_code] * self._instance._update_data[0xE1]
+
+               if self._eojgc == 0x02 and self._eojcc == 0x82:  # GAS
+                   if self._instance._update_data[self._op_code] is not None:
+                       return self._instance._update_data[self._op_code] * 0.001
 
             if self._instance._update_data[self._op_code] is None:
                 return STATE_UNAVAILABLE

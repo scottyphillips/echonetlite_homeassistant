@@ -5,11 +5,10 @@
 [![hacs][hacsbadge]][hacs]
 ![Project Maintenance][maintenance-shield]
 [![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 
 A Home Assistant custom component for use with ECHONETLite compatible devices.
 This custom component makes use of the 'pychonet'
-Python library also written by yours truly:
+Python3 library also maintained by this author.
 (https://github.com/scottyphillips/pychonet)
 
 **This component will set up the climate, fan, sensor and select platforms.**
@@ -39,12 +38,12 @@ compatible ECHONETLite Devices:
      * MSZ-JXV4018S
 
 * Mitsubishi MAC-578IF2-E WiFi Adaptor connected to the following systems:
-* AP Series
-   * MSZ-AP22VGD
-   * MSZ-AP35VGD
-   * MSZ-AP50VGD
-* Ducted
-   * PEAD-RP71
+  * AP Series
+     * MSZ-AP22VGD
+     * MSZ-AP35VGD
+     * MSZ-AP50VGD
+  * Ducted
+     * PEAD-RP71
 
 
 * 'MoekadenRoom' ECHONETLite Simulator: https://github.com/SonyCSL/MoekadenRoom
@@ -63,17 +62,18 @@ compatible ECHONETLite Devices:
 * Daikin (ECHONETLite enabled models)
 * Koizumi
      * Lighting system AE50264E bridge (https://www.koizumi-lt.co.jp/product/jyutaku/tree/ )
-* Rinnai How water system (ECHONETLite enabled models)
+* Rinnai Hot water system (ECHONETLite enabled models)
 
 ## Installation - Enable ECHONET protocol
-This Custom Component makes use of the official Mitsubishi MAC-568IF-E WiFi
-Adaptor. Other adaptors (indeed other vendors!) may work, but they
-must support the 'ECHONET lite' protocol.
+This Custom Component was originally designed for the Mitsubishi MAC-568IF-E WiFi
+Adaptor, a basic guide for enabling ECHONETlite is provided below.
 
 From the official Mitsubishi AU/NZ Wifi App, you will need to enable
 the 'ECHONET lite' protocol under the 'edit unit' settings.
 
 ![echonet][echonetimg]
+
+Many other products will work using this custom-component, but they must correctly support the 'ECHONET lite' protocol. The author cannot assist with enabling ECHONET Lite for other vendor products.
 
 ## Installation - if previously installed versions prior to 3.0.1 (mitsubishi component)
 1. Delete 'mitsubishi' from your 'custom_components' directory
@@ -93,9 +93,10 @@ the 'ECHONET lite' protocol under the 'edit unit' settings.
 
 ## Configuring Options for Fan and swing mode settings for supported HVAC and Air Purifiers.
 Once you have added the integration, you can go back to configuration -> integrations
-Under your ECHONETLite device click 'configure'
+Under your ECHONETLite device click 'configure'.
 Fine tune your required fan and swing mode settings. The integration will be able to determine what settings are supported for your system in question.
-NOTE: Selecting which specific options are suitable is a 'trial and errror' process as ECHONETLite does not provide a means of returning permittted values for these settings
+NOTE: Selecting which specific options are suitable is a 'trial and error' process as ECHONETLite does not provide a means of returning permittted values for these settings.
+
 As soon as you configure your options and save, the settings will take effect.
 
 
@@ -106,18 +107,13 @@ Thanks to khcnz (Karl Chaffey) and gvs for helping refector the old code
 and contributing to testing.
 
 Thanks to Dick Swart, Masaki Tagawa, Paul, khcnz,  Kolodnerd, and Alfie Gerner
-for each contributing code updates to to the original 'mitsubishi_hass'
-and therefore this custom component.
+for each contributing code updates to to the original 'mitsubishi_hass' and therefore this custom component.
 
-Thanks to Jeffro Carr who inspired me to write my own native Python ECHONET
-library for Home Assistant. I could not get his Node JS Docker container
-to work properly on Hass.io :-)
+Thanks to Jeffro Carr who inspired me to write my own native Python ECHONET library for Home Assistant.
 Some ideas in his own repo got implemented in my own code.
 (https://github.com/jethrocarr/echonetlite-hvac-mqtt-service.git)
 
-Also big thanks to Futomi Hatano for open sourcing a high quality and
-extremely well documented ECHONET Lite library in Node JS that formed
-the basis of my reverse engineering efforts.
+Thanks to Futomi Hatano for open sourcing a high quality and well documented ECHONET Lite library in Node JS that formed the basis of the 'Pychonet' library.
 (https://github.com/futomi/node-echonet-lite)
 
 

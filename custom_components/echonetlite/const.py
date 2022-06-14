@@ -1,5 +1,16 @@
 """Constants for the echonetlite integration."""
-from homeassistant.const import CONF_ICON, CONF_TYPE, DEVICE_CLASS_POWER, DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, DEVICE_CLASS_HUMIDITY, PERCENTAGE, CONF_SERVICE_DATA
+from homeassistant.const import (
+    CONF_ICON,
+    CONF_TYPE,
+    CONF_SERVICE_DATA,
+    DEVICE_CLASS_POWER,
+    DEVICE_CLASS_TEMPERATURE,
+    DEVICE_CLASS_ENERGY,
+    DEVICE_CLASS_HUMIDITY,
+    DEVICE_CLASS_GAS,
+    PERCENTAGE,
+    VOLUME_CUBIC_METERS
+)
 from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL_INCREASING
 from pychonet.HomeAirConditioner import (
     ENL_FANSPEED,
@@ -142,6 +153,27 @@ ENL_SENSOR_OP_CODES = {
                 CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
             }
         },
+        0x80: {
+            0xE0: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+            }
+        },
+        0x81: {
+            0xE0: {
+                CONF_ICON: "mdi:water",
+                CONF_TYPE: VOLUME_CUBIC_METERS,
+                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+            }
+        },
+        0x82: {
+            0xE0: {
+                CONF_ICON: "mdi:gas-burner",
+                CONF_TYPE: DEVICE_CLASS_GAS,
+                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+            }
+        },
         0x87 : {
             0xC0: {
                 CONF_ICON: "mdi:flash",
@@ -158,7 +190,14 @@ ENL_SENSOR_OP_CODES = {
                 CONF_TYPE: DEVICE_CLASS_POWER,
                 CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
             }
-        }
+        },
+        0x88: {
+            0xE0: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+            }
+        },
     },
     'default':  {
         CONF_ICON: None,
@@ -228,6 +267,12 @@ SWING_MODE_OPTIONS = {
     'vert':         'Vertical',
     'horiz':        'Horizontal',
     'vert-horiz':   'Vertical-Horizontal'
+}
+
+SILENT_MODE_OPTIONS = {
+    'normal':       'Normal',
+    'high-speed':   'High Speed',
+    'silent':       'Silent',
 }
 
 USER_OPTIONS = {
