@@ -1,4 +1,4 @@
-import time
+import asyncio
 import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA
 from homeassistant.components.switch import SwitchEntity
@@ -76,7 +76,7 @@ class EchonetSwitch(SwitchEntity):
             if await self._connector._instance.setMessage(main_sw_code, SWITCH_POWER[DATA_STATE_ON]):
                 self._connector._update_data[main_sw_code] = DATA_STATE_ON
                 # Wait for it to be reflected on the device
-                time.sleep(3)
+                await asyncio.sleep(3)
 
         if main_sw_code is None or self._connector._update_data[main_sw_code] == DATA_STATE_ON:
             if await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_ON]):
