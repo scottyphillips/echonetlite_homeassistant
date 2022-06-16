@@ -2,6 +2,7 @@
 from homeassistant.const import (
     CONF_ICON,
     CONF_TYPE,
+    CONF_SERVICE,
     CONF_SERVICE_DATA,
     DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE,
@@ -31,6 +32,7 @@ CONF_ENSURE_ON = "ensureon"
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
+SERVICE_SET_START_TIMER_TIME = "set_start_timer_time"
 SWITCH_POWER = {
     DATA_STATE_ON: 0x30,
     DATA_STATE_OFF: 0x31
@@ -128,12 +130,13 @@ ENL_OP_CODES = {
                 CONF_ENSURE_ON: 0x80,
                 TYPE_SWITCH: True
             },
-            0x91: { # Sensor
+            0x91: { # Sensor with service
                 CONF_ICON: "mdi:timer-outline",
                 CONF_TYPE: None,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_SERVICE: [ SERVICE_SET_START_TIMER_TIME ]
             },
-            0xD1: {
+            0xD1: { # Sensor
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: DEVICE_CLASS_TEMPERATURE,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT

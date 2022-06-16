@@ -3,23 +3,25 @@ import logging
 import voluptuous as vol
 
 from homeassistant.const import (
-    CONF_ICON, CONF_TYPE, DEVICE_CLASS_HUMIDITY, DEVICE_CLASS_POWER,
+    CONF_ICON, CONF_SERVICE, CONF_TYPE, DEVICE_CLASS_HUMIDITY, DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, PERCENTAGE, POWER_WATT,
     TEMP_CELSIUS, ENERGY_WATT_HOUR, VOLUME_CUBIC_METERS,
     STATE_UNAVAILABLE, DEVICE_CLASS_GAS
 )
+from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.typing import StateType
 
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
-from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH
+from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_START_TIMER_TIME
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
+    platform = entity_platform.async_get_current_platform()
     for entity in hass.data[DOMAIN][config.entry_id]:
         _LOGGER.debug(f"Configuring ECHONETLite sensor {entity}")
         _LOGGER.debug(f"Update flags for this sensor are {entity['echonetlite']._update_flags_full_list}")
@@ -56,7 +58,17 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                 if eojgc in ENL_OP_CODES.keys():
                     if eojcc in ENL_OP_CODES[eojgc].keys():
                         if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
-                            if TYPE_SWITCH in ENL_OP_CODES[eojgc][eojcc][op_code].keys():
+                            _keys = ENL_OP_CODES[eojgc][eojcc][op_code].keys()
+                            if CONF_SERVICE in _keys:
+                                for service_name in ENL_OP_CODES[eojgc][eojcc][op_code][CONF_SERVICE]:
+                                    if service_name == SERVICE_SET_START_TIMER_TIME:
+                                        platform.async_register_entity_service(
+                                            service_name,
+                                            { vol.Required('timer_time'): cv.time_period },
+                                            "async_" + service_name
+                                        )
+
+                            if TYPE_SWITCH in _keys:
                                 continue # dont configure as sensor, it will be configured as switch instead.
 
                             entities.append(
@@ -210,3 +222,12 @@ class EchonetSensor(SensorEntity):
     async def async_update(self):
         """Retrieve latest state."""
         await self._instance.async_update()
+
+    async def async_set_start_timer_time(self, timer_time):
+        val = str(timer_time).split(':')
+        hh_mm = ':'.join([val[0], val[1]])
+        mes = {"EPC": 0x91, "PDC": 0x02, "EDT": int(val[0]) * 256 + int(val[1])}
+        if await self._instance._instance.setMessages([mes]):
+            self._instance._update_data[0x91] = hh_mm
+            self.async_write_ha_state()
+        
