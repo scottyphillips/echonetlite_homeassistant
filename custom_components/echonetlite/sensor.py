@@ -3,7 +3,7 @@ import logging
 import voluptuous as vol
 
 from homeassistant.const import (
-    CONF_ICON, CONF_SERVICE, CONF_TYPE, DEVICE_CLASS_HUMIDITY, DEVICE_CLASS_POWER,
+    CONF_ICON, CONF_SERVICE, CONF_TYPE, CONF_UNIT_OF_MEASUREMENT, DEVICE_CLASS_HUMIDITY, DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, PERCENTAGE, POWER_WATT,
     TEMP_CELSIUS, ENERGY_WATT_HOUR, VOLUME_CUBIC_METERS,
     STATE_UNAVAILABLE, DEVICE_CLASS_GAS
@@ -100,6 +100,14 @@ class EchonetSensor(SensorEntity):
         self._uid = f'{self._instance._host}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
         self._device_name = name
 
+        _attr_keys = self._sensor_attributes.keys()
+        if CONF_ICON not in _attr_keys:
+            self._sensor_attributes[CONF_ICON] = None
+        if CONF_TYPE not in _attr_keys:
+            self._sensor_attributes[CONF_TYPE] = None
+        if CONF_STATE_CLASS not in _attr_keys:
+            self._sensor_attributes[CONF_STATE_CLASS] = None
+
         # Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
         if self._op_code in EPC_CODE[self._eojgc][self._eojcc].keys():
             self._name = f"{name} {EPC_CODE[self._eojgc][self._eojcc][self._op_code]}"
@@ -123,7 +131,10 @@ class EchonetSensor(SensorEntity):
         elif self._sensor_attributes[CONF_TYPE] == VOLUME_CUBIC_METERS:
             self._unit_of_measurement = VOLUME_CUBIC_METERS
         else:
-            self._unit_of_measurement = None
+            if CONF_UNIT_OF_MEASUREMENT in _attr_keys:
+                self._unit_of_measurement = self._sensor_attributes[CONF_UNIT_OF_MEASUREMENT]
+            else:
+                self._unit_of_measurement = None
 
     @property
     def icon(self):

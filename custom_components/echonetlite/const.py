@@ -4,6 +4,7 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_SERVICE,
     CONF_SERVICE_DATA,
+    CONF_UNIT_OF_MEASUREMENT,
     DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE,
     DEVICE_CLASS_ENERGY,
@@ -145,6 +146,12 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: DEVICE_CLASS_TEMPERATURE,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xE7: {
+                CONF_UNIT_OF_MEASUREMENT: "L"
+            },
+            0xEE: {
+                CONF_UNIT_OF_MEASUREMENT: "L"
             }
         },
         0x79:{
