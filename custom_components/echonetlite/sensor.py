@@ -14,7 +14,7 @@ from homeassistant.helpers.typing import StateType
 
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
-from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_START_TIMER_TIME
+from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             _keys = ENL_OP_CODES[eojgc][eojcc][op_code].keys()
                             if CONF_SERVICE in _keys:
                                 for service_name in ENL_OP_CODES[eojgc][eojcc][op_code][CONF_SERVICE]:
-                                    if service_name == SERVICE_SET_START_TIMER_TIME:
+                                    if service_name == SERVICE_SET_ON_TIMER_TIME:
                                         platform.async_register_entity_service(
                                             service_name,
                                             { vol.Required('timer_time'): cv.time_period },
@@ -223,11 +223,10 @@ class EchonetSensor(SensorEntity):
         """Retrieve latest state."""
         await self._instance.async_update()
 
-    async def async_set_start_timer_time(self, timer_time):
+    async def async_set_on_timer_time(self, timer_time):
         val = str(timer_time).split(':')
         hh_mm = ':'.join([val[0], val[1]])
         mes = {"EPC": 0x91, "PDC": 0x02, "EDT": int(val[0]) * 256 + int(val[1])}
         if await self._instance._instance.setMessages([mes]):
             self._instance._update_data[0x91] = hh_mm
             self.async_write_ha_state()
-        

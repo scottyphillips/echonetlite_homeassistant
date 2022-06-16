@@ -32,7 +32,7 @@ CONF_ENSURE_ON = "ensureon"
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
-SERVICE_SET_START_TIMER_TIME = "set_start_timer_time"
+SERVICE_SET_ON_TIMER_TIME = "set_on_timer_time"
 SWITCH_POWER = {
     DATA_STATE_ON: 0x30,
     DATA_STATE_OFF: 0x31
@@ -134,7 +134,7 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:timer-outline",
                 CONF_TYPE: None,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                CONF_SERVICE: [ SERVICE_SET_START_TIMER_TIME ]
+                CONF_SERVICE: [ SERVICE_SET_ON_TIMER_TIME ]
             },
             0xD1: { # Sensor
                 CONF_ICON: "mdi:thermometer",
