@@ -1,5 +1,6 @@
 """Support for ECHONETLite sensors."""
 import logging
+import voluptuous as vol
 
 from homeassistant.const import (
     CONF_ICON, CONF_TYPE, DEVICE_CLASS_HUMIDITY, DEVICE_CLASS_POWER,
@@ -12,11 +13,7 @@ from homeassistant.helpers.typing import StateType
 
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
-from .const import (
-    DOMAIN,
-    ENL_SENSOR_OP_CODES,
-    CONF_STATE_CLASS
-)
+from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,44 +29,47 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         # Home Air Conditioner we dont bother exposing all sensors
         if eojgc == 1 and eojcc == 48:
             _LOGGER.debug("This is an ECHONET climate device so not all sensors will be configured.")
-            for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
+            for op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity['instance']['getmap']:
                     entities.append(
                         EchonetSensor(
                             entity['echonetlite'],
                             op_code,
-                            ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code],
+                            ENL_OP_CODES[eojgc][eojcc][op_code],
                             config.title
                         )
                     )
         elif eojgc == 1 and eojcc == 53:
             _LOGGER.debug("This is an ECHONET fan device so not all sensors will be configured.")
-            for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
+            for op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity['instance']['getmap']:
                     entities.append(
                         EchonetSensor(
                             entity['echonetlite'],
                             op_code,
-                            ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code],
+                            ENL_OP_CODES[eojgc][eojcc][op_code],
                             config.title
                         )
                     )
         else:  # For all other devices, sensors will be configured but customise if applicable.
             for op_code in list(entity['echonetlite']._update_flags_full_list):
-                if eojgc in ENL_SENSOR_OP_CODES.keys():
-                    if eojcc in ENL_SENSOR_OP_CODES[eojgc].keys():
-                        if op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
+                if eojgc in ENL_OP_CODES.keys():
+                    if eojcc in ENL_OP_CODES[eojgc].keys():
+                        if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
+                            if TYPE_SWITCH in ENL_OP_CODES[eojgc][eojcc][op_code].keys():
+                                continue # dont configure as sensor, it will be configured as switch instead.
+
                             entities.append(
                                 EchonetSensor(
                                     entity['echonetlite'],
                                     op_code,
-                                    ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code],
+                                    ENL_OP_CODES[eojgc][eojcc][op_code],
                                     config.title
                                 )
                             )
                             continue
                 entities.append(
-                    EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
+                    EchonetSensor(entity['echonetlite'], op_code, ENL_OP_CODES['default'], config.title)
                 )
     async_add_entities(entities, True)
 

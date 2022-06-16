@@ -2,7 +2,7 @@ import asyncio
 import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA
 from homeassistant.components.switch import SwitchEntity
-from .const import DOMAIN, HOTWATER_SWITCH_CODES, DATA_STATE_ON, DATA_STATE_OFF, SWITCH_POWER, CONF_ENSURE_ON
+from .const import DOMAIN, ENL_OP_CODES, DATA_STATE_ON, DATA_STATE_OFF, SWITCH_POWER, CONF_ENSURE_ON, TYPE_SWITCH
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
 
@@ -11,21 +11,25 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        if entity['instance']['eojgc'] == 2 and entity['instance']['eojcc'] == 114:  # Hot water generator
-            for op_code in entity['instance']['setmap']:
-                if op_code in HOTWATER_SWITCH_CODES:
-                    entities.append(
-                        EchonetSwitch(
-                           hass,
-                           entity['echonetlite'],
-                           config,
-                           op_code,
-                           HOTWATER_SWITCH_CODES[op_code],
-                           config.title
-                        )
-                    )
+        eojgc = entity['instance']['eojgc']
+        eojcc = entity['instance']['eojcc']
+        # configure switch entities by looking up full ENL_OP_CODE dict
+        for op_code in list(entity['echonetlite']._update_flags_full_list):
+            if eojgc in ENL_OP_CODES.keys():
+                if eojcc in ENL_OP_CODES[eojgc].keys():
+                    if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
+                        if TYPE_SWITCH in ENL_OP_CODES[eojgc][eojcc][op_code].keys():
+                            entities.append(
+                                EchonetSwitch(
+                                   hass,
+                                   entity['echonetlite'],
+                                   config,
+                                   op_code,
+                                   ENL_OP_CODES[eojgc][eojcc][op_code],
+                                   config.title
+                                )
+                            )
     async_add_entities(entities, True)
-
 
 class EchonetSwitch(SwitchEntity):
     def __init__(self, hass, connector, config, code, options, name=None):
@@ -36,7 +40,7 @@ class EchonetSwitch(SwitchEntity):
         self._options = options
         self._attr_is_on = self._connector._update_data[self._code] == DATA_STATE_ON
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
-        self._attr_icon = HOTWATER_SWITCH_CODES[code][CONF_ICON]
+        self._attr_icon = options[CONF_ICON]
         self._uid = f'{self._connector._uid}-{self._code}'
         self._device_name = name
 
