@@ -59,7 +59,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     if eojcc in ENL_OP_CODES[eojgc].keys():
                         if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                             _keys = ENL_OP_CODES[eojgc][eojcc][op_code].keys()
-                            if CONF_SERVICE in _keys:
+                            if CONF_SERVICE in _keys: # Some devices support advanced service calls.
                                 for service_name in ENL_OP_CODES[eojgc][eojcc][op_code][CONF_SERVICE]:
                                     if service_name == SERVICE_SET_ON_TIMER_TIME:
                                         platform.async_register_entity_service(

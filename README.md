@@ -11,7 +11,7 @@ This custom component makes use of the 'pychonet'
 Python3 library also maintained by this author.
 (https://github.com/scottyphillips/pychonet)
 
-**This component will set up the climate, fan, sensor and select platforms.**
+**This component will set up the climate, fan, sensor, select and switch platforms.**
 
 # Current working systems:
 Based upon feedback this custom component works with the following
@@ -65,7 +65,8 @@ compatible ECHONETLite Devices:
 
 * Daikin
      * Hot Water Heaters
-         * Input entity to configure Hot Water Timers can be configured by using a template and [Service Calls](Services.md).
+         * Switch entities to enable various hot water settings.
+         * Input entity to configure Hot Water Timers can be configured by using a template and a [Service Call](Services.md).
      * Air Conditioners
           * ECHONETLite enabled HVAC models.
 
