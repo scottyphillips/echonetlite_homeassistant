@@ -65,7 +65,7 @@ compatible ECHONETLite Devices:
 * Rinnai Hot water system (ECHONETLite enabled models)
 
 * Daikin Hot Water Heaters
-     * A custom Input entity to configure Hot Water Timers can be configured by using a template and a [Service Call](Services.md)
+     * Input entity to configure Hot Water Timers can be configured by using a template and [Service Calls](Services.md).
 
 ## Installation - Enable ECHONET protocol
 This Custom Component was originally designed for the Mitsubishi MAC-568IF-E WiFi
