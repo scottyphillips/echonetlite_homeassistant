@@ -64,6 +64,9 @@ compatible ECHONETLite Devices:
      * Lighting system AE50264E bridge (https://www.koizumi-lt.co.jp/product/jyutaku/tree/ )
 * Rinnai Hot water system (ECHONETLite enabled models)
 
+* Daikin Hot Water Heaters
+     * A custom Input entity to configure Hot Water Timers can be configured by using a template and a [Service Call](Services.md)
+
 ## Installation - Enable ECHONET protocol
 This Custom Component was originally designed for the Mitsubishi MAC-568IF-E WiFi
 Adaptor, a basic guide for enabling ECHONETlite is provided below.

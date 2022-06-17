@@ -4,13 +4,13 @@ Preliminary support for advanced service calls has been configured as of version
 
 ## Daikin Hot Water Heater
 
-Daikins can have their hot water heater timers configured using the `echonetlite.set_on_timer_time` service call. This in turn can be used in automation as per the below example:
+Daikins Hot Water Heaters can have their hot water heater timers configured using the `echonetlite.set_on_timer_time` service call. This in turn can be used in automation as per the below example to create a corresponding input entity:
 
 Automation example
 
 ```
-    Sensor entity id as: sensor.hot_water_set_value_of_on_timer_time
-    Input entity id as: input_datetime.hot_water_value_of_on_timer_time
+Sensor entity id as: sensor.hot_water_set_value_of_on_timer_time
+Input entity id as: input_datetime.hot_water_value_of_on_timer_time
 
 alias: Relay Hot Water On Timer time
 description: ''
