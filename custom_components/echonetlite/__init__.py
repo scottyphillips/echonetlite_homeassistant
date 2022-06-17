@@ -41,7 +41,7 @@ from pychonet.GeneralLighting import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = ["sensor", 'climate', 'select', 'light', 'fan']
+PLATFORMS = ["sensor", 'climate', 'select', 'light', 'fan', 'switch']
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 MAX_UPDATE_BATCH_SIZE = 10

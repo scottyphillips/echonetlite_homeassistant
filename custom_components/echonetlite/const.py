@@ -2,6 +2,9 @@
 from homeassistant.const import (
     CONF_ICON,
     CONF_TYPE,
+    CONF_SERVICE,
+    CONF_SERVICE_DATA,
+    CONF_UNIT_OF_MEASUREMENT,
     DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE,
     DEVICE_CLASS_ENERGY,
@@ -10,7 +13,7 @@ from homeassistant.const import (
     PERCENTAGE,
     VOLUME_CUBIC_METERS
 )
-from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL_INCREASING
+from homeassistant.components.sensor import ATTR_STATE_CLASS, SensorStateClass
 from pychonet.HomeAirConditioner import (
     ENL_FANSPEED,
     ENL_AIR_VERT,
@@ -26,6 +29,19 @@ from pychonet.HomeAirConditioner import (
 
 DOMAIN = "echonetlite"
 CONF_STATE_CLASS = ATTR_STATE_CLASS
+CONF_ENSURE_ON = "ensureon"
+DATA_STATE_ON = "On"
+DATA_STATE_OFF = "Off"
+TYPE_SWITCH = "switch"
+SERVICE_SET_ON_TIMER_TIME = "set_on_timer_time"
+SWITCH_POWER = {
+    DATA_STATE_ON: 0x30,
+    DATA_STATE_OFF: 0x31
+}
+SWITCH_BINARY = {
+    DATA_STATE_ON: 0x41,
+    DATA_STATE_OFF: 0x42
+}
 
 HVAC_SELECT_OP_CODES = {
     0xA0: FAN_SPEED,
@@ -39,13 +55,13 @@ FAN_SELECT_OP_CODES = {
     0xA0: FAN_SPEED
 }
 
-ENL_SENSOR_OP_CODES = {
+ENL_OP_CODES = {
     0x00: {
         0x11: {
             0xE0: {
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: DEVICE_CLASS_TEMPERATURE,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             },
         }
     },
@@ -54,118 +70,165 @@ ENL_SENSOR_OP_CODES = {
             0x84: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_POWER,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             },
             0x85: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_ENERGY,
-                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
             },
             0xBA: {
                 CONF_ICON: "mdi:water-percent",
                 CONF_TYPE: DEVICE_CLASS_HUMIDITY,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             },
             0xBE: {
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: DEVICE_CLASS_TEMPERATURE,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             },
             0xBB: {
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: DEVICE_CLASS_TEMPERATURE,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             }
         },
         0x35: {
             0x84: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_POWER,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             },
             0x85: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_ENERGY,
-                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
             }
         }
     },
     0x02: {
+        0x72: {
+            0x80: { # switch
+                CONF_ICON: "mdi:power-settings",
+                CONF_SERVICE_DATA: SWITCH_POWER,
+                TYPE_SWITCH: True
+            },
+            0x90: {
+                CONF_ICON: "mdi:timer",
+                CONF_SERVICE_DATA: SWITCH_BINARY,
+                CONF_ENSURE_ON: 0x80,
+                TYPE_SWITCH: True
+            },
+            0xE3: {
+                CONF_ICON: "mdi:bathtub-outline",
+                CONF_SERVICE_DATA: SWITCH_BINARY,
+                CONF_ENSURE_ON: 0x80,
+                TYPE_SWITCH: True
+            },
+            0xE4: {
+                CONF_ICON: "mdi:heat-wave",
+                CONF_SERVICE_DATA: SWITCH_BINARY,
+                CONF_ENSURE_ON: 0x80,
+                TYPE_SWITCH: True
+            },
+            0x91: { # Sensor with service
+                CONF_ICON: "mdi:timer-outline",
+                CONF_TYPE: None,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_SERVICE: [ SERVICE_SET_ON_TIMER_TIME ]
+            },
+            0xD1: { # Sensor
+                CONF_ICON: "mdi:thermometer",
+                CONF_TYPE: DEVICE_CLASS_TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xE1: {
+                CONF_ICON: "mdi:thermometer",
+                CONF_TYPE: DEVICE_CLASS_TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xE7: {
+                CONF_UNIT_OF_MEASUREMENT: "L"
+            },
+            0xEE: {
+                CONF_UNIT_OF_MEASUREMENT: "L"
+            }
+        },
         0x79:{
             0xE0: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_POWER,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             },
             0xE1: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_ENERGY,
-                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
             },
             0xE5: {
                 CONF_ICON: "mdi:percent",
                 CONF_TYPE: PERCENTAGE,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             },
             0xE6: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_POWER,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             },
             0xE8: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_POWER,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             },
             0xE9: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_POWER,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             }
         },
         0x80: {
             0xE0: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_ENERGY,
-                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
             }
         },
         0x81: {
             0xE0: {
                 CONF_ICON: "mdi:water",
                 CONF_TYPE: VOLUME_CUBIC_METERS,
-                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
             }
         },
         0x82: {
             0xE0: {
                 CONF_ICON: "mdi:gas-burner",
                 CONF_TYPE: DEVICE_CLASS_GAS,
-                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
             }
         },
         0x87 : {
             0xC0: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_ENERGY,
-                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
             },
             0xC1: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_ENERGY,
-                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
             },
             0xC6: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_POWER,
-                CONF_STATE_CLASS: STATE_CLASS_MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             }
         },
         0x88: {
             0xE0: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_ENERGY,
-                CONF_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
             }
         },
     },

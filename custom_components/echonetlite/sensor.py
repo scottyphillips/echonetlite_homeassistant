@@ -1,28 +1,27 @@
 """Support for ECHONETLite sensors."""
 import logging
+import voluptuous as vol
 
 from homeassistant.const import (
-    CONF_ICON, CONF_TYPE, DEVICE_CLASS_HUMIDITY, DEVICE_CLASS_POWER,
+    CONF_ICON, CONF_SERVICE, CONF_TYPE, CONF_UNIT_OF_MEASUREMENT, DEVICE_CLASS_HUMIDITY, DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, PERCENTAGE, POWER_WATT,
     TEMP_CELSIUS, ENERGY_WATT_HOUR, VOLUME_CUBIC_METERS,
     STATE_UNAVAILABLE, DEVICE_CLASS_GAS
 )
+from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.typing import StateType
 
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
-from .const import (
-    DOMAIN,
-    ENL_SENSOR_OP_CODES,
-    CONF_STATE_CLASS
-)
+from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
+    platform = entity_platform.async_get_current_platform()
     for entity in hass.data[DOMAIN][config.entry_id]:
         _LOGGER.debug(f"Configuring ECHONETLite sensor {entity}")
         _LOGGER.debug(f"Update flags for this sensor are {entity['echonetlite']._update_flags_full_list}")
@@ -32,44 +31,57 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         # Home Air Conditioner we dont bother exposing all sensors
         if eojgc == 1 and eojcc == 48:
             _LOGGER.debug("This is an ECHONET climate device so not all sensors will be configured.")
-            for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
+            for op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity['instance']['getmap']:
                     entities.append(
                         EchonetSensor(
                             entity['echonetlite'],
                             op_code,
-                            ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code],
+                            ENL_OP_CODES[eojgc][eojcc][op_code],
                             config.title
                         )
                     )
         elif eojgc == 1 and eojcc == 53:
             _LOGGER.debug("This is an ECHONET fan device so not all sensors will be configured.")
-            for op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
+            for op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity['instance']['getmap']:
                     entities.append(
                         EchonetSensor(
                             entity['echonetlite'],
                             op_code,
-                            ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code],
+                            ENL_OP_CODES[eojgc][eojcc][op_code],
                             config.title
                         )
                     )
         else:  # For all other devices, sensors will be configured but customise if applicable.
             for op_code in list(entity['echonetlite']._update_flags_full_list):
-                if eojgc in ENL_SENSOR_OP_CODES.keys():
-                    if eojcc in ENL_SENSOR_OP_CODES[eojgc].keys():
-                        if op_code in ENL_SENSOR_OP_CODES[eojgc][eojcc].keys():
+                if eojgc in ENL_OP_CODES.keys():
+                    if eojcc in ENL_OP_CODES[eojgc].keys():
+                        if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
+                            _keys = ENL_OP_CODES[eojgc][eojcc][op_code].keys()
+                            if CONF_SERVICE in _keys:
+                                for service_name in ENL_OP_CODES[eojgc][eojcc][op_code][CONF_SERVICE]:
+                                    if service_name == SERVICE_SET_ON_TIMER_TIME:
+                                        platform.async_register_entity_service(
+                                            service_name,
+                                            { vol.Required('timer_time'): cv.time_period },
+                                            "async_" + service_name
+                                        )
+
+                            if TYPE_SWITCH in _keys:
+                                continue # dont configure as sensor, it will be configured as switch instead.
+
                             entities.append(
                                 EchonetSensor(
                                     entity['echonetlite'],
                                     op_code,
-                                    ENL_SENSOR_OP_CODES[eojgc][eojcc][op_code],
+                                    ENL_OP_CODES[eojgc][eojcc][op_code],
                                     config.title
                                 )
                             )
                             continue
                 entities.append(
-                    EchonetSensor(entity['echonetlite'], op_code, ENL_SENSOR_OP_CODES['default'], config.title)
+                    EchonetSensor(entity['echonetlite'], op_code, ENL_OP_CODES['default'], config.title)
                 )
     async_add_entities(entities, True)
 
@@ -87,6 +99,14 @@ class EchonetSensor(SensorEntity):
         self._eojci = self._instance._eojci
         self._uid = f'{self._instance._host}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
         self._device_name = name
+
+        _attr_keys = self._sensor_attributes.keys()
+        if CONF_ICON not in _attr_keys:
+            self._sensor_attributes[CONF_ICON] = None
+        if CONF_TYPE not in _attr_keys:
+            self._sensor_attributes[CONF_TYPE] = None
+        if CONF_STATE_CLASS not in _attr_keys:
+            self._sensor_attributes[CONF_STATE_CLASS] = None
 
         # Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
         if self._op_code in EPC_CODE[self._eojgc][self._eojcc].keys():
@@ -111,7 +131,10 @@ class EchonetSensor(SensorEntity):
         elif self._sensor_attributes[CONF_TYPE] == VOLUME_CUBIC_METERS:
             self._unit_of_measurement = VOLUME_CUBIC_METERS
         else:
-            self._unit_of_measurement = None
+            if CONF_UNIT_OF_MEASUREMENT in _attr_keys:
+                self._unit_of_measurement = self._sensor_attributes[CONF_UNIT_OF_MEASUREMENT]
+            else:
+                self._unit_of_measurement = None
 
     @property
     def icon(self):
@@ -210,3 +233,11 @@ class EchonetSensor(SensorEntity):
     async def async_update(self):
         """Retrieve latest state."""
         await self._instance.async_update()
+
+    async def async_set_on_timer_time(self, timer_time):
+        val = str(timer_time).split(':')
+        hh_mm = ':'.join([val[0], val[1]])
+        mes = {"EPC": 0x91, "PDC": 0x02, "EDT": int(val[0]) * 256 + int(val[1])}
+        if await self._instance._instance.setMessages([mes]):
+            self._instance._update_data[0x91] = hh_mm
+            self.async_write_ha_state()
