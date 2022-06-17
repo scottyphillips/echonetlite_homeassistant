@@ -70,6 +70,10 @@ compatible ECHONETLite Devices:
      * Air Conditioners
           * ECHONETLite enabled HVAC models.
 
+* OMRON Home Solar Power Generation
+    * Full support for Home Assistant Energy Dashboard including solar production and grid consumption.
+    * Loads of interesting sensors.
+
 ## Installation - Enable ECHONET protocol
 This Custom Component was originally designed for the Mitsubishi MAC-568IF-E WiFi
 Adaptor, a basic guide for enabling ECHONETlite is provided below.
@@ -107,6 +111,8 @@ As soon as you configure your options and save, the settings will take effect.
 
 
 ## Hall of Fame
+Thanks Naoki Sawada for creating the switch entity and creating the custom service call framework.
+
 Thanks to Jason Nader for all the quality of life updates to the codebase and doco.
 
 Thanks to khcnz (Karl Chaffey) and gvs for helping refector the old code
