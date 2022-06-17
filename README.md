@@ -75,9 +75,9 @@ the 'ECHONET lite' protocol under the 'edit unit' settings.
 
 Many other products will work using this custom-component, but they must correctly support the 'ECHONET lite' protocol. The author cannot assist with enabling ECHONET Lite for other vendor products.
 
-## Installation - if previously installed versions prior to 3.0.1 (mitsubishi component)
-1. Delete 'mitsubishi' from your 'custom_components' directory
-2. Remove references to 'mitsubishi' from 'configuration.yaml'
+## Installation - HACS
+1. Look up ECHONETLite in integrations
+2. Click 'install'
 
 ## Installation - Home Assistant
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
@@ -88,8 +88,8 @@ Many other products will work using this custom-component, but they must correct
 6. Restart Home Assistant and clear your browser cache
 7. Go to configuration -> integrations -> ADD INTEGRATION.
 5. Select the 'echonetlite' integration. Enter your IP address in the host field, and give the platform a name.
-6. Platform should automatically configure 'climate', and depending on your system will automatically configure 'sensor' and 'select'.
-7. If you have additional HVACs to configure then repeat step 4.
+6. Platform will automatically configure any supported platforms e.g. climate, sensor, switch, fan, select.
+7. If you have additional devices to configure then repeat step 4.
 
 ## Configuring Options for Fan and swing mode settings for supported HVAC and Air Purifiers.
 Once you have added the integration, you can go back to configuration -> integrations

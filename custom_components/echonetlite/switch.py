@@ -72,7 +72,8 @@ class EchonetSwitch(SwitchEntity):
     async def async_turn_on(self, **kwargs) -> None:
         """Turn switch on."""
         main_sw_code = None
-        # Check ensure turn on switch
+        # Check ensure turn on switch.
+        # For some devices this ensures the main switch is switched on firs
         if (CONF_ENSURE_ON in self._options):
             main_sw_code = self._options[CONF_ENSURE_ON]
         # Turn on the specified switch
