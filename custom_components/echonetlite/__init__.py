@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
 from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS
-from aioudp import UDPServer
+from pychonet.lib.udpserver import UDPServer
 
 from pychonet import ECHONETAPIClient
 from pychonet.EchonetInstance import (
@@ -87,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         udp = UDPServer()
         loop = asyncio.get_event_loop()
         udp.run("0.0.0.0", 3610, loop=loop)
-        server = ECHONETAPIClient(server=udp, loop=loop)
+        server = ECHONETAPIClient(server=udp)
         server._message_timeout = 300
         hass.data[DOMAIN].update({"api": server})
 
@@ -198,6 +198,7 @@ class ECHONETConnector():
         self._manufacturer = None
         if "manufacturer" in instance:
             self._manufacturer = instance["manufacturer"]
+        self._api.register_async_update_callbacks(self.async_update_callback)
 
         # Detect HVAC - eventually we will use factory here.
         self._update_flags_full_list = []
@@ -266,10 +267,14 @@ class ECHONETConnector():
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self, **kwargs):
+        return await self.async_update_data(kwargs = kwargs)
+
+    async def async_update_data(self, kwargs):
         for retry in range(1, 4):
             update_data = {}
+            no_request = 'no_request' in kwargs and kwargs['no_request']
             for flags in self._update_flag_batches:
-                batch_data = await self._instance.update(flags)
+                batch_data = await self._instance.update(flags, no_request)
                 if batch_data is not False:
                     if isinstance(batch_data, dict):
                         update_data.update(batch_data)
@@ -292,3 +297,6 @@ class ECHONETConnector():
                 _LOGGER.debug(f"Number of missed ECHONETLite msssages since reboot is {len(self._api._message_list)}")
         self._update_data.update(update_data)
         return self._update_data
+
+    async def async_update_callback(self):
+        await self.async_update_data(kwargs = {"no_request": True})

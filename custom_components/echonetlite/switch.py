@@ -43,6 +43,8 @@ class EchonetSwitch(SwitchEntity):
         self._attr_icon = options[CONF_ICON]
         self._uid = f'{self._connector._uid}-{self._code}'
         self._device_name = name
+        self._should_poll = True
+        self._connector._instance._api.register_async_update_callbacks(self.async_update_callback)
 
     @property
     def unique_id(self):
@@ -53,6 +55,10 @@ class EchonetSwitch(SwitchEntity):
     def icon(self):
         """Icon to use in the frontend, if any."""
         return self._attr_icon
+
+    @property
+    def should_poll(self):
+        return self._should_poll
 
     @property
     def device_info(self):
@@ -100,3 +106,10 @@ class EchonetSwitch(SwitchEntity):
         """Retrieve latest state."""
         await self._connector.async_update()
         self._attr_is_on = self._connector._update_data[self._code] == DATA_STATE_ON
+
+    async def async_update_callback(self):
+        _is_on = self._connector._update_data[self._code] == DATA_STATE_ON
+        if (self._attr_is_on != _is_on):
+            self._should_poll = False
+            self._attr_is_on = _is_on
+            self.async_schedule_update_ha_state()
