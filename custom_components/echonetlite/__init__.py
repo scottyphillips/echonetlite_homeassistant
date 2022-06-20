@@ -198,7 +198,7 @@ class ECHONETConnector():
         self._manufacturer = None
         if "manufacturer" in instance:
             self._manufacturer = instance["manufacturer"]
-        self._api.register_async_update_callbacks(self.async_update_callback)
+        self._api.register_async_update_callbacks(self._host, self._eojgc, self._eojcc, self._eojci, self.async_update_callback)
 
         # Detect HVAC - eventually we will use factory here.
         self._update_flags_full_list = []

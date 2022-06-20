@@ -44,7 +44,7 @@ class EchonetSwitch(SwitchEntity):
         self._uid = f'{self._connector._uid}-{self._code}'
         self._device_name = name
         self._should_poll = True
-        self._connector._instance._api.register_async_update_callbacks(self.async_update_callback)
+        self._connector._instance.register_async_update_callbacks(self.async_update_callback)
 
     @property
     def unique_id(self):
