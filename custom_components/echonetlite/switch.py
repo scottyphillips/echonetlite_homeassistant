@@ -2,9 +2,10 @@ import asyncio
 import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA
 from homeassistant.components.switch import SwitchEntity
-from .const import DOMAIN, ENL_OP_CODES, DATA_STATE_ON, DATA_STATE_OFF, SWITCH_POWER, CONF_ENSURE_ON, TYPE_SWITCH
+from .const import DOMAIN, ENL_OP_CODES, DATA_STATE_ON, DATA_STATE_OFF, SWITCH_POWER, CONF_ENSURE_ON, TYPE_SWITCH, ENL_STATUS, ENL_ON, ENL_OFF
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
+from pychonet.lib.const import ENL_SETMAP
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -13,6 +14,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     for entity in hass.data[DOMAIN][config.entry_id]:
         eojgc = entity['instance']['eojgc']
         eojcc = entity['instance']['eojcc']
+        set_enl_status = False
         # configure switch entities by looking up full ENL_OP_CODE dict
         for op_code in list(entity['echonetlite']._update_flags_full_list):
             if eojgc in ENL_OP_CODES.keys():
@@ -21,14 +23,31 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         if TYPE_SWITCH in ENL_OP_CODES[eojgc][eojcc][op_code].keys():
                             entities.append(
                                 EchonetSwitch(
-                                   hass,
-                                   entity['echonetlite'],
-                                   config,
-                                   op_code,
-                                   ENL_OP_CODES[eojgc][eojcc][op_code],
-                                   config.title
+                                    hass,
+                                    entity['echonetlite'],
+                                    config,
+                                    op_code,
+                                    ENL_OP_CODES[eojgc][eojcc][op_code],
+                                    config.title
                                 )
                             )
+                            if op_code == ENL_STATUS:
+                                set_enl_status = True
+        # Auto configure of the power switch
+        if not set_enl_status and ENL_STATUS in entity['instance']['setmap']:
+            entities.append(
+                EchonetSwitch(
+                    hass,
+                    entity['echonetlite'],
+                    config,
+                    ENL_STATUS,
+                    {
+                        CONF_ICON: "mdi:power-settings",
+                        CONF_SERVICE_DATA: SWITCH_POWER,
+                    },
+                    config.title
+                )
+            )
     async_add_entities(entities, True)
 
 class EchonetSwitch(SwitchEntity):
