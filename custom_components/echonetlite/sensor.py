@@ -100,6 +100,9 @@ class EchonetSensor(SensorEntity):
         self._eojci = self._instance._eojci
         self._uid = f'{self._instance._host}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
         self._device_name = name
+        self._should_poll = True
+        self._state_value = None
+        self._instance._instance.register_async_update_callbacks(self.async_update_callback)
 
         _attr_keys = self._sensor_attributes.keys()
         if CONF_ICON not in _attr_keys:
@@ -143,6 +146,10 @@ class EchonetSensor(SensorEntity):
         return self._sensor_attributes[CONF_ICON]
 
     @property
+    def should_poll(self):
+        return self._should_poll
+
+    @property
     def name(self):
         """Return the name of the sensor."""
         return self._name
@@ -167,51 +174,52 @@ class EchonetSensor(SensorEntity):
     @property
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
+        self._state_value = self._instance._update_data[self._op_code]
         if self._op_code in self._instance._update_data:
             if self._op_code == 0xC0 or self._op_code == 0xC1: # kludge for distribution panel meter.
                if self._eojgc == 0x02 and self._eojcc == 0x87 and 0xC2 in self._instance._update_data:
-                   if self._instance._update_data[0xC2] is not None and self._instance._update_data[self._op_code] is not None:
-                        return self._instance._update_data[self._op_code] * self._instance._update_data[0xC2] * 1000 # value in Wh
+                   if self._instance._update_data[0xC2] is not None and self._state_value is not None:
+                        return self._state_value * self._instance._update_data[0xC2] * 1000 # value in Wh
 
             if self._op_code == 0xE0: # kludge for electric energy meter and water volume meters
                if self._eojgc == 0x02 and self._eojcc == 0x80 and 0xE2 in self._instance._update_data:
-                   if self._instance._update_data[0xE2] is not None and self._instance._update_data[self._op_code] is not None: # electric energy
-                       return self._instance._update_data[self._op_code] * self._instance._update_data[0xE2] * 1000 # value in Wh
+                   if self._instance._update_data[0xE2] is not None and self._state_value is not None: # electric energy
+                       return self._state_value * self._instance._update_data[0xE2] * 1000 # value in Wh
 
                if self._eojgc == 0x02 and self._eojcc == 0x81 and 0xE1 in self._instance._update_data: # water flow
-                   if self._instance._update_data[0xE1] is not None and self._instance._update_data[self._op_code] is not None:
-                       return self._instance._update_data[self._op_code] * self._instance._update_data[0xE1]
+                   if self._instance._update_data[0xE1] is not None and self._state_value is not None:
+                       return self._state_value * self._instance._update_data[0xE1]
 
                if self._eojgc == 0x02 and self._eojcc == 0x82:  # GAS
-                   if self._instance._update_data[self._op_code] is not None:
-                       return self._instance._update_data[self._op_code] * 0.001
+                   if self._state_value is not None:
+                       return self._state_value * 0.001
 
-            if self._instance._update_data[self._op_code] is None:
+            if self._state_value is None:
                 return STATE_UNAVAILABLE
             elif self._sensor_attributes[CONF_TYPE] in [
                     DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_HUMIDITY
             ]:
                 if self._op_code in self._instance._update_data:
-                    if self._instance._update_data[self._op_code] in [126, 253]:
+                    if self._state_value in [126, 253]:
                         return STATE_UNAVAILABLE
                     else:
-                        return self._instance._update_data[self._op_code]
+                        return self._state_value
                 else:
                     return STATE_UNAVAILABLE
             elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_POWER:
                 if self._op_code in self._instance._update_data:
                     # Underflow (less than 1 W)
-                    if self._instance._update_data[self._op_code] == 65534:
+                    if self._state_value == 65534:
                         return 1
                     else:
-                        return self._instance._update_data[self._op_code]
+                        return self._state_value
                 else:
                     return STATE_UNAVAILABLE
             elif self._op_code in self._instance._update_data:
-                if isinstance(self._instance._update_data[self._op_code], (int, float)):
-                    return self._instance._update_data[self._op_code]
-                if len(self._instance._update_data[self._op_code]) < 255:
-                    return self._instance._update_data[self._op_code]
+                if isinstance(self._state_value, (int, float)):
+                    return self._state_value
+                if len(self._state_value) < 255:
+                    return self._state_value
                 else:
                     return STATE_UNAVAILABLE
         return STATE_UNAVAILABLE
@@ -242,3 +250,10 @@ class EchonetSensor(SensorEntity):
         if await self._instance._instance.setMessages([mes]):
             self._instance._update_data[0x91] = hh_mm
             self.async_write_ha_state()
+
+    async def async_update_callback(self):
+        changed = self._state_value != self._instance._update_data[self._op_code]
+        if (changed):
+            self._should_poll = False
+            self._state_value = self._instance._update_data[self._op_code]
+            self.async_schedule_update_ha_state()
