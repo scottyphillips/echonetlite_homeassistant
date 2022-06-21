@@ -56,6 +56,8 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     )
         else:  # For all other devices, sensors will be configured but customise if applicable.
             for op_code in list(entity['echonetlite']._update_flags_full_list):
+                if power_switch and ENL_STATUS == op_code:
+                    continue
                 if eojgc in ENL_OP_CODES.keys():
                     if eojcc in ENL_OP_CODES[eojgc].keys():
                         if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
@@ -69,7 +71,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                             "async_" + service_name
                                         )
 
-                            if TYPE_SWITCH in _keys or (power_switch and ENL_STATUS == op_code):
+                            if TYPE_SWITCH in _keys:
                                 continue # dont configure as sensor, it will be configured as switch instead.
 
                             entities.append(
