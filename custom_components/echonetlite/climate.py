@@ -79,6 +79,9 @@ class EchonetClimate(ClimateEntity):
         self._hvac_modes = DEFAULT_HVAC_MODES
         self._min_temp = self._connector._user_options['min_temp_auto']
         self._max_temp = self._connector._user_options['max_temp_auto']
+        self._olddata = {}
+        self._should_poll = True
+        self._connector._instance.register_async_update_callbacks(self.async_update_callback)
 
 
     async def async_update(self):
@@ -117,7 +120,7 @@ class EchonetClimate(ClimateEntity):
     @property
     def should_poll(self):
         """Return the polling state."""
-        return True
+        return self._should_poll
 
     @property
     def name(self):
@@ -300,3 +303,10 @@ class EchonetClimate(ClimateEntity):
         if self.hvac_mode == HVAC_MODE_HEAT_COOL:
             self._max_temp = self._connector._user_options['max_temp_auto']
         return self._max_temp
+
+    async def async_update_callback(self):
+        changed = self._olddata != self._instance._update_data
+        if (changed):
+            self._should_poll = False
+            self._olddata = self._instance._update_data
+            self.async_schedule_update_ha_state()
