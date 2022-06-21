@@ -1,0 +1,9 @@
+set_on_timer_time:
+  description: Set the time of the on-timer of the device.
+  fields:
+    entity_id:
+      description: On-timer time sensor entity ID.
+      example: "sensor.echonetlite_set_value_of_on_timer_time"
+    timer_time:
+      description: Time notation in "hour:minute" format.
+      example: "21:00"
