@@ -14,7 +14,7 @@ from homeassistant.helpers.typing import StateType
 
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
-from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME
+from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, ENL_STATUS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         _LOGGER.debug(f"Update flags for this sensor are {entity['echonetlite']._update_flags_full_list}")
         eojgc = entity['instance']['eojgc']
         eojcc = entity['instance']['eojcc']
+        power_switch = ENL_STATUS in entity['instance']['setmap']
 
         # Home Air Conditioner we dont bother exposing all sensors
         if eojgc == 1 and eojcc == 48:
@@ -68,7 +69,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                             "async_" + service_name
                                         )
 
-                            if TYPE_SWITCH in _keys:
+                            if TYPE_SWITCH in _keys or (power_switch and ENL_STATUS == op_code):
                                 continue # dont configure as sensor, it will be configured as switch instead.
 
                             entities.append(
