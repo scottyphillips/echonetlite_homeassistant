@@ -39,6 +39,9 @@ DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
 SERVICE_SET_ON_TIMER_TIME = "set_on_timer_time"
+OPEN = "open"
+CLOSE = "close"
+STOP = "stop"
 SWITCH_POWER = {
     DATA_STATE_ON: ENL_ON,
     DATA_STATE_OFF: ENL_OFF
@@ -58,6 +61,14 @@ HVAC_SELECT_OP_CODES = {
 
 FAN_SELECT_OP_CODES = {
     0xA0: FAN_SPEED
+}
+
+COVER_SELECT_OP_CODES = {
+    0xE0: {
+        OPEN: 0x41,
+        CLOSE: 0x42,
+        STOP: 0x43
+    }
 }
 
 ENL_OP_CODES = {
