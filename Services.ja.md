@@ -1,15 +1,15 @@
-# Configuring Services
+# サービスの構成
 
-Preliminary support for advanced service calls has been configured as of version 3.5.3. At the moment the follow devices support Home Assistant services:
+バージョン 3.5.3 以降、予備的なサポートとして高度なサービス呼び出しが構成されています。 現在、次のデバイスがホームアシスタントサービスをサポートしています。
 
-## Hot Water Heater Syatem
+## ECHONET Lite 対応給湯器 (リンナイ給湯器で動作確認済)
 
-ECHONET Lite compatible Hot Water Heaters can have their hot water heater timers configured using the `echonetlite.set_on_timer_time` service call. This in turn can be used in automation as per the below example to create a corresponding input entity:
+ECHONET Lite 対応給湯器は、`echonetlite.set_on_timer_time`サービスコールを使用して自動湯はりタイマーを設定できます。 これは、以下の例のように自動化で使用して、対応する入力エンティティを作成できます。
 
-### Automation example
+自動化のサンプル
 
-- Sensor entity id as: `sensor.hot_water_set_value_of_on_timer_time`
-- Input entity id as: `input_datetime.hot_water_value_of_on_timer_time`
+- センサーエンティティID: sensor.hot_water_set_value_of_on_timer_time
+- 時刻入力エンティティID: input_datetime.hot_water_value_of_on_timer_time
 
 ```yaml
 alias: Relay Hot Water On Timer time
