@@ -1,0 +1,48 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "デバイスは構成済みです"
+        },
+        "error": {
+            "cannot_connect": "接続できません",
+            "invalid_auth": "認証が無効です",
+            "unknown": "予期しないエラーです"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "host": "ホスト (IP アドレス)",
+                    "title": "機器名称"
+                }
+            }
+        },
+        "progress": {
+            "discover": "ECHONETLite 機器を探しています.."
+        }
+    },
+    "options": {
+        "error": {
+            "invalid_path": "指定されたパスが無効です。`ユーザー名/リポジトリ名` の形式の有効な GitHub リポジトリである必要があります。"
+        },
+        "step": {
+            "init": {
+                "title": "ECHONET Lite 空調機器オプション",
+                "data": {
+                   "fan_settings": "風量設定の構成",
+                   "swing_horiz": "風向左右設定の構成",
+                   "swing_vert": "風向上下設定の構成",
+                   "auto_direction": "自動風向の設定",
+                   "swing_mode": "スイングモードの設定",
+                   "min_temp_heat": "暖房時の最低温度設定",
+                   "max_temp_heat": "暖房時の最高温度設定",
+                   "min_temp_cool": "冷房時の最低温度設定",
+                   "max_temp_cool": "冷房時の最低温度設定",
+                   "min_temp_auto": "自動モード時の最低温度設定",
+                   "max_temp_auto": "自動モード時の最高温度設定"
+                },
+                "description": "風向とスイングモードなどのオプション設定を構成する"
+                }
+            }
+        },
+    "title": "ECHONETLite"
+}
