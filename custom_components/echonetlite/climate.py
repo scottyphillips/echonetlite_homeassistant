@@ -304,9 +304,10 @@ class EchonetClimate(ClimateEntity):
             self._max_temp = self._connector._user_options['max_temp_auto']
         return self._max_temp
 
-    async def async_update_callback(self):
+    async def async_update_callback(self, isPush = False):
+        if isPush and self._should_poll:
+            self._should_poll = False
         changed = self._olddata != self._instance._update_data
         if (changed):
-            self._should_poll = False
             self._olddata = self._instance._update_data
             self.async_schedule_update_ha_state()
