@@ -13,7 +13,8 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
 from pychonet.lib.const import ENL_SETMAP, ENL_GETMAP, ENL_UID, ENL_MANUFACTURER
-from aioudp import UDPServer
+#from aioudp import UDPServer
+from pychonet.lib.udpserver import UDPServer
 # from pychonet import Factory
 from pychonet import ECHONETAPIClient
 from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS
@@ -43,7 +44,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
         udp = UDPServer()
         loop = asyncio.get_event_loop()
         udp.run("0.0.0.0", 3610, loop=loop)
-        server = ECHONETAPIClient(server=udp, loop=loop)
+        server = ECHONETAPIClient(server=udp)
 
     instance_list = []
     _LOGGER.debug("Beginning ECHONET node discovery")
