@@ -68,6 +68,9 @@ class EchonetLight(LightEntity):
         self._echonet_mireds = ['daylight_color',
             'daylight_white', 'white', 'other', 'incandescent_lamp_color']  # coolest to warmest
         self._echonet_mireds_int = [68, 67, 66, 64, 65]  # coolest to warmest
+        self._olddata = {}
+        self._should_poll = True
+        self._connector._instance.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update(self):
         """Get the latest state from the Light."""
@@ -193,3 +196,11 @@ class EchonetLight(LightEntity):
     def supported_color_modes(self) -> set:
         """Flag supported features."""
         return self._supported_color_modes
+
+    async def async_update_callback(self, isPush = False):
+        if isPush and self._should_poll:
+            self._should_poll = False
+        changed = self._olddata != self._connector._update_data
+        if (changed):
+            self._olddata = self._connector._update_data
+            self.async_schedule_update_ha_state()
