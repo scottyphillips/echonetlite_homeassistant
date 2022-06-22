@@ -250,9 +250,10 @@ class EchonetSensor(SensorEntity):
             self._instance._update_data[0x91] = hh_mm
             self.async_write_ha_state()
 
-    async def async_update_callback(self):
+    async def async_update_callback(self, isPush = False):
+        if isPush and self._should_poll:
+            self._should_poll = False
         changed = self._state_value != self._instance._update_data[self._op_code]
         if (changed):
-            self._should_poll = False
             self._state_value = self._instance._update_data[self._op_code]
             self.async_schedule_update_ha_state()

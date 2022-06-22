@@ -107,9 +107,10 @@ class EchonetSwitch(SwitchEntity):
         await self._connector.async_update()
         self._attr_is_on = self._connector._update_data[self._code] == DATA_STATE_ON
 
-    async def async_update_callback(self):
+    async def async_update_callback(self, isPush = False):
+        if isPush and self._should_poll:
+            self._should_poll = False
         _is_on = self._connector._update_data[self._code] == DATA_STATE_ON
         if (self._attr_is_on != _is_on):
-            self._should_poll = False
             self._attr_is_on = _is_on
             self.async_schedule_update_ha_state()

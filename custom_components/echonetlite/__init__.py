@@ -298,5 +298,5 @@ class ECHONETConnector():
         self._update_data.update(update_data)
         return self._update_data
 
-    async def async_update_callback(self):
+    async def async_update_callback(self, isPush = False):
         await self.async_update_data(kwargs = {"no_request": True})
