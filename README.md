@@ -61,7 +61,10 @@ compatible ECHONETLite Devices:
 
 * Koizumi
      * Lighting system AE50264E bridge (https://www.koizumi-lt.co.jp/product/jyutaku/tree/ )
+
 * Rinnai Hot water system (ECHONETLite enabled models)
+     * Switch entities to enable various hot water settings.
+     * Input entity to configure Hot Water Timers can be configured by using a template and a [Service Call](Services.md).
 
 * Daikin
      * Hot Water Heaters
