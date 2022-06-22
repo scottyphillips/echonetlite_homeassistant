@@ -308,13 +308,7 @@ class EchonetClimate(ClimateEntity):
         if isPush and self._should_poll:
             self._should_poll = False
             _LOGGER.warning(f"ECHONETLite entity {self._name} is now using push for updates.")
-<<<<<<< HEAD
         changed = self._olddata != self._connector._update_data
         if (changed):
             self._olddata = self._connector._update_data
-=======
-        changed = self._olddata != self._connector._instance._update_data
-        if (changed):
-            self._olddata = self._connector._instance._update_data
->>>>>>> 3a8cff73dcadf9e4ed3bf19d5846638488a5de77
             self.async_schedule_update_ha_state()
