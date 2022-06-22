@@ -26,6 +26,11 @@ from pychonet.HomeAirConditioner import (
     AUTO_DIRECTION,
     SWING_MODE
 )
+from pychonet.EchonetInstance import (
+    ENL_STATUS,
+    ENL_ON,
+    ENL_OFF
+)
 
 DOMAIN = "echonetlite"
 CONF_STATE_CLASS = ATTR_STATE_CLASS
@@ -34,9 +39,12 @@ DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
 SERVICE_SET_ON_TIMER_TIME = "set_on_timer_time"
+OPEN = "open"
+CLOSE = "close"
+STOP = "stop"
 SWITCH_POWER = {
-    DATA_STATE_ON: 0x30,
-    DATA_STATE_OFF: 0x31
+    DATA_STATE_ON: ENL_ON,
+    DATA_STATE_OFF: ENL_OFF
 }
 SWITCH_BINARY = {
     DATA_STATE_ON: 0x41,
@@ -53,6 +61,14 @@ HVAC_SELECT_OP_CODES = {
 
 FAN_SELECT_OP_CODES = {
     0xA0: FAN_SPEED
+}
+
+COVER_SELECT_OP_CODES = {
+    0xE0: {
+        OPEN: 0x41,
+        CLOSE: 0x42,
+        STOP: 0x43
+    }
 }
 
 ENL_OP_CODES = {
@@ -108,27 +124,22 @@ ENL_OP_CODES = {
     },
     0x02: {
         0x72: {
-            0x80: { # switch
-                CONF_ICON: "mdi:power-settings",
-                CONF_SERVICE_DATA: SWITCH_POWER,
-                TYPE_SWITCH: True
-            },
             0x90: {
                 CONF_ICON: "mdi:timer",
                 CONF_SERVICE_DATA: SWITCH_BINARY,
-                CONF_ENSURE_ON: 0x80,
+                CONF_ENSURE_ON: ENL_STATUS,
                 TYPE_SWITCH: True
             },
             0xE3: {
                 CONF_ICON: "mdi:bathtub-outline",
                 CONF_SERVICE_DATA: SWITCH_BINARY,
-                CONF_ENSURE_ON: 0x80,
+                CONF_ENSURE_ON: ENL_STATUS,
                 TYPE_SWITCH: True
             },
             0xE4: {
                 CONF_ICON: "mdi:heat-wave",
                 CONF_SERVICE_DATA: SWITCH_BINARY,
-                CONF_ENSURE_ON: 0x80,
+                CONF_ENSURE_ON: ENL_STATUS,
                 TYPE_SWITCH: True
             },
             0x91: { # Sensor with service
