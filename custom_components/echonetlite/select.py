@@ -1,6 +1,6 @@
 import logging
 from homeassistant.components.select import SelectEntity
-from .const import HVAC_SELECT_OP_CODES, DOMAIN, FAN_SELECT_OP_CODES, COVER_SELECT_OP_CODES
+from .const import HVAC_SELECT_OP_CODES, DOMAIN, FAN_SELECT_OP_CODES
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
 
@@ -33,26 +33,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                            config,
                            op_code,
                            FAN_SELECT_OP_CODES[op_code],
-                           config.title
-                        )
-                    )
-        elif entity['instance']['eojgc'] == 0x02 and entity['instance']['eojcc'] in (0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66):
-            # 0x60: "Electrically operated blind/shade"
-            # 0x61: "Electrically operated shutter"
-            # 0x62: "Electrically operated curtain"
-            # 0x63: "Electrically operated rain sliding door/shutter"
-            # 0x64: "Electrically operated gate"
-            # 0x65: "Electrically operated window"
-            # 0x66: "Automatically operated entrance door/sliding door"
-            for op_code in entity['instance']['setmap']:
-                if op_code in COVER_SELECT_OP_CODES:
-                    entities.append(
-                        EchonetSelect(
-                           hass,
-                           entity['echonetlite'],
-                           config,
-                           op_code,
-                           COVER_SELECT_OP_CODES[op_code],
                            config.title
                         )
                     )
