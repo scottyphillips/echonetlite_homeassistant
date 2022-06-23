@@ -193,6 +193,7 @@ class ECHONETConnector():
         self._update_flag_batches = []
         self._update_data = {}
         self._api = api
+        self._update_callbacks = []
         self._getPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_GETMAP]
         self._setPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_SETMAP]
         self._manufacturer = None
@@ -300,3 +301,8 @@ class ECHONETConnector():
 
     async def async_update_callback(self, isPush = False):
         await self.async_update_data(kwargs = {"no_request": True})
+        for update_func in self._update_callbacks:
+            await update_func(isPush)
+
+    def register_async_update_callbacks(self, update_func):
+        self._update_callbacks.append(update_func)
