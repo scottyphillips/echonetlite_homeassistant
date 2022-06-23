@@ -81,7 +81,7 @@ class EchonetClimate(ClimateEntity):
         self._max_temp = self._connector._user_options['max_temp_auto']
         self._olddata = {}
         self._should_poll = True
-        self._connector._instance.register_async_update_callbacks(self.async_update_callback)
+        self._connector.register_async_update_callbacks(self.async_update_callback)
 
 
     async def async_update(self):
@@ -307,8 +307,8 @@ class EchonetClimate(ClimateEntity):
     async def async_update_callback(self, isPush = False):
         if isPush and self._should_poll:
             self._should_poll = False
-            _LOGGER.warning(f"ECHONETLite entity {self._name} is now using push for updates.")
         changed = self._olddata != self._connector._update_data
+        _LOGGER.debug(f"Called async_update_callback on {self._device_name}.\nChanged: {changed}\nUpdate data: {self._connector._update_data}\nOld data: {self._olddata}")
         if (changed):
-            self._olddata = self._connector._update_data
-            self.async_schedule_update_ha_state()
+           self._olddata = self._connector._update_data.copy()
+           self.async_schedule_update_ha_state()
