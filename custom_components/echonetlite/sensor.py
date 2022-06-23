@@ -104,9 +104,10 @@ class EchonetSensor(SensorEntity):
         self._eojci = self._instance._eojci
         self._uid = f'{self._instance._host}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
         self._device_name = name
-        self._should_poll = True
+        self._should_poll = self._op_code not in self._instance._ntfPropertyMap
         self._state_value = None
         self._instance.register_async_update_callbacks(self.async_update_callback)
+        _LOGGER.debug(f"{self._name}({self._op_code}): _should_poll is {self._should_poll}")
 
         _attr_keys = self._sensor_attributes.keys()
         if CONF_ICON not in _attr_keys:
@@ -256,8 +257,6 @@ class EchonetSensor(SensorEntity):
             self.async_write_ha_state()
 
     async def async_update_callback(self, isPush = False):
-        if isPush and self._should_poll:
-            self._should_poll = False
         changed = self._state_value != self._instance._update_data[self._op_code]
         if (changed):
             self._state_value = self._instance._update_data[self._op_code]

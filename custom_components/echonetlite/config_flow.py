@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
-from pychonet.lib.const import ENL_SETMAP, ENL_GETMAP, ENL_UID, ENL_MANUFACTURER
+from pychonet.lib.const import ENL_STATMAP, ENL_SETMAP, ENL_GETMAP, ENL_UID, ENL_MANUFACTURER
 #from aioudp import UDPServer
 from pychonet.lib.udpserver import UDPServer
 # from pychonet import Factory
@@ -67,6 +67,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
 
                 await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
                 _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
+                ntfmap = state['instances'][eojgc][eojcc][instance][ENL_STATMAP]
                 getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
                 setmap = state['instances'][eojgc][eojcc][instance][ENL_SETMAP]
 
@@ -88,6 +89,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
                     "eojgc": eojgc,
                     "eojcc": eojcc,
                     "eojci": instance,
+                    "ntfmap": ntfmap,
                     "getmap": getmap,
                     "setmap": setmap,
                     "uid": uid,

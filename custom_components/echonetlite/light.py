@@ -198,8 +198,6 @@ class EchonetLight(LightEntity):
         return self._supported_color_modes
 
     async def async_update_callback(self, isPush = False):
-        if isPush and self._should_poll:
-            self._should_poll = False
         changed = self._olddata != self._connector._update_data
         if (changed):
             self._olddata = self._connector._update_data.copy()
