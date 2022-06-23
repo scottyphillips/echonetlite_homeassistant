@@ -106,8 +106,6 @@ class EchonetSensor(SensorEntity):
         self._device_name = name
         self._should_poll = self._op_code not in self._instance._ntfPropertyMap
         self._state_value = None
-        self._instance.register_async_update_callbacks(self.async_update_callback)
-        _LOGGER.debug(f"{self._name}({self._op_code}): _should_poll is {self._should_poll}")
 
         _attr_keys = self._sensor_attributes.keys()
         if CONF_ICON not in _attr_keys:
@@ -144,6 +142,9 @@ class EchonetSensor(SensorEntity):
                 self._unit_of_measurement = self._sensor_attributes[CONF_UNIT_OF_MEASUREMENT]
             else:
                 self._unit_of_measurement = None
+
+        self._instance.register_async_update_callbacks(self.async_update_callback)
+        _LOGGER.debug(f"{self._name}({self._op_code}): _should_poll is {self._should_poll}")
 
     @property
     def icon(self):
