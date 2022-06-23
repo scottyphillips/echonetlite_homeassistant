@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import pychonet as echonet
 from pychonet.lib.epc import EPC_SUPER, EPC_CODE
-from pychonet.lib.const import VERSION
+from pychonet.lib.const import VERSION, ENL_STATMAP
 from datetime import timedelta
 import asyncio
 from homeassistant.config_entries import ConfigEntry
@@ -93,11 +93,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
     for instance in entry.data["instances"]:
+        # auto update to new style
+        if "ntfmap" not in instance:
+            instance["ntfmap"] = []
         echonetlite = None
         host = instance["host"]
         eojgc = instance["eojgc"]
         eojcc = instance["eojcc"]
         eojci = instance["eojci"]
+        ntfmap = instance["ntfmap"]
         getmap = instance["getmap"]
         setmap = instance["setmap"]
         uid = instance["uid"]
@@ -109,6 +113,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     eojgc: {
                         eojcc: {
                             eojci: {
+                                ENL_STATMAP: ntfmap,
                                 ENL_SETMAP: setmap,
                                 ENL_GETMAP: getmap,
                                 ENL_UID: uid
@@ -122,6 +127,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 eojgc: {
                     eojcc: {
                         eojci: {
+                            ENL_STATMAP: ntfmap,
                             ENL_SETMAP: setmap,
                             ENL_GETMAP: getmap,
                             ENL_UID: uid
@@ -133,6 +139,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             server._state[host]["instances"][eojgc].update({
                 eojcc: {
                     eojci: {
+                        ENL_STATMAP: ntfmap,
                         ENL_SETMAP: setmap,
                         ENL_GETMAP: getmap,
                         ENL_UID: uid
@@ -142,6 +149,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if eojci not in list(server._state[host]["instances"][eojgc][eojcc]):
             server._state[host]["instances"][eojgc][eojcc].update({
                 eojci: {
+                    ENL_STATMAP: ntfmap,
                     ENL_SETMAP: setmap,
                     ENL_GETMAP: getmap,
                     ENL_UID: uid
@@ -194,6 +202,7 @@ class ECHONETConnector():
         self._update_data = {}
         self._api = api
         self._update_callbacks = []
+        self._ntfPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_STATMAP]
         self._getPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_GETMAP]
         self._setPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_SETMAP]
         self._manufacturer = None

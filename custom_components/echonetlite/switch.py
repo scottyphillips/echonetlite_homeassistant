@@ -65,8 +65,9 @@ class EchonetSwitch(SwitchEntity):
         self._attr_icon = options[CONF_ICON]
         self._uid = f'{self._connector._uid}-{self._code}'
         self._device_name = name
-        self._should_poll = True
+        self._should_poll = self._code not in self._connector._ntfPropertyMap
         self._connector.register_async_update_callbacks(self.async_update_callback)
+        _LOGGER.debug(f"{self._device_name}({self._code}): _should_poll is {self._should_poll}")
 
     @property
     def unique_id(self):
@@ -130,8 +131,6 @@ class EchonetSwitch(SwitchEntity):
         self._attr_is_on = self._connector._update_data[self._code] == DATA_STATE_ON
 
     async def async_update_callback(self, isPush = False):
-        if isPush and self._should_poll:
-            self._should_poll = False
         _is_on = self._connector._update_data[self._code] == DATA_STATE_ON
         if (self._attr_is_on != _is_on):
             self._attr_is_on = _is_on
