@@ -106,7 +106,7 @@ class EchonetSensor(SensorEntity):
         self._device_name = name
         self._should_poll = True
         self._state_value = None
-        self._instance._instance.register_async_update_callbacks(self.async_update_callback)
+        self._instance.register_async_update_callbacks(self.async_update_callback)
 
         _attr_keys = self._sensor_attributes.keys()
         if CONF_ICON not in _attr_keys:
