@@ -305,8 +305,6 @@ class EchonetClimate(ClimateEntity):
         return self._max_temp
 
     async def async_update_callback(self, isPush = False):
-        if isPush and self._should_poll:
-            self._should_poll = False
         changed = self._olddata != self._connector._update_data
         _LOGGER.debug(f"Called async_update_callback on {self._device_name}.\nChanged: {changed}\nUpdate data: {self._connector._update_data}\nOld data: {self._olddata}")
         if (changed):
