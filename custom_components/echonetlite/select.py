@@ -102,6 +102,7 @@ class EchonetSelect(SelectEntity):
 
     async def async_select_option(self, option: str):
         await self._connector._instance.setMessage(self._code, self._options[option])
+        self._connector._update_data[self._code] = option
         self._attr_current_option = option
 
     async def async_update(self):
@@ -112,6 +113,11 @@ class EchonetSelect(SelectEntity):
     def update_attr(self):
         self._attr_current_option = self._connector._update_data[self._code]
         self._attr_options = list(self._options.keys())
+        if self._attr_current_option not in self._attr_options:
+            # maybe data value is raw(int)
+            keys = [k for k, v in self._options.items() if v == self._attr_current_option]
+            if keys:
+                self._attr_current_option = keys[0]
         if self._code in list(self._connector._user_options.keys()):
             if self._connector._user_options[self._code] is not False:
                 self._attr_options = self._connector._user_options[self._code]
