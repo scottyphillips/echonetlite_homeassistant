@@ -123,7 +123,27 @@ ENL_OP_CODES = {
         }
     },
     0x02: {
-        0x72: {
+        0x6F: { # Electric lock
+            0xE0: {
+                CONF_ICON: "mdi:mdi:lock",
+                CONF_SERVICE_DATA: SWITCH_BINARY,
+                CONF_ENSURE_ON: ENL_STATUS,
+                TYPE_SWITCH: True
+            },
+            0xE1: {
+                CONF_ICON: "mdi:mdi:lock",
+                CONF_SERVICE_DATA: SWITCH_BINARY,
+                CONF_ENSURE_ON: ENL_STATUS,
+                TYPE_SWITCH: True
+            },
+            0xE6: {
+                CONF_ICON: None,
+                CONF_SERVICE_DATA: SWITCH_BINARY,
+                CONF_ENSURE_ON: ENL_STATUS,
+                TYPE_SWITCH: True
+            }
+        },
+        0x72: { # Hot water generator
             0x90: {
                 CONF_ICON: "mdi:timer",
                 CONF_SERVICE_DATA: SWITCH_BINARY,
