@@ -18,7 +18,7 @@ from pychonet.lib.const import ENL_STATMAP, ENL_SETMAP, ENL_GETMAP, ENL_UID, ENL
 from pychonet.lib.udpserver import UDPServer
 # from pychonet import Factory
 from pychonet import ECHONETAPIClient
-from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS, CONF_FORCE_POLLING, ENL_HVAC_MODE, CONF_OTHER_MODE
+from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS, CONF_FORCE_POLLING, MISC_OPTIONS, ENL_HVAC_MODE, CONF_OTHER_MODE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -221,12 +221,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Manage the options."""
         data_schema_structure = {}
 
-        data_schema_structure.update({
-            vol.Required(
-                CONF_FORCE_POLLING,
-                default=self._config_entry.options.get(CONF_FORCE_POLLING, False) 
-            ): bool
-        })
+        for key, option in MISC_OPTIONS.items():
+            data_schema_structure.update({
+                vol.Required(
+                    CONF_FORCE_POLLING,
+                    default=self._config_entry.options.get(key, option['default']) 
+                ): option['type']
+            })
 
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)

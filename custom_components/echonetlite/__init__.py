@@ -9,7 +9,7 @@ import asyncio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
-from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS
+from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS, CONF_FORCE_POLLING, MISC_OPTIONS
 from pychonet.lib.udpserver import UDPServer
 
 from pychonet import ECHONETAPIClient
@@ -187,7 +187,11 @@ async def update_listener(hass, entry):
                         instance["echonetlite"]._user_options.update({option: False})
             for option in TEMP_OPTIONS.keys():
                 if entry.options.get(option) is not None:
-                        instance["echonetlite"]._user_options.update({option: entry.options.get(option)})
+                    instance["echonetlite"]._user_options.update({option: entry.options.get(option)})
+
+        for key in MISC_OPTIONS:
+            if entry.options.get(key) is not None:
+                instance["echonetlite"]._user_options.update({key: entry.options.get(key)})
 
 class ECHONETConnector():
     """EchonetAPIConnector is used to centralise API calls for  Echonet devices.

@@ -358,3 +358,10 @@ TEMP_OPTIONS = {"min_temp_heat": {"min":10, "max":25},
                 "min_temp_auto": {"min":15, "max":25},
                 "max_temp_auto": {"min":18, "max":30},
 }
+
+MISC_OPTIONS = {
+    CONF_FORCE_POLLING: {
+        'type': bool,
+        'default': False
+    }
+}
