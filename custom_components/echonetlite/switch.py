@@ -2,7 +2,7 @@ import asyncio
 import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA
 from homeassistant.components.switch import SwitchEntity
-from .const import DOMAIN, ENL_OP_CODES, DATA_STATE_ON, DATA_STATE_OFF, SWITCH_POWER, CONF_ENSURE_ON, TYPE_SWITCH, ENL_STATUS, ENL_ON, ENL_OFF
+from .const import DOMAIN, ENL_OP_CODES, CONF_ON_VALUE, CONF_OFF_VALUE, DATA_STATE_ON, DATA_STATE_OFF, SWITCH_POWER, CONF_ENSURE_ON, TYPE_SWITCH, ENL_STATUS, ENL_ON, ENL_OFF
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.const import ENL_SETMAP
@@ -60,7 +60,9 @@ class EchonetSwitch(SwitchEntity):
         self._config = config
         self._code = code
         self._options = options
-        self._attr_is_on = self._connector._update_data[self._code] == DATA_STATE_ON
+        self._on_value = options.get(CONF_ON_VALUE, DATA_STATE_ON)
+        self._on_vals = [self._on_value, self._options[CONF_SERVICE_DATA][DATA_STATE_ON], hex(self._options[CONF_SERVICE_DATA][DATA_STATE_ON])[2:]]
+        self._attr_is_on = self._connector._update_data[self._code] in self._on_vals
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
         self._attr_icon = options[CONF_ICON]
         self._uid = f'{self._connector._uid}-{self._code}'
@@ -113,26 +115,26 @@ class EchonetSwitch(SwitchEntity):
 
         if main_sw_code is None or self._connector._update_data[main_sw_code] == DATA_STATE_ON:
             if await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_ON]):
-                self._connector._update_data[self._code] = DATA_STATE_ON
+                self._connector._update_data[self._code] = self._on_value
                 self._attr_is_on = True
                 self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn switch off."""
         if await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_OFF]):
-            self._connector._update_data[self._code] = DATA_STATE_OFF
+            self._connector._update_data[self._code] = options.get(CONF_OFF_VALUE, DATA_STATE_OFF)
             self._attr_is_on = False
             self.async_write_ha_state()
 
     async def async_update(self):
         """Retrieve latest state."""
         await self._connector.async_update()
-        self._attr_is_on = self._connector._update_data[self._code] == DATA_STATE_ON
+        self._attr_is_on = self._connector._update_data[self._code] in self._on_vals
 
     async def async_update_callback(self, isPush = False):
         if isPush and self._should_poll:
             self._should_poll = False
-        _is_on = self._connector._update_data[self._code] == DATA_STATE_ON
+        _is_on = self._connector._update_data[self._code] in self._on_vals
         if (self._attr_is_on != _is_on):
             self._attr_is_on = _is_on
             self.async_schedule_update_ha_state()

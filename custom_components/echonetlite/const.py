@@ -35,6 +35,8 @@ from pychonet.EchonetInstance import (
 DOMAIN = "echonetlite"
 CONF_STATE_CLASS = ATTR_STATE_CLASS
 CONF_ENSURE_ON = "ensureon"
+CONF_ON_VALUE = 'on_val'
+CONF_OFF_VALUE = 'off_val'
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
@@ -128,18 +130,24 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:mdi:lock",
                 CONF_SERVICE_DATA: SWITCH_BINARY,
                 CONF_ENSURE_ON: ENL_STATUS,
+                CONF_ON_VALUE: "lock",
+                CONF_OFF_VALUE: 'unlock',
                 TYPE_SWITCH: True
             },
             0xE1: {
                 CONF_ICON: "mdi:mdi:lock",
                 CONF_SERVICE_DATA: SWITCH_BINARY,
                 CONF_ENSURE_ON: ENL_STATUS,
+                CONF_ON_VALUE: "lock",
+                CONF_OFF_VALUE: 'unlock',
                 TYPE_SWITCH: True
             },
             0xE6: {
                 CONF_ICON: None,
                 CONF_SERVICE_DATA: SWITCH_BINARY,
                 CONF_ENSURE_ON: ENL_STATUS,
+                CONF_ON_VALUE: "on",
+                CONF_OFF_VALUE: 'off',
                 TYPE_SWITCH: True
             }
         },
