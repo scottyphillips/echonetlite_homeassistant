@@ -124,7 +124,7 @@ class EchonetSwitch(SwitchEntity):
     async def async_turn_off(self, **kwargs) -> None:
         """Turn switch off."""
         if await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_OFF]):
-            self._connector._update_data[self._code] = options.get(CONF_OFF_VALUE, DATA_STATE_OFF)
+            self._connector._update_data[self._code] = self._options.get(CONF_OFF_VALUE, DATA_STATE_OFF)
             self._attr_is_on = False
             self.async_write_ha_state()
 
