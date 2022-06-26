@@ -189,9 +189,9 @@ async def update_listener(hass, entry):
                 if entry.options.get(option) is not None:
                     instance["echonetlite"]._user_options.update({option: entry.options.get(option)})
 
-        for key in MISC_OPTIONS:
-            if entry.options.get(key) is not None:
-                instance["echonetlite"]._user_options.update({key: entry.options.get(key)})
+        for key, option in MISC_OPTIONS.items():
+            if entry.options.get(key) is not None or option.get('default'):
+                instance["echonetlite"]._user_options.update({key: entry.options.get(key, option.get('default'))})
 
 class ECHONETConnector():
     """EchonetAPIConnector is used to centralise API calls for  Echonet devices.
@@ -206,6 +206,7 @@ class ECHONETConnector():
         self._update_data = {}
         self._api = api
         self._update_callbacks = []
+        self._update_option_func = []
         self._ntfPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_STATMAP]
         self._getPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_GETMAP]
         self._setPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_SETMAP]
@@ -319,3 +320,6 @@ class ECHONETConnector():
 
     def register_async_update_callbacks(self, update_func):
         self._update_callbacks.append(update_func)
+
+    def add_update_option_listener(self, update_func):
+        self._update_option_func.append(update_func)
