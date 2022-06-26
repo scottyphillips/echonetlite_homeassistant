@@ -104,7 +104,7 @@ class EchonetSensor(SensorEntity):
         self._eojci = self._instance._eojci
         self._uid = f'{self._instance._host}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
         self._device_name = name
-        self._should_poll = self._instance._user_options.get(CONF_FORCE_POLLING, False) or self._op_code not in self._instance._ntfPropertyMap
+        self._should_poll = True
         self._state_value = None
 
         _attr_keys = self._sensor_attributes.keys()
@@ -143,8 +143,9 @@ class EchonetSensor(SensorEntity):
             else:
                 self._unit_of_measurement = None
 
+        self.update_option_listener()
+        self._instance.add_update_option_listener(self.update_option_listener)
         self._instance.register_async_update_callbacks(self.async_update_callback)
-        _LOGGER.debug(f"{self._name}({self._op_code}): _should_poll is {self._should_poll}")
 
     @property
     def icon(self):
@@ -262,3 +263,7 @@ class EchonetSensor(SensorEntity):
         if (changed):
             self._state_value = self._instance._update_data[self._op_code]
             self.async_schedule_update_ha_state()
+
+    def update_option_listener(self):
+        self._should_poll = self._instance._user_options.get(CONF_FORCE_POLLING, False) or self._op_code not in self._instance._ntfPropertyMap
+        _LOGGER.info(f"{self._name}({self._op_code}): _should_poll is {self._should_poll}")
