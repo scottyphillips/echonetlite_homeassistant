@@ -193,6 +193,9 @@ async def update_listener(hass, entry):
             if entry.options.get(key) is not None or option.get('default'):
                 instance["echonetlite"]._user_options.update({key: entry.options.get(key, option.get('default'))})
 
+        for func in instance["echonetlite"]._update_option_func:
+            func()
+
 class ECHONETConnector():
     """EchonetAPIConnector is used to centralise API calls for  Echonet devices.
     API calls are aggregated per instance (not per node!)"""
