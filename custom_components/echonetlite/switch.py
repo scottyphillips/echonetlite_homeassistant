@@ -2,7 +2,7 @@ import asyncio
 import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA
 from homeassistant.components.switch import SwitchEntity
-from .const import DOMAIN, ENL_OP_CODES, DATA_STATE_ON, DATA_STATE_OFF, SWITCH_POWER, CONF_ENSURE_ON, TYPE_SWITCH, ENL_STATUS, ENL_ON, ENL_OFF
+from .const import DOMAIN, ENL_OP_CODES, DATA_STATE_ON, DATA_STATE_OFF, SWITCH_POWER, CONF_ENSURE_ON, TYPE_SWITCH, ENL_STATUS, ENL_ON, ENL_OFF, CONF_FORCE_POLLING
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.const import ENL_SETMAP
@@ -65,7 +65,7 @@ class EchonetSwitch(SwitchEntity):
         self._attr_icon = options[CONF_ICON]
         self._uid = f'{self._connector._uid}-{self._code}'
         self._device_name = name
-        self._should_poll = self._code not in self._connector._ntfPropertyMap
+        self._should_poll = self._connector._user_options.get(CONF_FORCE_POLLING, False) or self._code not in self._connector._ntfPropertyMap
         self._connector.register_async_update_callbacks(self.async_update_callback)
         _LOGGER.debug(f"{self._device_name}({self._code}): _should_poll is {self._should_poll}")
 

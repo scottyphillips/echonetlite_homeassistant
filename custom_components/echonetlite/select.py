@@ -1,6 +1,6 @@
 import logging
 from homeassistant.components.select import SelectEntity
-from .const import HVAC_SELECT_OP_CODES, DOMAIN, FAN_SELECT_OP_CODES, COVER_SELECT_OP_CODES
+from .const import HVAC_SELECT_OP_CODES, DOMAIN, FAN_SELECT_OP_CODES, COVER_SELECT_OP_CODES, CONF_FORCE_POLLING
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
 
@@ -76,7 +76,7 @@ class EchonetSelect(SelectEntity):
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
         self._uid = f'{self._connector._uid}-{self._code}'
         self._device_name = name
-        self._should_poll = self._code not in self._connector._ntfPropertyMap
+        self._should_poll = self._connector._user_options.get(CONF_FORCE_POLLING, False) or self._code not in self._connector._ntfPropertyMap
         _LOGGER.debug(f"{self._device_name}({self._code}): _should_poll is {self._should_poll}")
 
     @property

@@ -42,8 +42,15 @@
                    "max_temp_auto": "自動モード時の最高温度設定"
                 },
                 "description": "風向とスイングモードなどのオプション設定を構成する"
-                }
+            },
+            "misc": {
+                "title": "ECHONET Lite その他のオプション",
+                "data": {
+                   "force_polling": "即時通知が見込める場合でもポーリングを止めない。"
+                },
+                "description": "各種のオプションの設定"
             }
-        },
+        }
+    },
     "title": "ECHONETLite"
 }

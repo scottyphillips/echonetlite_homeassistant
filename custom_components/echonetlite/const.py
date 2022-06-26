@@ -37,6 +37,7 @@ DOMAIN = "echonetlite"
 CONF_STATE_CLASS = ATTR_STATE_CLASS
 CONF_ENSURE_ON = "ensureon"
 CONF_OTHER_MODE = "other_mode"
+CONF_FORCE_POLLING = 'force_polling'
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
