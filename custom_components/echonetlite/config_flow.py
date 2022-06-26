@@ -12,13 +12,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.selector import selector
 from pychonet.lib.const import ENL_STATMAP, ENL_SETMAP, ENL_GETMAP, ENL_UID, ENL_MANUFACTURER
 #from aioudp import UDPServer
 from pychonet.lib.udpserver import UDPServer
 # from pychonet import Factory
 from pychonet import ECHONETAPIClient
-from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS
-
+from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS, ENL_HVAC_MODE, CONF_OTHER_MODE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -178,6 +178,22 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                                 default=default_temp
                             ): vol.All(vol.Coerce(int), vol.Range(min=TEMP_OPTIONS[option]['min'], max=TEMP_OPTIONS[option]['max']))
                     })
+
+                # Handle setting for the operation mode "Other"
+                option_default = 'as_off'
+                if self._config_entry.options.get(CONF_OTHER_MODE) is not None:
+                    option_default = self._config_entry.options.get(CONF_OTHER_MODE)
+                data_schema_structure.update({
+                    vol.Optional(
+                        USER_OPTIONS[ENL_HVAC_MODE]['option'],
+                        default=option_default
+                    ): selector({
+                        "select": {
+                            "options": USER_OPTIONS[ENL_HVAC_MODE]['option_list'],
+                            "mode": "dropdown"
+                        }
+                    })
+                })
 
             elif instance['eojgc'] == 0x01 and instance['eojcc'] == 0x35:  # AirCleaner
                 for option in list(USER_OPTIONS.keys()):
