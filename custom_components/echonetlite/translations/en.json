@@ -28,6 +28,7 @@
             "init": {
                 "title": "ECHONET Lite HVAC Options",
                 "data": {
+                   "other_mode": "Handling of operation mode \"Other\"",
                    "fan_settings": "Configure Fan settings",
                    "swing_horiz": "Configure Horizontal Swing Settings",
                    "swing_vert": "Configure Vertical Swing Settings",

@@ -15,6 +15,7 @@ from homeassistant.const import (
 )
 from homeassistant.components.sensor import ATTR_STATE_CLASS, SensorStateClass
 from pychonet.HomeAirConditioner import (
+    ENL_HVAC_MODE,
     ENL_FANSPEED,
     ENL_AIR_VERT,
     ENL_AIR_HORZ,
@@ -35,6 +36,7 @@ from pychonet.EchonetInstance import (
 DOMAIN = "echonetlite"
 CONF_STATE_CLASS = ATTR_STATE_CLASS
 CONF_ENSURE_ON = "ensureon"
+CONF_OTHER_MODE = "other_mode"
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
@@ -345,6 +347,7 @@ USER_OPTIONS = {
     ENL_AIR_VERT:   {'option': 'swing_vert', 'option_list': AIRFLOW_VERT_OPTIONS},
     ENL_AUTO_DIRECTION: {'option': 'auto_direction', 'option_list': AUTO_DIRECTION_OPTIONS},
     ENL_SWING_MODE:     {'option': 'swing_mode', 'option_list': SWING_MODE_OPTIONS},
+    ENL_HVAC_MODE:  {'option': CONF_OTHER_MODE, 'option_list': [{'value': 'as_off', 'label': 'As Off'}, {'value': 'as_idle', 'label': 'As Idle'}]},
 }
 
 TEMP_OPTIONS = {"min_temp_heat": {"min":10, "max":25},

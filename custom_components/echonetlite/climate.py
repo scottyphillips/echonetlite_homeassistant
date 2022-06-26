@@ -31,12 +31,13 @@ from homeassistant.components.climate.const import (
     HVAC_MODE_HEAT_COOL,
     HVAC_MODE_DRY,
     HVAC_MODE_FAN_ONLY,
+    HVAC_MODE_OFF,
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
     PRECISION_WHOLE,
 )
-from .const import DOMAIN, SILENT_MODE_OPTIONS
+from .const import DOMAIN, SILENT_MODE_OPTIONS, CONF_OTHER_MODE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,6 +82,7 @@ class EchonetClimate(ClimateEntity):
         self._max_temp = self._connector._user_options['max_temp_auto']
         self._olddata = {}
         self._should_poll = True
+        self._last_mode = HVAC_MODE_OFF
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
 
@@ -163,12 +165,19 @@ class EchonetClimate(ClimateEntity):
     @property
     def hvac_mode(self):
         """Return current operation ie. heat, cool, idle."""
+        mode = self._connector._update_data[ENL_HVAC_MODE]
         if self._connector._update_data[ENL_STATUS] == "On":
-            if self._connector._update_data[ENL_HVAC_MODE] == 'auto':
-                return HVAC_MODE_HEAT_COOL
-            else:
-                return self._connector._update_data[ENL_HVAC_MODE]
-        return "off"
+            if mode == "auto":
+                mode = HVAC_MODE_HEAT_COOL
+            elif mode == "other":
+                if (self._connector._user_options.get(CONF_OTHER_MODE) == "as_idle"):
+                    mode = self._last_mode
+                else:
+                    mode = HVAC_MODE_OFF
+        else:
+            mode = HVAC_MODE_OFF
+        self._last_mode = mode
+        return mode
 
     @property
     def hvac_action(self):
@@ -191,6 +200,11 @@ class EchonetClimate(ClimateEntity):
                         elif self._connector._update_data[ENL_HVAC_SET_TEMP] > self._connector._update_data[ENL_HVAC_ROOM_TEMP]:
                             return CURRENT_HVAC_HEAT
                 return CURRENT_HVAC_IDLE
+            elif self._connector._update_data[ENL_HVAC_MODE] == "other":
+                if (self._connector._user_options.get(CONF_OTHER_MODE) == "as_idle"):
+                    return CURRENT_HVAC_IDLE
+                else:
+                    return CURRENT_HVAC_OFF
             else:
                 _LOGGER.warning(f"Unknown HVAC mode {self._connector._update_data[ENL_HVAC_MODE]}")
                 return CURRENT_HVAC_IDLE
