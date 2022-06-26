@@ -15,7 +15,7 @@ from homeassistant.helpers.typing import StateType
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.ElectricBlind import ENL_OPENSTATE
-from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, ENL_STATUS
+from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, ENL_STATUS, CONF_FORCE_POLLING
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ class EchonetSensor(SensorEntity):
         self._eojci = self._instance._eojci
         self._uid = f'{self._instance._host}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
         self._device_name = name
-        self._should_poll = self._op_code not in self._instance._ntfPropertyMap
+        self._should_poll = self._instance._user_options.get(CONF_FORCE_POLLING, False) or self._op_code not in self._instance._ntfPropertyMap
         self._state_value = None
 
         _attr_keys = self._sensor_attributes.keys()

@@ -41,8 +41,15 @@
                    "max_temp_auto": "Configure Maximum Temperature for Automatic Operation"
                 },
                 "description": "Configure optional fan and swing mode settings"
-                }
+            },
+            "misc": {
+                "title": "ECHONET Lite misc options",
+                "data": {
+                   "force_polling": "Do not stop polling even if immediate notification is expected."
+                },
+                "description": "Setting various options"
             }
-        },
+        }
+    },
     "title": "ECHONETLite"
 }
