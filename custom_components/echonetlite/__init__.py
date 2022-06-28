@@ -181,10 +181,13 @@ async def update_listener(hass, entry):
         if instance['instance']['eojgc'] == 1 and instance['instance']['eojcc'] == 48:
             for option in USER_OPTIONS.keys():
                 if entry.options.get(USER_OPTIONS[option]["option"]) is not None:  # check if options has been created
-                    if len(entry.options.get(USER_OPTIONS[option]["option"])) > 0:  # if it has been created then check list length.
-                        instance["echonetlite"]._user_options.update({option: entry.options.get(USER_OPTIONS[option]["option"])})
+                    if isinstance(entry.options.get(USER_OPTIONS[option]["option"]), list):
+                        if len(entry.options.get(USER_OPTIONS[option]["option"])) > 0:  # if it has been created then check list length.
+                            instance["echonetlite"]._user_options.update({option: entry.options.get(USER_OPTIONS[option]["option"])})
+                        else:
+                            instance["echonetlite"]._user_options.update({option: False})
                     else:
-                        instance["echonetlite"]._user_options.update({option: False})
+                        instance["echonetlite"]._user_options.update({option: entry.options.get(USER_OPTIONS[option]["option"])})
             for option in TEMP_OPTIONS.keys():
                 if entry.options.get(option) is not None:
                     instance["echonetlite"]._user_options.update({option: entry.options.get(option)})
