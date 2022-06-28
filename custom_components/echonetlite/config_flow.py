@@ -196,7 +196,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         })
 
         if user_input is not None or not any(data_schema_structure):
-            self._data.update(user_input)
+            if user_input is not None:
+                self._data.update(user_input)
             return await self.async_step_misc()
         return self.async_show_form(
             step_id="init",
