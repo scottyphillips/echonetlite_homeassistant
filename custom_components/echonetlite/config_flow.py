@@ -145,6 +145,7 @@ class CannotConnect(HomeAssistantError):
 class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config):
         self._config_entry = config
+        self._data = {}
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -211,6 +212,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         })
 
         if user_input is not None or not any(data_schema_structure):
+            self._data.update(user_input)
             return await self.async_step_misc()
         return self.async_show_form(
             step_id="init",
@@ -230,7 +232,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             })
 
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            self._data.update(user_input)
+            return self.async_create_entry(title="", data=self._data)
         return self.async_show_form(
             step_id="misc",
             data_schema=vol.Schema(data_schema_structure),
