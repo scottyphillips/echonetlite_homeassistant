@@ -37,7 +37,7 @@ from homeassistant.const import (
     ATTR_TEMPERATURE,
     PRECISION_WHOLE,
 )
-from .const import DOMAIN, SILENT_MODE_OPTIONS, CONF_OTHER_MODE
+from .const import DOMAIN, SILENT_MODE_OPTIONS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -170,13 +170,14 @@ class EchonetClimate(ClimateEntity):
             if mode == "auto":
                 mode = HVAC_MODE_HEAT_COOL
             elif mode == "other":
-                if (self._connector._user_options.get(CONF_OTHER_MODE) == "as_idle"):
+                if (self._connector._user_options.get(ENL_HVAC_MODE) == "as_idle"):
                     mode = self._last_mode
                 else:
                     mode = HVAC_MODE_OFF
+            if mode != "other" and mode != HVAC_MODE_OFF:
+                self._last_mode = mode
         else:
             mode = HVAC_MODE_OFF
-        self._last_mode = mode
         return mode
 
     @property
@@ -201,7 +202,7 @@ class EchonetClimate(ClimateEntity):
                             return CURRENT_HVAC_HEAT
                 return CURRENT_HVAC_IDLE
             elif self._connector._update_data[ENL_HVAC_MODE] == "other":
-                if (self._connector._user_options.get(CONF_OTHER_MODE) == "as_idle"):
+                if (self._connector._user_options.get(ENL_HVAC_MODE) == "as_idle"):
                     return CURRENT_HVAC_IDLE
                 else:
                     return CURRENT_HVAC_OFF
