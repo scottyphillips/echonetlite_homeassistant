@@ -62,7 +62,6 @@ class EchonetSwitch(SwitchEntity):
         self._options = options
         self._on_value = options.get(CONF_ON_VALUE, DATA_STATE_ON)
         self._on_vals = [self._on_value, self._options[CONF_SERVICE_DATA][DATA_STATE_ON], hex(self._options[CONF_SERVICE_DATA][DATA_STATE_ON])[2:]]
-        self._attr_is_on = self._connector._update_data[self._code] in self._on_vals
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
         self._attr_icon = options[CONF_ICON]
         self._uid = f'{self._connector._uid}-{self._code}'
@@ -101,6 +100,10 @@ class EchonetSwitch(SwitchEntity):
             "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc]
         }
 
+    @property
+    def is_on(self):
+        return self._connector._update_data[self._code] in self._on_vals
+
     async def async_turn_on(self, **kwargs) -> None:
         """Turn switch on."""
         main_sw_code = None
@@ -110,34 +113,23 @@ class EchonetSwitch(SwitchEntity):
             main_sw_code = self._options[CONF_ENSURE_ON]
         # Turn on the specified switch
         if main_sw_code is not None and self._connector._update_data[main_sw_code] != DATA_STATE_ON:
-            if await self._connector._instance.setMessage(main_sw_code, SWITCH_POWER[DATA_STATE_ON]):
-                self._connector._update_data[main_sw_code] = DATA_STATE_ON
-                # Wait for it to be reflected on the device
-                await asyncio.sleep(3)
+            await self._connector._instance.setMessage(main_sw_code, SWITCH_POWER[DATA_STATE_ON])
 
         if main_sw_code is None or self._connector._update_data[main_sw_code] == DATA_STATE_ON:
             if await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_ON]):
-                self._connector._update_data[self._code] = self._on_value
-                self._attr_is_on = True
                 self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn switch off."""
         if await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_OFF]):
-            self._connector._update_data[self._code] = self._options.get(CONF_OFF_VALUE, DATA_STATE_OFF)
-            self._attr_is_on = False
             self.async_write_ha_state()
 
     async def async_update(self):
         """Retrieve latest state."""
         await self._connector.async_update()
-        self._attr_is_on = self._connector._update_data[self._code] in self._on_vals
 
     async def async_update_callback(self, isPush = False):
-        _is_on = self._connector._update_data[self._code] in self._on_vals
-        if (self._attr_is_on != _is_on):
-            self._attr_is_on = _is_on
-            self.async_schedule_update_ha_state()
+        self.async_schedule_update_ha_state()
 
     def update_option_listener(self):
         self._should_poll = self._connector._user_options.get(CONF_FORCE_POLLING, False) or self._code not in self._connector._ntfPropertyMap
