@@ -1,6 +1,6 @@
 import logging
 from homeassistant.components.select import SelectEntity
-from .const import HVAC_SELECT_OP_CODES, DOMAIN, FAN_SELECT_OP_CODES, COVER_SELECT_OP_CODES
+from .const import HVAC_SELECT_OP_CODES, DOMAIN, FAN_SELECT_OP_CODES, COVER_SELECT_OP_CODES, CONF_FORCE_POLLING
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
 
@@ -76,8 +76,9 @@ class EchonetSelect(SelectEntity):
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
         self._uid = f'{self._connector._uid}-{self._code}'
         self._device_name = name
-        self._olddata = {}
         self._should_poll = True
+        self.update_option_listener()
+        self._connector.add_update_option_listener(self.update_option_listener)
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     @property
@@ -103,6 +104,7 @@ class EchonetSelect(SelectEntity):
 
     async def async_select_option(self, option: str):
         await self._connector._instance.setMessage(self._code, self._options[option])
+        self._connector._update_data[self._code] = option
         self._attr_current_option = option
 
     async def async_update(self):
@@ -113,15 +115,21 @@ class EchonetSelect(SelectEntity):
     def update_attr(self):
         self._attr_current_option = self._connector._update_data[self._code]
         self._attr_options = list(self._options.keys())
+        if self._attr_current_option not in self._attr_options:
+            # maybe data value is raw(int)
+            keys = [k for k, v in self._options.items() if v == self._attr_current_option]
+            if keys:
+                self._attr_current_option = keys[0]
         if self._code in list(self._connector._user_options.keys()):
             if self._connector._user_options[self._code] is not False:
                 self._attr_options = self._connector._user_options[self._code]
 
     async def async_update_callback(self, isPush = False):
-        if isPush and self._should_poll:
-            self._should_poll = False
-        changed = self._olddata != self._connector._update_data
+        changed = self._attr_current_option != self._connector._update_data[self._code]
         if (changed):
-            self._olddata = self._connector._update_data.copy()
             self.update_attr()
             self.async_schedule_update_ha_state()
+
+    def update_option_listener(self):
+        self._should_poll = self._connector._user_options.get(CONF_FORCE_POLLING, False) or self._code not in self._connector._ntfPropertyMap
+        _LOGGER.info(f"{self._device_name}({self._code}): _should_poll is {self._should_poll}")

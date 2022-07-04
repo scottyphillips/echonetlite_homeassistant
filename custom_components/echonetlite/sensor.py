@@ -15,7 +15,7 @@ from homeassistant.helpers.typing import StateType
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.ElectricBlind import ENL_OPENSTATE
-from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, ENL_STATUS
+from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, ENL_STATUS, CONF_FORCE_POLLING
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -106,7 +106,6 @@ class EchonetSensor(SensorEntity):
         self._device_name = name
         self._should_poll = True
         self._state_value = None
-        self._instance.register_async_update_callbacks(self.async_update_callback)
 
         _attr_keys = self._sensor_attributes.keys()
         if CONF_ICON not in _attr_keys:
@@ -143,6 +142,10 @@ class EchonetSensor(SensorEntity):
                 self._unit_of_measurement = self._sensor_attributes[CONF_UNIT_OF_MEASUREMENT]
             else:
                 self._unit_of_measurement = None
+
+        self.update_option_listener()
+        self._instance.add_update_option_listener(self.update_option_listener)
+        self._instance.register_async_update_callbacks(self.async_update_callback)
 
     @property
     def icon(self):
@@ -256,9 +259,11 @@ class EchonetSensor(SensorEntity):
             self.async_write_ha_state()
 
     async def async_update_callback(self, isPush = False):
-        if isPush and self._should_poll:
-            self._should_poll = False
         changed = self._state_value != self._instance._update_data[self._op_code]
         if (changed):
             self._state_value = self._instance._update_data[self._op_code]
             self.async_schedule_update_ha_state()
+
+    def update_option_listener(self):
+        self._should_poll = self._instance._user_options.get(CONF_FORCE_POLLING, False) or self._op_code not in self._instance._ntfPropertyMap
+        _LOGGER.info(f"{self._name}({self._op_code}): _should_poll is {self._should_poll}")

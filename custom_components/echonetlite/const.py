@@ -15,6 +15,7 @@ from homeassistant.const import (
 )
 from homeassistant.components.sensor import ATTR_STATE_CLASS, SensorStateClass
 from pychonet.HomeAirConditioner import (
+    ENL_HVAC_MODE,
     ENL_FANSPEED,
     ENL_AIR_VERT,
     ENL_AIR_HORZ,
@@ -35,6 +36,10 @@ from pychonet.EchonetInstance import (
 DOMAIN = "echonetlite"
 CONF_STATE_CLASS = ATTR_STATE_CLASS
 CONF_ENSURE_ON = "ensureon"
+CONF_OTHER_MODE = "other_mode"
+CONF_FORCE_POLLING = 'force_polling'
+CONF_ON_VALUE = 'on_val'
+CONF_OFF_VALUE = 'off_val'
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
@@ -128,18 +133,24 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:mdi:lock",
                 CONF_SERVICE_DATA: SWITCH_BINARY,
                 CONF_ENSURE_ON: ENL_STATUS,
+                CONF_ON_VALUE: "lock",
+                CONF_OFF_VALUE: 'unlock',
                 TYPE_SWITCH: True
             },
             0xE1: {
                 CONF_ICON: "mdi:mdi:lock",
                 CONF_SERVICE_DATA: SWITCH_BINARY,
                 CONF_ENSURE_ON: ENL_STATUS,
+                CONF_ON_VALUE: "lock",
+                CONF_OFF_VALUE: 'unlock',
                 TYPE_SWITCH: True
             },
             0xE6: {
                 CONF_ICON: None,
                 CONF_SERVICE_DATA: SWITCH_BINARY,
                 CONF_ENSURE_ON: ENL_STATUS,
+                CONF_ON_VALUE: "on",
+                CONF_OFF_VALUE: 'off',
                 TYPE_SWITCH: True
             }
         },
@@ -345,6 +356,7 @@ USER_OPTIONS = {
     ENL_AIR_VERT:   {'option': 'swing_vert', 'option_list': AIRFLOW_VERT_OPTIONS},
     ENL_AUTO_DIRECTION: {'option': 'auto_direction', 'option_list': AUTO_DIRECTION_OPTIONS},
     ENL_SWING_MODE:     {'option': 'swing_mode', 'option_list': SWING_MODE_OPTIONS},
+    ENL_HVAC_MODE:  {'option': CONF_OTHER_MODE, 'option_list': [{'value': 'as_off', 'label': 'As Off'}, {'value': 'as_idle', 'label': 'As Idle'}]},
 }
 
 TEMP_OPTIONS = {"min_temp_heat": {"min":10, "max":25},
@@ -353,4 +365,11 @@ TEMP_OPTIONS = {"min_temp_heat": {"min":10, "max":25},
                 "max_temp_cool": {"min":18, "max":30},
                 "min_temp_auto": {"min":15, "max":25},
                 "max_temp_auto": {"min":18, "max":30},
+}
+
+MISC_OPTIONS = {
+    CONF_FORCE_POLLING: {
+        'type': bool,
+        'default': False
+    }
 }

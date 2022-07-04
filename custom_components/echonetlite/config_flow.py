@@ -12,13 +12,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
-from pychonet.lib.const import ENL_SETMAP, ENL_GETMAP, ENL_UID, ENL_MANUFACTURER
+from homeassistant.helpers.selector import selector
+from pychonet.lib.const import ENL_STATMAP, ENL_SETMAP, ENL_GETMAP, ENL_UID, ENL_MANUFACTURER
 #from aioudp import UDPServer
 from pychonet.lib.udpserver import UDPServer
 # from pychonet import Factory
 from pychonet import ECHONETAPIClient
-from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS
-
+from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS, CONF_FORCE_POLLING, MISC_OPTIONS, ENL_HVAC_MODE, CONF_OTHER_MODE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,6 +67,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
 
                 await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
                 _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
+                ntfmap = state['instances'][eojgc][eojcc][instance].get(ENL_STATMAP, [])
                 getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
                 setmap = state['instances'][eojgc][eojcc][instance][ENL_SETMAP]
 
@@ -88,6 +89,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
                     "eojgc": eojgc,
                     "eojcc": eojcc,
                     "eojci": instance,
+                    "ntfmap": ntfmap,
                     "getmap": getmap,
                     "setmap": setmap,
                     "uid": uid,
@@ -143,6 +145,7 @@ class CannotConnect(HomeAssistantError):
 class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config):
         self._config_entry = config
+        self._data = {}
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -177,6 +180,22 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             ): vol.All(vol.Coerce(int), vol.Range(min=TEMP_OPTIONS[option]['min'], max=TEMP_OPTIONS[option]['max']))
                     })
 
+                # Handle setting for the operation mode "Other"
+                option_default = 'as_off'
+                if self._config_entry.options.get(CONF_OTHER_MODE) is not None:
+                    option_default = self._config_entry.options.get(CONF_OTHER_MODE)
+                data_schema_structure.update({
+                    vol.Optional(
+                        USER_OPTIONS[ENL_HVAC_MODE]['option'],
+                        default=option_default
+                    ): selector({
+                        "select": {
+                            "options": USER_OPTIONS[ENL_HVAC_MODE]['option_list'],
+                            "mode": "dropdown"
+                        }
+                    })
+                })
+
             elif instance['eojgc'] == 0x01 and instance['eojcc'] == 0x35:  # AirCleaner
                 for option in list(USER_OPTIONS.keys()):
                     if option in instance['setmap']:
@@ -192,9 +211,31 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             )
                         })
 
-        if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+        if user_input is not None or not any(data_schema_structure):
+            if user_input is not None:
+                self._data.update(user_input)
+            return await self.async_step_misc()
         return self.async_show_form(
             step_id="init",
+            data_schema=vol.Schema(data_schema_structure),
+        )
+
+    async def async_step_misc(self, user_input=None):
+        """Manage the options."""
+        data_schema_structure = {}
+
+        for key, option in MISC_OPTIONS.items():
+            data_schema_structure.update({
+                vol.Required(
+                    CONF_FORCE_POLLING,
+                    default=self._config_entry.options.get(key, option['default']) 
+                ): option['type']
+            })
+
+        if user_input is not None:
+            self._data.update(user_input)
+            return self.async_create_entry(title="", data=self._data)
+        return self.async_show_form(
+            step_id="misc",
             data_schema=vol.Schema(data_schema_structure),
         )

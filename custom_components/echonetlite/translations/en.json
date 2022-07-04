@@ -28,6 +28,7 @@
             "init": {
                 "title": "ECHONET Lite HVAC Options",
                 "data": {
+                   "other_mode": "Handling of operation mode \"Other\"",
                    "fan_settings": "Configure Fan settings",
                    "swing_horiz": "Configure Horizontal Swing Settings",
                    "swing_vert": "Configure Vertical Swing Settings",
@@ -41,8 +42,15 @@
                    "max_temp_auto": "Configure Maximum Temperature for Automatic Operation"
                 },
                 "description": "Configure optional fan and swing mode settings"
-                }
+            },
+            "misc": {
+                "title": "ECHONET Lite misc options",
+                "data": {
+                   "force_polling": "Do not stop polling even if immediate notification is expected."
+                },
+                "description": "Setting various options"
             }
-        },
+        }
+    },
     "title": "ECHONETLite"
 }
