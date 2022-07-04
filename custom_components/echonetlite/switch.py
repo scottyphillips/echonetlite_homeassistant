@@ -114,6 +114,10 @@ class EchonetSwitch(SwitchEntity):
         # Turn on the specified switch
         if main_sw_code is not None and self._connector._update_data[main_sw_code] != DATA_STATE_ON:
             await self._connector._instance.setMessage(main_sw_code, SWITCH_POWER[DATA_STATE_ON])
+            cnt = 0
+            while(self._connector._update_data[main_sw_code] != DATA_STATE_ON and cnt < 100):
+                cnt += 1
+                await asyncio.sleep(0.1)
 
         if main_sw_code is None or self._connector._update_data[main_sw_code] == DATA_STATE_ON:
             if await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_ON]):
