@@ -29,6 +29,10 @@ compatible ECHONETLite Devices:
      * MSZ-AP22VGD
      * MSZ-AP25VGD
      * MSZ-AP50VGD
+  * LN Series
+     * MSZ-LN25VG2
+     * MSZ-LN35VG2
+     * MSZ-LN50VG2
   * Ducted
      * PEA-M100GAA
      * PEA-RP140GAA
