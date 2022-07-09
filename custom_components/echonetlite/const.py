@@ -350,6 +350,11 @@ SILENT_MODE_OPTIONS = {
     'silent':       'Silent',
 }
 
+HVAC_MODE_OPTIONS = {
+    'as_off':       'As Off',
+    'as_idle':      'As Idle'
+}
+
 USER_OPTIONS = {
     ENL_FANSPEED:   {'option': 'fan_settings', 'option_list': FAN_SPEED_OPTIONS},
     ENL_AIR_HORZ:   {'option': 'swing_horiz', 'option_list': AIRFLOW_HORIZ_OPTIONS},

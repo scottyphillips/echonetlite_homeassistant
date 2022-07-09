@@ -26,7 +26,7 @@
         },
         "step": {
             "init": {
-                "title": "ECHONET Lite HVAC Options",
+                "title": "ECHONETLite Options",
                 "data": {
                    "other_mode": "Handling of operation mode \"Other\"",
                    "fan_settings": "Configure Fan settings",
@@ -39,16 +39,10 @@
                    "min_temp_cool": "Configure Minimum Temperature for Cooling Operation",
                    "max_temp_cool": "Configure Maximum Temperature for Cooling Operation",
                    "min_temp_auto": "Configure Minimum Temperature for Automatic Operation",
-                   "max_temp_auto": "Configure Maximum Temperature for Automatic Operation"
-                },
-                "description": "Configure optional fan and swing mode settings"
-            },
-            "misc": {
-                "title": "ECHONET Lite misc options",
-                "data": {
+                   "max_temp_auto": "Configure Maximum Temperature for Automatic Operation",
                    "force_polling": "Do not stop polling even if immediate notification is expected."
                 },
-                "description": "Setting various options"
+                "description": "Configure optional settings"
             }
         }
     },

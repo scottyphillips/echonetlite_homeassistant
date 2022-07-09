@@ -130,7 +130,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_finish(self, user_input=None):
-        return self.async_create_entry(title=self.title, data={"instances": self.instance_list})
+        return self.async_create_entry(title=self.title, data={"instances": self.instance_list}, options={"other_mode": "as_off"})
 
     @staticmethod
     @callback
@@ -211,10 +211,20 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             )
                         })
 
+        for key, option in MISC_OPTIONS.items():
+            data_schema_structure.update({
+                vol.Required(
+                    CONF_FORCE_POLLING,
+                    default=self._config_entry.options.get(key, option['default'])
+                ): option['type']
+            })
+
+
         if user_input is not None or not any(data_schema_structure):
             if user_input is not None:
                 self._data.update(user_input)
-            return await self.async_step_misc()
+            return self.async_create_entry(title="", data=self._data)
+            # return await self.async_step_misc()
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(data_schema_structure),
@@ -224,13 +234,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Manage the options."""
         data_schema_structure = {}
 
-        for key, option in MISC_OPTIONS.items():
-            data_schema_structure.update({
-                vol.Required(
-                    CONF_FORCE_POLLING,
-                    default=self._config_entry.options.get(key, option['default']) 
-                ): option['type']
-            })
+        # for key, option in MISC_OPTIONS.items():
+        #     data_schema_structure.update({
+        #         vol.Required(
+        #             CONF_FORCE_POLLING,
+        #             default=self._config_entry.options.get(key, option['default'])
+        #         ): option['type']
+        #     })
 
         if user_input is not None:
             self._data.update(user_input)
