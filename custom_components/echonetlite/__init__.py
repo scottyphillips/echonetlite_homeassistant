@@ -295,10 +295,9 @@ class ECHONETConnector():
     async def async_update_data(self, kwargs):
         for retry in range(1, 4):
             update_data = {}
-#            no_request = 'no_request' in kwargs and kwargs['no_request']
+            no_request = 'no_request' in kwargs and kwargs['no_request']
             for flags in self._update_flag_batches:
-#                batch_data = await self._instance.update(flags, no_request)
-                batch_data = await self._instance.update(flags)
+                batch_data = await self._instance.update(flags, no_request)
                 if batch_data is not False:
                     if isinstance(batch_data, dict):
                         update_data.update(batch_data)
@@ -323,10 +322,9 @@ class ECHONETConnector():
         return self._update_data
 
     async def async_update_callback(self, isPush = False):
-         _LOGGER.debug("breaking this for now")
-#        await self.async_update_data(kwargs = {"no_request": True})
-#        for update_func in self._update_callbacks:
-#            await update_func(isPush)
+        await self.async_update_data(kwargs = {"no_request": True})
+        for update_func in self._update_callbacks:
+            await update_func(isPush)
 
     def register_async_update_callbacks(self, update_func):
         self._update_callbacks.append(update_func)
