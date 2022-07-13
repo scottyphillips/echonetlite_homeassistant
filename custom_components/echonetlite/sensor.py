@@ -102,7 +102,7 @@ class EchonetSensor(SensorEntity):
         self._eojgc = self._instance._eojgc
         self._eojcc = self._instance._eojcc
         self._eojci = self._instance._eojci
-        self._uid = f'{self._instance._host}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
+        self._uid = f'{self._instance._uid}-{self._op_code}'
         self._device_name = name
         self._should_poll = True
         self._state_value = None
