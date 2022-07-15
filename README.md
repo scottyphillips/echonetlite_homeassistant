@@ -63,6 +63,10 @@ compatible ECHONETLite Devices:
      * Air Purifier
          * KI-HS70
 
+* Panasonic
+     * Air Conditioners
+         * CS-221DJ
+
 * Koizumi
      * Lighting system AE50264E bridge (https://www.koizumi-lt.co.jp/product/jyutaku/tree/ )
 
