@@ -58,6 +58,10 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
      * 加湿空気清浄機
          * KI-HS70
 
+* パナソニック
+     *  エアコン
+         *　CS-221DJ
+
 * コイズミ照明
      * スマートブリッジ AE50264E (https://www.koizumi-lt.co.jp/product/jyutaku/tree/ )
 
