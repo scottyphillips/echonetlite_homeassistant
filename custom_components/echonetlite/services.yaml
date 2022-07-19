@@ -1,9 +1,35 @@
 set_on_timer_time:
   description: Set the time of the on-timer of the device.
-  fields:
-    entity_id:
+  target:
+    entity:
+      domain: sensor
+      integration: echonetlite
       description: On-timer time sensor entity ID.
       example: "sensor.echonetlite_set_value_of_on_timer_time"
+    device:
+      integration: echonetlite
+      description: ECHONET Lite device ID.
+  fields:
     timer_time:
       description: Time notation in "hour:minute" format.
       example: "21:00"
+      required: true
+    entity_id:
+      description: On-timer time sensor entity ID.
+      example: "sensor.echonetlite_set_value_of_on_timer_time"
+set_value_int_1b:
+  description: Sets the specified sensor entity to an integer value.
+  target:
+    entity:
+      domain: sensor
+      integration: echonetlite
+      description: Integer sensor entity ID.
+      example: "sensor.echonetlite_set_value_of_hot_water_temperature"
+  fields:
+    value:
+      description: Valid integer value for the specified entity.
+      example: 42
+      required: true
+    entity_id:
+      description: Integer sensor entity ID.
+      example: "sensor.echonetlite_set_value_of_hot_water_temperature"
