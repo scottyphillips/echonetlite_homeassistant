@@ -15,7 +15,7 @@ from homeassistant.helpers.typing import StateType
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.ElectricBlind import ENL_OPENSTATE
-from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, ENL_STATUS, CONF_FORCE_POLLING
+from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, SERVICE_SET_INT_1B, ENL_STATUS, CONF_FORCE_POLLING
 
 _LOGGER = logging.getLogger(__name__)
 
