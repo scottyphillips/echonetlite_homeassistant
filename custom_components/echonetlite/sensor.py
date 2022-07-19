@@ -11,6 +11,7 @@ from homeassistant.const import (
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.typing import StateType
+from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
@@ -263,6 +264,8 @@ class EchonetSensor(SensorEntity):
         if await self._instance._instance.setMessages([mes]):
             self._instance._update_data[0x91] = hh_mm
             self.async_write_ha_state()
+        else:
+            raise InvalidStateError('The state setting is not supported or is an invalid value.')
 
     async def async_set_value_int_1b(self, value, epc=None):
         if epc:
@@ -270,6 +273,10 @@ class EchonetSensor(SensorEntity):
             if await self._instance._instance.setMessage(epc, value):
                 self._instance._update_data[epc] = value
                 self.async_write_ha_state()
+            else:
+                raise InvalidStateError('The state setting is not supported or is an invalid value.')
+        else:
+            raise NoEntitySpecifiedError('The required parameter EPC has not been specified.')
 
     async def async_update_callback(self, isPush = False):
         changed = self._state_value != self._instance._update_data[self._op_code]
