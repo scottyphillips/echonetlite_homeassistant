@@ -26,7 +26,7 @@
         },
         "step": {
             "init": {
-                "title": "ECHONET Lite 空調機器オプション",
+                "title": "ECHONET Lite オプション",
                 "data": {
                    "other_mode": "運転モード「その他」の取り扱い",
                    "fan_settings": "風量設定の構成",
@@ -42,7 +42,7 @@
                    "max_temp_auto": "自動モード時の最高温度設定",
                    "force_polling": "即時通知が見込める場合でもポーリングを止めない。"
                 },
-                "description": "風向とスイングモードなどのオプション設定を構成する"
+                "description": "オプション設定を構成する"
             }
         }
     },
