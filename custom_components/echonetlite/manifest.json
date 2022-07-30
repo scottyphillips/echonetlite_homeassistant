@@ -11,6 +11,6 @@
   "codeowners": [
     "@scottyphillips"
   ],
-  "version":  "3.5.2",
+  "version":  "3.6.0",
   "iot_class": "local_polling"
 }
