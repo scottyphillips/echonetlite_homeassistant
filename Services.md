@@ -55,10 +55,10 @@ We can create a numeric setting entity with the following automation with the nu
 
 Of course, it can also be used for various automations.
 
-With future expansion, parameters that can be set numerically on other devices can be added, so I think it can be used conveniently.
+With future expansion, parameters that can be set numerically on other devices can be added, so I think it can be used conveniently. (Thanks @nao-pon)
 
-  - Sensor entity id as: sensor.set_value_of_hot_water_temperature
-  - Input entity id as: input_number.set_value_of_hot_water_temperature
+  - Sensor entity id as: `sensor.set_value_of_hot_water_temperature`
+  - Input entity id as: `input_number.set_value_of_hot_water_temperature`
 
 ### Automation example
 
