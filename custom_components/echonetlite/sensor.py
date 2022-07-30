@@ -11,11 +11,12 @@ from homeassistant.const import (
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.typing import StateType
+from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.ElectricBlind import ENL_OPENSTATE
-from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, ENL_STATUS, CONF_FORCE_POLLING
+from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, SERVICE_SET_INT_1B, ENL_STATUS, CONF_FORCE_POLLING
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,12 +65,18 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     if eojcc in ENL_OP_CODES[eojgc].keys():
                         if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                             _keys = ENL_OP_CODES[eojgc][eojcc][op_code].keys()
-                            if CONF_SERVICE in _keys: # Some devices support advanced service calls.
+                            if CONF_SERVICE in _keys and op_code in entity['instance']['setmap']: # Some devices support advanced service calls.
                                 for service_name in ENL_OP_CODES[eojgc][eojcc][op_code][CONF_SERVICE]:
                                     if service_name == SERVICE_SET_ON_TIMER_TIME:
                                         platform.async_register_entity_service(
                                             service_name,
                                             { vol.Required('timer_time'): cv.time_period },
+                                            "async_" + service_name
+                                        )
+                                    elif service_name == SERVICE_SET_INT_1B:
+                                        platform.async_register_entity_service(
+                                            service_name,
+                                            { vol.Required('value'): cv.positive_int, vol.Optional('epc', default=op_code): cv.positive_int },
                                             "async_" + service_name
                                         )
 
@@ -257,6 +264,19 @@ class EchonetSensor(SensorEntity):
         if await self._instance._instance.setMessages([mes]):
             self._instance._update_data[0x91] = hh_mm
             self.async_write_ha_state()
+        else:
+            raise InvalidStateError('The state setting is not supported or is an invalid value.')
+
+    async def async_set_value_int_1b(self, value, epc=None):
+        if epc:
+            value = int(value)
+            if await self._instance._instance.setMessage(epc, value):
+                self._instance._update_data[epc] = value
+                self.async_write_ha_state()
+            else:
+                raise InvalidStateError('The state setting is not supported or is an invalid value.')
+        else:
+            raise NoEntitySpecifiedError('The required parameter EPC has not been specified.')
 
     async def async_update_callback(self, isPush = False):
         changed = self._state_value != self._instance._update_data[self._op_code]

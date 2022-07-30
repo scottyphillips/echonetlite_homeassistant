@@ -44,6 +44,7 @@ DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
 SERVICE_SET_ON_TIMER_TIME = "set_on_timer_time"
+SERVICE_SET_INT_1B = "set_value_int_1b"
 OPEN = "open"
 CLOSE = "close"
 STOP = "stop"
@@ -97,6 +98,12 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
+            },
+            0xB4: { # Humidity setting in dry mode
+                CONF_ICON: "mdi:water-percent",
+                CONF_TYPE: DEVICE_CLASS_HUMIDITY,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_SERVICE: [ SERVICE_SET_INT_1B ]
             },
             0xBA: {
                 CONF_ICON: "mdi:water-percent",
@@ -182,12 +189,14 @@ ENL_OP_CODES = {
             0xD1: { # Sensor
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: DEVICE_CLASS_TEMPERATURE,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_SERVICE: [ SERVICE_SET_INT_1B ]
             },
             0xE1: {
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: DEVICE_CLASS_TEMPERATURE,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_SERVICE: [ SERVICE_SET_INT_1B ]
             },
             0xE7: {
                 CONF_UNIT_OF_MEASUREMENT: "L"
