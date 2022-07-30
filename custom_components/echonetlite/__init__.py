@@ -221,6 +221,7 @@ class ECHONETConnector():
         self._manufacturer = None
         if "manufacturer" in instance:
             self._manufacturer = instance["manufacturer"]
+        self._uid = instance.get('uid')
         self._api.register_async_update_callbacks(self._host, self._eojgc, self._eojcc, self._eojci, self.async_update_callback)
 
         # Detect HVAC - eventually we will use factory here.
@@ -283,7 +284,6 @@ class ECHONETConnector():
             if entry.options.get(option) is not None:
                 self._user_options[option] = entry.options.get(option)
 
-        self._uid = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_UID]
         _LOGGER.debug(f'UID for ECHONETLite instance at {self._host}  is {self._uid}.')
         if self._uid is None:
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"

@@ -60,6 +60,17 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
         _LOGGER.debug("ECHONET Node Discovery Failed!")
         raise CannotConnect("ECHONET node is not online")
     state = server._state[host]
+    uid = state['uid']
+    manufacturer = state['manufacturer']
+    if not isinstance(manufacturer, str):
+        # If unable to resolve the manufacturer,
+        # the raw identification number will be passed as int.
+        _LOGGER.warn(
+            f"{host} - Unable to resolve the manufacturer name - {manufacturer}. " +
+            "Please report the manufacturer name of your device at the issue tracker on GitHub!"
+        )
+        manufacturer = f"Unknown({manufacturer})"
+
     for eojgc in list(state['instances'].keys()):
         for eojcc in list(state['instances'][eojgc].keys()):
             for instance in list(state['instances'][eojgc][eojcc].keys()):
@@ -70,18 +81,6 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
                 ntfmap = state['instances'][eojgc][eojcc][instance].get(ENL_STATMAP, [])
                 getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
                 setmap = state['instances'][eojgc][eojcc][instance][ENL_SETMAP]
-
-                await server.getIdentificationInformation(host, eojgc, eojcc, instance)
-                uid = state['instances'][eojgc][eojcc][instance][ENL_UID]
-                manufacturer = state['instances'][eojgc][eojcc][instance][ENL_MANUFACTURER]
-                if not isinstance(manufacturer, str):
-                    # If unable to resolve the manufacturer,
-                    # the raw identification number will be passed as int.
-                    _LOGGER.warn(
-                        f"{host} - Unable to resolve the manufacturer name - {manufacturer}. " +
-                        "Please report the manufacturer name of your device at the issue tracker on GitHub!"
-                    )
-                    manufacturer = "ECHONETLite"
 
                 _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} Identification number discovered!")
                 instance_list.append({
