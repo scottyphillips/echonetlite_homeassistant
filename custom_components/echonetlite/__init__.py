@@ -9,6 +9,7 @@ import asyncio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
+from homeassistant.const import Platform
 from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS, CONF_FORCE_POLLING, MISC_OPTIONS
 from pychonet.lib.udpserver import UDPServer
 
@@ -41,7 +42,7 @@ from pychonet.GeneralLighting import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = ["sensor", 'climate', 'select', 'light', 'fan', 'switch']
+PLATFORMS = [Platform.SENSOR, Platform.CLIMATE, Platform.SELECT, Platform.LIGHT, Platform.FAN, Platform.SWITCH]
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 MAX_UPDATE_BATCH_SIZE = 10
@@ -164,7 +165,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _LOGGER.debug(f"Plaform entry data - {entry.data}")
 
-    hass.config_entries.async_setup_platforms(entry, PLATFORMS)
+    # this api is too recent (around April 2021): hass.config_entries.async_setup_platforms(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
