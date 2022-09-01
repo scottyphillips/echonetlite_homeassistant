@@ -4,7 +4,6 @@
 [![License][license-shield]](LICENSE)
 [![hacs][hacsbadge]][hacs]
 ![Project Maintenance][maintenance-shield]
-[![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
 
 ECHONETLite互換機器で使用するためのHomeAssistantカスタムコンポーネント。
 このカスタムコンポーネントは「pychonet」Python3ライブラリを利用しています。
