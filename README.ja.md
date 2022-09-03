@@ -27,6 +27,10 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
      * MSZ-AP22VGD
      * MSZ-AP25VGD
      * MSZ-AP50VGD
+  * LN シリーズ
+     * MSZ-LN25VG2
+     * MSZ-LN35VG2
+     * MSZ-LN50VG2
   * 換気システム
      * PEA-M100GAA
      * PEA-RP140GAA
@@ -60,6 +64,8 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
 * パナソニック
      *  エアコン
          *　CS-221DJ
+     * IP/JEM-A 変換アダプター
+         * HF-JA2-W
 
 * コイズミ照明
      * スマートブリッジ AE50264E (https://www.koizumi-lt.co.jp/product/jyutaku/tree/ )

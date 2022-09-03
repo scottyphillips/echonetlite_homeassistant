@@ -65,6 +65,8 @@ compatible ECHONETLite Devices:
 * Panasonic
      * Air Conditioners
          * CS-221DJ
+     * IP/JEM-A conversion adapter
+         * HF-JA2-W
 
 * Koizumi
      * Lighting system AE50264E bridge (https://www.koizumi-lt.co.jp/product/jyutaku/tree/ )
@@ -74,9 +76,6 @@ compatible ECHONETLite Devices:
      * Input entity to configure Hot Water Timers can be configured by using a template and a [Service Call](Services.md).
 
 * Daikin
-     * Hot Water Heaters
-         * Switch entities to enable various hot water settings.
-         * Input entity to configure Hot Water Timers can be configured by using a template and a [Service Call](Services.md).
      * Air Conditioners
           * ECHONETLite enabled HVAC models.
 
