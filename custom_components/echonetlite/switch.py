@@ -120,13 +120,11 @@ class EchonetSwitch(SwitchEntity):
                 await asyncio.sleep(0.1)
 
         if main_sw_code is None or self._connector._update_data[main_sw_code] == DATA_STATE_ON:
-            if await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_ON]):
-                self.async_write_ha_state()
+            await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_ON])
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn switch off."""
-        if await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_OFF]):
-            self.async_write_ha_state()
+        await self._connector._instance.setMessage(self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_OFF])
 
     async def async_update(self):
         """Retrieve latest state."""
