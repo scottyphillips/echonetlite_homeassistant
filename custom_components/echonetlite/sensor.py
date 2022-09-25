@@ -279,9 +279,10 @@ class EchonetSensor(SensorEntity):
             raise NoEntitySpecifiedError('The required parameter EPC has not been specified.')
 
     async def async_update_callback(self, isPush = False):
-        changed = self._state_value != self._instance._update_data[self._op_code]
+        new_val = self._instance._update_data.get(self._op_code)
+        changed = new_val and self._state_value != new_val
         if (changed):
-            self._state_value = self._instance._update_data[self._op_code]
+            self._state_value = new_val
             self.async_schedule_update_ha_state()
 
     def update_option_listener(self):

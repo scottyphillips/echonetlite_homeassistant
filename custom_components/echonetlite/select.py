@@ -125,9 +125,10 @@ class EchonetSelect(SelectEntity):
                 self._attr_options = self._connector._user_options[self._code]
 
     async def async_update_callback(self, isPush = False):
-        changed = self._attr_current_option != self._connector._update_data[self._code]
+        new_val = self._connector._update_data.get(self._code)
+        changed = new_val and self._state_value != new_val
         if (changed):
-            self.update_attr()
+            self._state_value = new_val
             self.async_schedule_update_ha_state()
 
     def update_option_listener(self):
