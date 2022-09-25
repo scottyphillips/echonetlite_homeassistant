@@ -45,8 +45,6 @@ class EchonetFan(FanEntity):
         self._support_flags = self._support_flags |  SUPPORT_PRESET_MODE
         self._olddata = {}
         self._should_poll = True
-        self._connector.register_async_update_callbacks(self.async_update_callback)
-
 
     async def async_update(self):
         await self._connector.async_update()
@@ -126,6 +124,10 @@ class EchonetFan(FanEntity):
         """Set new fan mode."""
         await self._connector._instance.setFanSpeed(preset_mode)
         self._connector._update_data[ENL_FANSPEED] = preset_mode
+
+    async def async_added_to_hass(self):
+        """Register callbacks."""
+        self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush = False):
         changed = self._olddata != self._connector._update_data

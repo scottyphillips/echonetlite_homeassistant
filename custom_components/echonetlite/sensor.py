@@ -151,8 +151,6 @@ class EchonetSensor(SensorEntity):
                 self._unit_of_measurement = None
 
         self.update_option_listener()
-        self._instance.add_update_option_listener(self.update_option_listener)
-        self._instance.register_async_update_callbacks(self.async_update_callback)
 
     @property
     def icon(self):
@@ -277,6 +275,11 @@ class EchonetSensor(SensorEntity):
                 raise InvalidStateError('The state setting is not supported or is an invalid value.')
         else:
             raise NoEntitySpecifiedError('The required parameter EPC has not been specified.')
+
+    async def async_added_to_hass(self):
+        """Register callbacks."""
+        self._instance.add_update_option_listener(self.update_option_listener)
+        self._instance.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush = False):
         new_val = self._instance._update_data.get(self._op_code)

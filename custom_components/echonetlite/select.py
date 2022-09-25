@@ -78,8 +78,6 @@ class EchonetSelect(SelectEntity):
         self._device_name = name
         self._should_poll = True
         self.update_option_listener()
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
 
     @property
     def unique_id(self):
@@ -123,6 +121,11 @@ class EchonetSelect(SelectEntity):
         if self._code in list(self._connector._user_options.keys()):
             if self._connector._user_options[self._code] is not False:
                 self._attr_options = self._connector._user_options[self._code]
+
+    async def async_added_to_hass(self):
+        """Register callbacks."""
+        self._connector.add_update_option_listener(self.update_option_listener)
+        self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush = False):
         new_val = self._connector._update_data.get(self._code)

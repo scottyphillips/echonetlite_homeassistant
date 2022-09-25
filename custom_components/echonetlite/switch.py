@@ -68,8 +68,6 @@ class EchonetSwitch(SwitchEntity):
         self._device_name = name
         self._should_poll = True
         self.update_option_listener()
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
 
     @property
     def unique_id(self):
@@ -129,6 +127,11 @@ class EchonetSwitch(SwitchEntity):
     async def async_update(self):
         """Retrieve latest state."""
         await self._connector.async_update()
+
+    async def async_added_to_hass(self):
+        """Register callbacks."""
+        self._connector.add_update_option_listener(self.update_option_listener)
+        self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush = False):
         self.async_schedule_update_ha_state()

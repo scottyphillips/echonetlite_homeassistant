@@ -83,8 +83,6 @@ class EchonetClimate(ClimateEntity):
         self._olddata = {}
         self._should_poll = True
         self._last_mode = HVAC_MODE_OFF
-        self._connector.register_async_update_callbacks(self.async_update_callback)
-
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
@@ -319,6 +317,10 @@ class EchonetClimate(ClimateEntity):
         if self.hvac_mode == HVAC_MODE_HEAT_COOL:
             self._max_temp = self._connector._user_options['max_temp_auto']
         return self._max_temp
+
+    async def async_added_to_hass(self):
+        """Register callbacks."""
+        self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush = False):
         changed = self._olddata != self._connector._update_data
