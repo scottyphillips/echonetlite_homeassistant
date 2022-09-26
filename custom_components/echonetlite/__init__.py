@@ -30,10 +30,21 @@ from pychonet.HomeAirConditioner import (
     ENL_AIR_HORZ,
     ENL_HVAC_MODE,
     ENL_HVAC_SET_TEMP,
+    ENL_HVAC_SET_HUMIDITY,
     ENL_HVAC_ROOM_HUMIDITY,
     ENL_HVAC_ROOM_TEMP,
     ENL_HVAC_SILENT_MODE,
     ENL_HVAC_OUT_TEMP
+)
+
+from pychonet.DistributionPanelMeter import (
+    ENL_DPM_ENG_NOR,
+    ENL_DPM_ENG_REV,
+    ENL_DPM_ENG_UNIT,
+    ENL_DPM_DAY_GET_HISTORY,
+    ENL_DPM_INSTANT_ENG,
+    ENL_DPM_INSTANT_CUR,
+    ENL_DPM_INSTANT_VOL
 )
 
 from pychonet.GeneralLighting import (
@@ -49,7 +60,7 @@ MAX_UPDATE_BATCH_SIZE = 10
 
 HVAC_API_CONNECTOR_DEFAULT_FLAGS = [
     ENL_STATUS, ENL_FANSPEED, ENL_AUTO_DIRECTION, ENL_SWING_MODE, ENL_AIR_VERT, ENL_AIR_HORZ, ENL_HVAC_MODE,
-    ENL_HVAC_SET_TEMP, ENL_HVAC_ROOM_HUMIDITY, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP, ENL_HVAC_SILENT_MODE,
+    ENL_HVAC_SET_TEMP, ENL_HVAC_SET_HUMIDITY, ENL_HVAC_ROOM_HUMIDITY, ENL_HVAC_ROOM_TEMP, ENL_HVAC_OUT_TEMP, ENL_HVAC_SILENT_MODE,
     ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER
 ]
 
@@ -57,8 +68,7 @@ LIGHT_API_CONNECTOR_DEFAULT_FLAGS = [
     ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
 ]
 
-# fix later
-_0287_API_CONNECTOR_DEFAULT_FLAGS = [ENL_STATUS, 0xC0, 0xC1, 0xC2, 0xC5, 0xC6, 0xC7, 0xC8]
+_0287_API_CONNECTOR_DEFAULT_FLAGS = [ENL_STATUS, ENL_DPM_ENG_NOR, ENL_DPM_ENG_REV, ENL_DPM_ENG_UNIT, ENL_DPM_DAY_GET_HISTORY, ENL_DPM_INSTANT_ENG, ENL_DPM_INSTANT_CUR, ENL_DPM_INSTANT_VOL]
 
 def polling_update_debug_log(values, eojgc, eojcc):
     debug_log = f"\nECHONETlite polling update data:\n"
@@ -217,9 +227,9 @@ class ECHONETConnector():
         self._api = api
         self._update_callbacks = []
         self._update_option_func = []
-        self._ntfPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_STATMAP]
-        self._getPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_GETMAP]
-        self._setPropertyMap = self._api._state[self._host]["instances"][self._eojgc][self._eojcc][self._eojci][ENL_SETMAP]
+        self._ntfPropertyMap = instance["ntfmap"]
+        self._getPropertyMap = instance["getmap"]
+        self._setPropertyMap = instance["setmap"]
         self._manufacturer = None
         if "manufacturer" in instance:
             self._manufacturer = instance["manufacturer"]

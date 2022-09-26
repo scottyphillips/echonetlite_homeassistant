@@ -186,8 +186,8 @@ class EchonetSensor(SensorEntity):
     @property
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
-        self._state_value = self._instance._update_data[self._op_code]
         if self._op_code in self._instance._update_data:
+            self._state_value = self._instance._update_data[self._op_code]
             if self._op_code == 0xC0 or self._op_code == 0xC1: # kludge for distribution panel meter.
                if self._eojgc == 0x02 and self._eojcc == 0x87 and 0xC2 in self._instance._update_data:
                    if self._instance._update_data[0xC2] is not None and self._state_value is not None:
@@ -211,22 +211,16 @@ class EchonetSensor(SensorEntity):
             elif self._sensor_attributes[CONF_TYPE] in [
                     DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_HUMIDITY
             ]:
-                if self._op_code in self._instance._update_data:
-                    if self._state_value in [126, 253]:
-                        return STATE_UNAVAILABLE
-                    else:
-                        return self._state_value
-                else:
+                if self._state_value in [126, 253]:
                     return STATE_UNAVAILABLE
+                else:
+                    return self._state_value
             elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_POWER:
-                if self._op_code in self._instance._update_data:
-                    # Underflow (less than 1 W)
-                    if self._state_value == 65534:
-                        return 1
-                    else:
-                        return self._state_value
+                # Underflow (less than 1 W)
+                if self._state_value == 65534:
+                    return 1
                 else:
-                    return STATE_UNAVAILABLE
+                    return self._state_value
             elif self._op_code in self._instance._update_data:
                 if isinstance(self._state_value, (int, float)):
                     return self._state_value
@@ -283,7 +277,7 @@ class EchonetSensor(SensorEntity):
 
     async def async_update_callback(self, isPush = False):
         new_val = self._instance._update_data.get(self._op_code)
-        changed = new_val and self._state_value != new_val
+        changed = new_val is not None and self._state_value != new_val
         if (changed):
             self._state_value = new_val
             self.async_schedule_update_ha_state()

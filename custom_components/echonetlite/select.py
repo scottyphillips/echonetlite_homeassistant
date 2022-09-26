@@ -72,7 +72,7 @@ class EchonetSelect(SelectEntity):
         if self._code in list(self._connector._user_options.keys()):
             if self._connector._user_options[code] is not False:
                 self._attr_options = self._connector._user_options[code]
-        self._attr_current_option = self._connector._update_data[self._code]
+        self._attr_current_option = self._connector._update_data.get(self._code)
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
         self._uid = f'{self._connector._uid}-{self._code}'
         self._device_name = name
@@ -129,7 +129,7 @@ class EchonetSelect(SelectEntity):
 
     async def async_update_callback(self, isPush = False):
         new_val = self._connector._update_data.get(self._code)
-        changed = new_val and self._state_value != new_val
+        changed = new_val is not None and self._state_value != new_val
         if (changed):
             self._state_value = new_val
             self.async_schedule_update_ha_state()
