@@ -30,6 +30,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
+_detected_hosts = {}
 
 async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
@@ -50,8 +51,8 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     _LOGGER.debug("Beginning ECHONET node discovery")
     await server.discover(host)
 
-    # Timeout after 3 seconds
-    for x in range(0, 300):
+    # Timeout after 5 seconds
+    for x in range(0, 500):
         await asyncio.sleep(0.01)
         if 'discovered' in list(server._state[host]):
             _LOGGER.debug("ECHONET Node Discovery Successful!")
@@ -82,7 +83,6 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
                 getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]
                 setmap = state['instances'][eojgc][eojcc][instance][ENL_SETMAP]
 
-                _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} Identification number discovered!")
                 instance_list.append({
                     "host": host,
                     "eojgc": eojgc,
@@ -91,7 +91,8 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
                     "ntfmap": ntfmap,
                     "getmap": getmap,
                     "setmap": setmap,
-                    "uid": uid,
+                    "uid": uid, # Deprecated, for backwards compatibility
+                    "uidi": f"{uid}-{eojgc}-{eojcc}-{instance}",
                     "manufacturer": manufacturer
                 })
 
@@ -111,8 +112,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         """Handle the initial step."""
         if user_input is None:
+            scm = STEP_USER_DATA_SCHEMA
+            if len(_detected_hosts):
+                host = list(_detected_hosts.keys()).pop(0)
+                scm = scm.extend({
+                    vol.Required("host", default=host): str,
+                    vol.Required("title", default=_detected_hosts[host][0]["manufacturer"]): str,
+                })
             return self.async_show_form(
-                step_id="user", data_schema=STEP_USER_DATA_SCHEMA
+                step_id="user", data_schema=scm
             )
         try:
             self.instance_list = await validate_input(self.hass, user_input)
@@ -129,6 +137,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_finish(self, user_input=None):
+        if len(_detected_hosts):
+            _detected_hosts.pop(self.host)
         return self.async_create_entry(title=self.title, data={"instances": self.instance_list}, options={"other_mode": "as_off"})
 
     @staticmethod
@@ -136,6 +146,22 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry):
         return OptionsFlowHandler(config_entry)
 
+    @staticmethod
+    @callback
+    async def async_discover_newhost(hass, host):
+        _LOGGER.info(f"received newip discovery: {host}")
+        if host not in _detected_hosts.keys():
+            _detected_hosts.update({ host: None })
+            try:
+                instance_list = await validate_input(hass, { "host": host })
+                _LOGGER.debug("Node detected")
+            except CannotConnect:
+                _detected_hosts.pop(host)
+            else:
+                if len(instance_list):
+                    _detected_hosts[host] = instance_list
+                else:
+                    _detected_hosts.pop(host)
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""

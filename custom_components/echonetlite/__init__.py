@@ -6,6 +6,7 @@ from pychonet.lib.epc import EPC_SUPER, EPC_CODE
 from pychonet.lib.const import VERSION, ENL_STATMAP
 from datetime import timedelta
 import asyncio
+from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
@@ -86,6 +87,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     loop = None
     server = None
 
+    async def discover_callback(host):
+        await config_entries.HANDLERS[DOMAIN].async_discover_newhost(hass, host)
+
     if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug(f"ECHONETlite platform is already started.")
         server = hass.data[DOMAIN]['api']
@@ -102,6 +106,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         server._debug_flag = True
         server._logger = _LOGGER.debug
         server._message_timeout = 300
+        server._discover_callback = discover_callback
         hass.data[DOMAIN].update({"api": server})
 
 
@@ -234,6 +239,7 @@ class ECHONETConnector():
         if "manufacturer" in instance:
             self._manufacturer = instance["manufacturer"]
         self._uid = instance.get('uid')
+        self._uidi = instance.get('uidi')
         self._api.register_async_update_callbacks(self._host, self._eojgc, self._eojcc, self._eojci, self.async_update_callback)
 
         # Detect HVAC - eventually we will use factory here.
