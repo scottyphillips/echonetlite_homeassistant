@@ -74,7 +74,7 @@ class EchonetSelect(SelectEntity):
                 self._attr_options = self._connector._user_options[code]
         self._attr_current_option = self._connector._update_data.get(self._code)
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
-        self._uid = f'{self._connector._uid}-{self._code}'
+        self._uid = f'{self._connector._uidi}-{self._code}' if self._connector._uidi else f'{self._connector._uid}-{self._code}'
         self._device_name = name
         self._should_poll = True
         self.update_option_listener()
@@ -108,10 +108,8 @@ class EchonetSelect(SelectEntity):
     async def async_update(self):
         """Retrieve latest state."""
         await self._connector.async_update()
-        self.update_attr()
 
     def update_attr(self):
-        self._attr_current_option = self._connector._update_data[self._code]
         self._attr_options = list(self._options.keys())
         if self._attr_current_option not in self._attr_options:
             # maybe data value is raw(int)
@@ -129,9 +127,10 @@ class EchonetSelect(SelectEntity):
 
     async def async_update_callback(self, isPush = False):
         new_val = self._connector._update_data.get(self._code)
-        changed = new_val is not None and self._state_value != new_val
+        changed = new_val is not None and self._attr_current_option != new_val
         if (changed):
-            self._state_value = new_val
+            self._attr_current_option = new_val
+            self.update_attr()
             self.async_schedule_update_ha_state()
 
     def update_option_listener(self):
