@@ -35,10 +35,7 @@ class EchonetFan(FanEntity):
         self._name = name
         self._device_name = name
         self._connector = connector  # new line
-        self._uid = self._connector._uid
-        if self._uid == "":
-            self.uid = self._connector._instance._eojgc + self._connector._instance._eojcc + \
-                       self._connector._instance._eojci + self._connector._instance._host
+        self._uid = self._connector._uidi if self._connector._uidi else self._connector._uid
         self._precision = 1.0
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS

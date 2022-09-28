@@ -48,7 +48,7 @@ class EchonetLight(LightEntity):
         """Initialize the climate device."""
         self._name = name
         self._connector = connector  # new line
-        self._uid = self._connector._uid
+        self._uid = self._connector._uidi if self._connector._uidi else self._connector._uid
         self._support_flags = SUPPORT_FLAGS
         self._supported_color_modes = set()
         self._supports_color = False

@@ -65,7 +65,7 @@ class EchonetClimate(ClimateEntity):
         self._name = name
         self._device_name = name
         self._connector = connector  # new line
-        self._uid = self._connector._uid
+        self._uid = self._connector._uidi if self._connector._uidi else self._connector._uid
         self._unit_of_measurement = units.temperature_unit
         self._precision = 1.0
         self._target_temperature_step = 1

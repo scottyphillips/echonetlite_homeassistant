@@ -101,15 +101,15 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetSensor(SensorEntity):
     """Representation of an ECHONETLite Temperature Sensor."""
 
-    def __init__(self, instance, op_code, attributes, name=None) -> None:
+    def __init__(self, connector, op_code, attributes, name=None) -> None:
         """Initialize the sensor."""
-        self._instance = instance
+        self._connector = connector
         self._op_code = op_code
         self._sensor_attributes = attributes
-        self._eojgc = self._instance._eojgc
-        self._eojcc = self._instance._eojcc
-        self._eojci = self._instance._eojci
-        self._uid = f'{self._instance._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
+        self._eojgc = self._connector._eojgc
+        self._eojcc = self._connector._eojcc
+        self._eojci = self._connector._eojci
+        self._uid = f'{self._connector._uidi}-{self._op_code}' if self._connector._uidi else f'{self._connector._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}'
         self._device_name = name
         self._should_poll = True
         self._state_value = None
@@ -175,10 +175,10 @@ class EchonetSensor(SensorEntity):
     def device_info(self):
         return {
             "identifiers": {
-                (DOMAIN, self._instance._uid, self._instance._eojgc, self._instance._eojcc, self._instance._eojci)
+                (DOMAIN, self._connector._uid, self._connector._eojgc, self._connector._eojcc, self._connector._eojci)
             },
             "name": self._device_name,
-            "manufacturer": self._instance._manufacturer,
+            "manufacturer": self._connector._manufacturer,
             "model": EOJX_CLASS[self._eojgc][self._eojcc]
             # "sw_version": "",
         }
@@ -186,21 +186,21 @@ class EchonetSensor(SensorEntity):
     @property
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
-        if self._op_code in self._instance._update_data:
-            self._state_value = self._instance._update_data[self._op_code]
+        if self._op_code in self._connector._update_data:
+            self._state_value = self._connector._update_data[self._op_code]
             if self._op_code == 0xC0 or self._op_code == 0xC1: # kludge for distribution panel meter.
-               if self._eojgc == 0x02 and self._eojcc == 0x87 and 0xC2 in self._instance._update_data:
-                   if self._instance._update_data[0xC2] is not None and self._state_value is not None:
-                        return self._state_value * self._instance._update_data[0xC2] * 1000 # value in Wh
+               if self._eojgc == 0x02 and self._eojcc == 0x87 and 0xC2 in self._connector._update_data:
+                   if self._connector._update_data[0xC2] is not None and self._state_value is not None:
+                        return self._state_value * self._connector._update_data[0xC2] * 1000 # value in Wh
 
             if self._op_code == 0xE0: # kludge for electric energy meter and water volume meters
-               if self._eojgc == 0x02 and self._eojcc == 0x80 and 0xE2 in self._instance._update_data:
-                   if self._instance._update_data[0xE2] is not None and self._state_value is not None: # electric energy
-                       return self._state_value * self._instance._update_data[0xE2] * 1000 # value in Wh
+               if self._eojgc == 0x02 and self._eojcc == 0x80 and 0xE2 in self._connector._update_data:
+                   if self._connector._update_data[0xE2] is not None and self._state_value is not None: # electric energy
+                       return self._state_value * self._connector._update_data[0xE2] * 1000 # value in Wh
 
-               if self._eojgc == 0x02 and self._eojcc == 0x81 and 0xE1 in self._instance._update_data: # water flow
-                   if self._instance._update_data[0xE1] is not None and self._state_value is not None:
-                       return self._state_value * self._instance._update_data[0xE1]
+               if self._eojgc == 0x02 and self._eojcc == 0x81 and 0xE1 in self._connector._update_data: # water flow
+                   if self._connector._update_data[0xE1] is not None and self._state_value is not None:
+                       return self._state_value * self._connector._update_data[0xE1]
 
                if self._eojgc == 0x02 and self._eojcc == 0x82:  # GAS
                    if self._state_value is not None:
@@ -221,7 +221,7 @@ class EchonetSensor(SensorEntity):
                     return 1
                 else:
                     return self._state_value
-            elif self._op_code in self._instance._update_data:
+            elif self._op_code in self._connector._update_data:
                 if isinstance(self._state_value, (int, float)):
                     return self._state_value
                 if len(self._state_value) < 255:
@@ -247,14 +247,14 @@ class EchonetSensor(SensorEntity):
 
     async def async_update(self):
         """Retrieve latest state."""
-        await self._instance.async_update()
+        await self._connector.async_update()
 
     async def async_set_on_timer_time(self, timer_time):
         val = str(timer_time).split(':')
         hh_mm = ':'.join([val[0], val[1]])
         mes = {"EPC": 0x91, "PDC": 0x02, "EDT": int(val[0]) * 256 + int(val[1])}
-        if await self._instance._instance.setMessages([mes]):
-            self._instance._update_data[0x91] = hh_mm
+        if await self._connector._instance.setMessages([mes]):
+            self._connector._update_data[0x91] = hh_mm
             self.async_write_ha_state()
         else:
             raise InvalidStateError('The state setting is not supported or is an invalid value.')
@@ -262,8 +262,8 @@ class EchonetSensor(SensorEntity):
     async def async_set_value_int_1b(self, value, epc=None):
         if epc:
             value = int(value)
-            if await self._instance._instance.setMessage(epc, value):
-                self._instance._update_data[epc] = value
+            if await self._connector._instance.setMessage(epc, value):
+                self._connector._update_data[epc] = value
                 self.async_write_ha_state()
             else:
                 raise InvalidStateError('The state setting is not supported or is an invalid value.')
@@ -272,16 +272,16 @@ class EchonetSensor(SensorEntity):
 
     async def async_added_to_hass(self):
         """Register callbacks."""
-        self._instance.add_update_option_listener(self.update_option_listener)
-        self._instance.register_async_update_callbacks(self.async_update_callback)
+        self._connector.add_update_option_listener(self.update_option_listener)
+        self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush = False):
-        new_val = self._instance._update_data.get(self._op_code)
+        new_val = self._connector._update_data.get(self._op_code)
         changed = new_val is not None and self._state_value != new_val
         if (changed):
             self._state_value = new_val
             self.async_schedule_update_ha_state()
 
     def update_option_listener(self):
-        self._should_poll = self._instance._user_options.get(CONF_FORCE_POLLING, False) or self._op_code not in self._instance._ntfPropertyMap
+        self._should_poll = self._connector._user_options.get(CONF_FORCE_POLLING, False) or self._op_code not in self._connector._ntfPropertyMap
         _LOGGER.info(f"{self._name}({self._op_code}): _should_poll is {self._should_poll}")
