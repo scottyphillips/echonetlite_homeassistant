@@ -4,15 +4,26 @@
             "already_configured": "Device is already configured"
         },
         "error": {
-            "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error"
+            "cannot_connect": "Failed to connect.",
+            "invalid_auth": "Invalid authentication.",
+            "unknown": "Unexpected error.",
+            "not_found": "Device could not be detected."
         },
         "step": {
             "user": {
+                "title": "Device IP address and name setting (Auto Discovery)",
+                "description": "For automatic detection, after pressing the Submit button, please perform operations such as turning the device on or off within 30 seconds. If you know the IP address, enter the IP address and name.",
                 "data": {
                     "host": "Host (IP Address)",
-                    "title": "Description"
+                    "title": "Device Name"
+                }
+            },
+            "user_man": {
+                "title": "Device IP address and name setting",
+                "description": "",
+                "data": {
+                    "host": "Host (IP Address)",
+                    "title": "Device Name"
                 }
             }
         },

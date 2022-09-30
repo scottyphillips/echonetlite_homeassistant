@@ -90,6 +90,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def discover_callback(host):
         await config_entries.HANDLERS[DOMAIN].async_discover_newhost(hass, host)
 
+    def unload_config_entry():
+        _LOGGER.debug(f"Called unload_config_entry() try to remove {host} from server._state.")
+        server._state.pop(host)
+
+    entry.async_on_unload(unload_config_entry)
+
     if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug(f"ECHONETlite platform is already started.")
         server = hass.data[DOMAIN]['api']

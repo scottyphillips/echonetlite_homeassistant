@@ -1,18 +1,28 @@
 {
-    "title": "ECHONETLite",
     "config": {
-       "step": {
-           "user": {
-              "data": {
-                 "host": "[%key:common::config_flow::data::host%]",
-                 "title": "[%key:common::config_flow::data::title%]"
-               }
-           }
+        "step": {
+            "user": {
+                "title": "Device IP address and name setting (Auto Discovery)",
+                "description": "For automatic detection, after pressing the Submit button, please perform operations such as turning the device on or off within 30 seconds. If you know the IP address, enter the IP address and name.",
+                "data": {
+                    "host": "[%key:common::config_flow::data::host%]",
+                    "title": "[%key:common::config_flow::data::title%]"
+                }
+            },
+            "user_man": {
+                "title": "Device IP address and name setting",
+                "description": "",
+                "data": {
+                    "host": "[%key:common::config_flow::data::host%]",
+                    "title": "[%key:common::config_flow::data::title%]"
+                }
+            }
         },
         "error": {
             "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
             "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-            "unknown": "[%key:common::config_flow::error::unknown%]"
+            "unknown": "[%key:common::config_flow::error::unknown%]",
+            "not_found": "Device could not be detected."
         },
         "abort": {
              "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"

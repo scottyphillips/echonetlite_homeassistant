@@ -4,12 +4,23 @@
             "already_configured": "デバイスは構成済みです"
         },
         "error": {
-            "cannot_connect": "接続できません",
-            "invalid_auth": "認証が無効です",
-            "unknown": "予期しないエラーです"
+            "cannot_connect": "接続できません。",
+            "invalid_auth": "認証が無効です。",
+            "unknown": "予期しないエラーです。",
+            "not_found": "機器を検出できませんでした。"
         },
         "step": {
             "user": {
+                "title": "機器IPアドレスと名称の設定 (自動検出)",
+                "description": "自動検出のため、送信ボタンを押してから30秒以内に電源のON/OFFなどの操作を行ってください。IPアドレスが分かっている場合は、IPアドレスと名称を入力し直してください。",
+                "data": {
+                    "host": "ホスト (IP アドレス)",
+                    "title": "機器名称"
+                }
+            },
+            "user_man": {
+                "title": "機器IPアドレスと名称の設定",
+                "description": "",
                 "data": {
                     "host": "ホスト (IP アドレス)",
                     "title": "機器名称"

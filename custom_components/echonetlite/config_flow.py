@@ -22,15 +22,18 @@ from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS, CONF_FORCE_POLLING, MISC_
 
 _LOGGER = logging.getLogger(__name__)
 
+WORD_OF_AUTO_DISCOVERY = '[Auto Discovery]'
+
 # TODO adjust the data schema to the data that you need
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required("host"): str,
-        vol.Required("title"): str,
+        vol.Required("host", default=WORD_OF_AUTO_DISCOVERY): str,
+        vol.Required("title", default=WORD_OF_AUTO_DISCOVERY): str,
     }
 )
 
 _detected_hosts = {}
+_init_server = None
 
 async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
@@ -41,11 +44,17 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug("API listener has already been setup previously..")
         server = hass.data[DOMAIN]['api']
+    elif _init_server:
+        _LOGGER.debug("API listener has already been setup in init_discover()")
+        server = _init_server
     else:
         udp = UDPServer()
         loop = asyncio.get_event_loop()
         udp.run("0.0.0.0", 3610, loop=loop)
         server = ECHONETAPIClient(server=udp)
+        server._debug_flag = True
+        server._logger = _LOGGER.debug
+        server._message_timeout = 300
 
     instance_list = []
     _LOGGER.debug("Beginning ECHONET node discovery")
@@ -108,19 +117,65 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     instances = None
     VERSION = 1
 
+    async def init_discover(self):
+        async def discover_callback(host):
+            await config_entries.HANDLERS[DOMAIN].async_discover_newhost(self.hass, host)
+
+        if DOMAIN in self.hass.data:  # maybe set up by config entry?
+            _LOGGER.debug("API listener has already been setup previously..")
+            server = self.hass.data[DOMAIN]['api']
+
+            _init_server = None
+
+        else:
+            udp = UDPServer()
+            loop = asyncio.get_event_loop()
+            udp.run("0.0.0.0", 3610, loop=loop)
+            server = ECHONETAPIClient(server=udp)
+            server._debug_flag = True
+            server._logger = _LOGGER.debug
+            server._message_timeout = 300
+            server._discover_callback = discover_callback
+
+            _init_server = server
+
+        await server.discover()
+
+        # Timeout after 30 seconds
+        for x in range(0, 3000):
+            await asyncio.sleep(0.01)
+            if len(_detected_hosts):
+                _LOGGER.debug("ECHONET Any Node Discovery Successful!")
+                break
+
+        if _init_server:
+            _init_server._server._sock.close()
+            del _init_server
+            _init_server = None
+
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         errors = {}
         """Handle the initial step."""
-        if user_input is None:
-            scm = STEP_USER_DATA_SCHEMA
+        scm = STEP_USER_DATA_SCHEMA
+        if user_input is None or user_input.get("host") == WORD_OF_AUTO_DISCOVERY:
+            if user_input and user_input.get("host") == WORD_OF_AUTO_DISCOVERY and not len(_detected_hosts):
+                await self.init_discover()
             if len(_detected_hosts):
                 host = list(_detected_hosts.keys()).pop(0)
-                scm = scm.extend({
-                    vol.Required("host", default=host): str,
-                    vol.Required("title", default=_detected_hosts[host][0]["manufacturer"]): str,
-                })
+                title = _detected_hosts[host][0]["manufacturer"]
+            else:
+                if user_input is None:
+                    host = title = WORD_OF_AUTO_DISCOVERY
+                else:
+                    host = ''
+                    title = ''
+                    errors["base"] = "not_found"
+            scm = scm.extend({
+                vol.Required("host", default=host): str,
+                vol.Required("title", default=title): str,
+            })
             return self.async_show_form(
-                step_id="user", data_schema=scm
+                step_id="user_man", data_schema=scm, errors=errors
             )
         try:
             self.instance_list = await validate_input(self.hass, user_input)
@@ -135,6 +190,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
+
+    async def async_step_user_man(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        return await self.async_step_user(user_input)
 
     async def async_step_finish(self, user_input=None):
         if len(_detected_hosts):
@@ -151,17 +209,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_discover_newhost(hass, host):
         _LOGGER.info(f"received newip discovery: {host}")
         if host not in _detected_hosts.keys():
-            _detected_hosts.update({ host: None })
             try:
                 instance_list = await validate_input(hass, { "host": host })
-                _LOGGER.debug("Node detected")
+                _LOGGER.debug(f"ECHONET Node detected in {host}")
             except CannotConnect:
-                _detected_hosts.pop(host)
+                _LOGGER.debug(f"ECHONET Node not found in {host}")
             else:
                 if len(instance_list):
-                    _detected_hosts[host] = instance_list
+                    _detected_hosts.update({ host: instance_list })
                 else:
-                    _detected_hosts.pop(host)
+                    _LOGGER.debug(f"ECHONET Node not found in {host}")
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
