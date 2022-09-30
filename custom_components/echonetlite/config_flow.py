@@ -158,6 +158,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         scm = STEP_USER_DATA_SCHEMA
         if user_input is None or user_input.get("host") == WORD_OF_AUTO_DISCOVERY:
+            step = "user_man"
             if user_input and user_input.get("host") == WORD_OF_AUTO_DISCOVERY and not len(_detected_hosts):
                 await self.init_discover()
             if len(_detected_hosts):
@@ -166,6 +167,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 if user_input is None:
                     host = title = WORD_OF_AUTO_DISCOVERY
+                    step = "user"
                 else:
                     host = ''
                     title = ''
@@ -175,7 +177,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required("title", default=title): str,
             })
             return self.async_show_form(
-                step_id="user_man", data_schema=scm, errors=errors
+                step_id=step, data_schema=scm, errors=errors
             )
         try:
             self.instance_list = await validate_input(self.hass, user_input)
