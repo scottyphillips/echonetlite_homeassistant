@@ -44,6 +44,8 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug("API listener has already been setup previously..")
         server = hass.data[DOMAIN]['api']
+        if server._state.get(host):
+            raise ErrorConnect("already_configured")
     elif _init_server:
         _LOGGER.debug("API listener has already been setup in init_discover()")
         server = _init_server
@@ -68,7 +70,7 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
             break
     if 'discovered' not in list(server._state[host]):
         _LOGGER.debug("ECHONET Node Discovery Failed!")
-        raise CannotConnect("ECHONET node is not online")
+        raise ErrorConnect("cannot_connect")
     state = server._state[host]
     uid = state['uid']
     manufacturer = state['manufacturer']
@@ -182,8 +184,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             self.instance_list = await validate_input(self.hass, user_input)
             _LOGGER.debug("Node detected")
-        except CannotConnect:
-            errors["base"] = "cannot_connect"
+        except ErrorConnect as e:
+            errors["base"] = f"{e}"
         else:
             self.host = user_input["host"]
             self.title = user_input["title"]
@@ -214,15 +216,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 instance_list = await validate_input(hass, { "host": host })
                 _LOGGER.debug(f"ECHONET Node detected in {host}")
-            except CannotConnect:
-                _LOGGER.debug(f"ECHONET Node not found in {host}")
+            except ErrorConnect as e:
+                _LOGGER.debug(f"ECHONET Node Error Connect ({e})")
             else:
                 if len(instance_list):
                     _detected_hosts.update({ host: instance_list })
                 else:
                     _LOGGER.debug(f"ECHONET Node not found in {host}")
 
-class CannotConnect(HomeAssistantError):
+class ErrorConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 

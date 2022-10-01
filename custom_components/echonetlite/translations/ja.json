@@ -7,7 +7,8 @@
             "cannot_connect": "接続できません。",
             "invalid_auth": "認証が無効です。",
             "unknown": "予期しないエラーです。",
-            "not_found": "機器を検出できませんでした。"
+            "not_found": "機器を検出できませんでした。",
+            "already_configured": "その IP のデバイスは既に構成されています。"
         },
         "step": {
             "user": {
