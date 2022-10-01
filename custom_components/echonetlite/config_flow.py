@@ -44,8 +44,14 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug("API listener has already been setup previously..")
         server = hass.data[DOMAIN]['api']
-        if server._state.get(host):
-            raise ErrorConnect("already_configured")
+        for key in hass.data[DOMAIN]:
+            if key != 'api':
+                entries = hass.data[DOMAIN][key]
+                if len(entries):
+                    inst = entries[0].get('instance')
+                    if inst:
+                        if inst.get('host') == host:
+                            raise ErrorConnect("already_configured")
     elif _init_server:
         _LOGGER.debug("API listener has already been setup in init_discover()")
         server = _init_server
