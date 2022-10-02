@@ -204,4 +204,6 @@ class EchonetLight(LightEntity):
         changed = self._olddata != self._connector._update_data
         if (changed):
             self._olddata = self._connector._update_data.copy()
-            self.async_schedule_update_ha_state(True)
+            self.async_schedule_update_ha_state()
+            if isPush:
+                await self._connector.async_update()

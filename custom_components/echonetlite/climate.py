@@ -326,5 +326,7 @@ class EchonetClimate(ClimateEntity):
         changed = self._olddata != self._connector._update_data
         _LOGGER.debug(f"Called async_update_callback on {self._device_name}.\nChanged: {changed}\nUpdate data: {self._connector._update_data}\nOld data: {self._olddata}")
         if (changed):
-           self._olddata = self._connector._update_data.copy()
-           self.async_schedule_update_ha_state(True)
+            self._olddata = self._connector._update_data.copy()
+            self.async_schedule_update_ha_state()
+            if isPush:
+                await self._connector.async_update()
