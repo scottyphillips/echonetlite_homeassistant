@@ -134,6 +134,5 @@ class EchonetSelect(SelectEntity):
             self.async_schedule_update_ha_state()
 
     def update_option_listener(self):
-        self._should_poll = True
-#        self._should_poll = self._connector._user_options.get(CONF_FORCE_POLLING, False) or self._code not in self._connector._ntfPropertyMap
-#        _LOGGER.info(f"{self._device_name}({self._code}): _should_poll is {self._should_poll}")
+       self._should_poll = self._connector._user_options.get(CONF_FORCE_POLLING, False) or self._code not in self._connector._ntfPropertyMap
+       _LOGGER.info(f"{self._device_name}({self._code}): _should_poll is {self._should_poll}")
