@@ -56,7 +56,7 @@ from pychonet.GeneralLighting import (
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.SENSOR, Platform.CLIMATE, Platform.SELECT, Platform.LIGHT, Platform.FAN, Platform.SWITCH]
 PARALLEL_UPDATES = 0
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=1)
 MAX_UPDATE_BATCH_SIZE = 10
 
 HVAC_API_CONNECTOR_DEFAULT_FLAGS = [
