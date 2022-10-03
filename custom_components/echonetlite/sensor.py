@@ -16,7 +16,7 @@ from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.ElectricBlind import ENL_OPENSTATE
-from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, SERVICE_SET_INT_1B, ENL_STATUS, CONF_FORCE_POLLING
+from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, SERVICE_SET_INT_1B, ENL_STATUS, CONF_FORCE_POLLING, TYPE_DATA_DICT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -83,14 +83,41 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             if TYPE_SWITCH in _keys:
                                 continue # dont configure as sensor, it will be configured as switch instead.
 
-                            entities.append(
-                                EchonetSensor(
-                                    entity['echonetlite'],
-                                    op_code,
-                                    ENL_OP_CODES[eojgc][eojcc][op_code],
-                                    config.title
+                            if TYPE_DATA_DICT in _keys:
+                                type_data = ENL_OP_CODES[eojgc][eojcc][op_code][TYPE_DATA_DICT]
+                                if isinstance(type_data, int):
+                                    for x in range(1, type_data):
+                                        attr = ENL_OP_CODES[eojgc][eojcc][op_code].copy()
+                                        attr['dict_key'] = x
+                                        entities.append(
+                                            EchonetSensor(
+                                                entity['echonetlite'],
+                                                op_code,
+                                                attr,
+                                                config.title
+                                            )
+                                        )
+                                else:
+                                    for attr_key in type_data:
+                                        attr = ENL_OP_CODES[eojgc][eojcc][op_code].copy()
+                                        attr['dict_key'] = attr_key
+                                        entities.append(
+                                            EchonetSensor(
+                                                entity['echonetlite'],
+                                                op_code,
+                                                attr,
+                                                config.title
+                                            )
+                                        )
+                            else:
+                                entities.append(
+                                    EchonetSensor(
+                                        entity['echonetlite'],
+                                        op_code,
+                                        ENL_OP_CODES[eojgc][eojcc][op_code],
+                                        config.title
+                                    )
                                 )
-                            )
                             continue
                 entities.append(
                     EchonetSensor(entity['echonetlite'], op_code, ENL_OP_CODES['default'], config.title)
@@ -129,6 +156,13 @@ class EchonetSensor(SensorEntity):
             self._name = f"{name} {EPC_SUPER[self._op_code]}"
         else:
             self._name = f"{name} self._sensor_attributes[CONF_TYPE]"
+
+        if 'dict_key' in _attr_keys:
+            self._uid += f'-{self._sensor_attributes["dict_key"]}'
+            if isinstance(self._sensor_attributes[TYPE_DATA_DICT], int):
+                self._name += f' {str(self._sensor_attributes["accessor_index"] + 1).zfill(len(str(self._sensor_attributes[TYPE_DATA_DICT])))}'
+            else:
+                self._name += f' {self._sensor_attributes["dict_key"]}'
 
         if self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_TEMPERATURE:
             self._unit_of_measurement = TEMP_CELSIUS
@@ -187,24 +221,37 @@ class EchonetSensor(SensorEntity):
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
         if self._op_code in self._connector._update_data:
-            self._state_value = self._connector._update_data[self._op_code]
+            new_val = self._connector._update_data[self._op_code]
+            if 'dict_key' in self._sensor_attributes:
+                if (hasattr(new_val, 'get')):
+                    self._state_value = new_val.get(self._sensor_attributes['dict_key'])
+                else:
+                    self._state_value = None
+            else:
+                self._state_value = new_val
+
             if self._op_code == 0xC0 or self._op_code == 0xC1: # kludge for distribution panel meter.
-               if self._eojgc == 0x02 and self._eojcc == 0x87 and 0xC2 in self._connector._update_data:
+                if self._eojgc == 0x02 and self._eojcc == 0x87 and 0xC2 in self._connector._update_data:
                    if self._connector._update_data[0xC2] is not None and self._state_value is not None:
                         return self._state_value * self._connector._update_data[0xC2] * 1000 # value in Wh
 
             if self._op_code == 0xE0: # kludge for electric energy meter and water volume meters
-               if self._eojgc == 0x02 and self._eojcc == 0x80 and 0xE2 in self._connector._update_data:
+                if self._eojgc == 0x02 and self._eojcc == 0x80 and 0xE2 in self._connector._update_data:
                    if self._connector._update_data[0xE2] is not None and self._state_value is not None: # electric energy
                        return self._state_value * self._connector._update_data[0xE2] * 1000 # value in Wh
 
-               if self._eojgc == 0x02 and self._eojcc == 0x81 and 0xE1 in self._connector._update_data: # water flow
+                if self._eojgc == 0x02 and self._eojcc == 0x81 and 0xE1 in self._connector._update_data: # water flow
                    if self._connector._update_data[0xE1] is not None and self._state_value is not None:
                        return self._state_value * self._connector._update_data[0xE1]
 
-               if self._eojgc == 0x02 and self._eojcc == 0x82:  # GAS
+                if self._eojgc == 0x02 and self._eojcc == 0x82:  # GAS
                    if self._state_value is not None:
                        return self._state_value * 0.001
+
+            if self._op_code in [0xE0, 0xE3]: # Measured cumulative amounts normal or revers
+                if self._eojgc == 0x02 and self._eojcc == 0x88 and self._connector._update_data.get(0xE1):
+                    coef = self._connector._update_data.get(0xD3) or 1
+                    return self._state_value * coef * self._connector._update_data[0xE1] * 1000 # value in Wh
 
             if self._state_value is None:
                 return STATE_UNAVAILABLE
@@ -277,6 +324,11 @@ class EchonetSensor(SensorEntity):
 
     async def async_update_callback(self, isPush = False):
         new_val = self._connector._update_data.get(self._op_code)
+        if 'dict_key' in self._sensor_attributes:
+            if (hasattr(new_val, 'get')):
+                new_val = new_val.get(self._sensor_attributes['dict_key'])
+            else:
+                new_val = None
         changed = new_val is not None and self._state_value != new_val
         if (changed):
             self._state_value = new_val
