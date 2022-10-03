@@ -139,7 +139,7 @@ ENL_OP_CODES = {
     0x02: {
         0x6F: { # Electric lock
             0xE0: {
-                CONF_ICON: "mdi:mdi:lock",
+                CONF_ICON: "mdi:lock",
                 CONF_SERVICE_DATA: SWITCH_BINARY,
                 CONF_ENSURE_ON: ENL_STATUS,
                 CONF_ON_VALUE: "lock",
@@ -147,7 +147,7 @@ ENL_OP_CODES = {
                 TYPE_SWITCH: True
             },
             0xE1: {
-                CONF_ICON: "mdi:mdi:lock",
+                CONF_ICON: "mdi:lock",
                 CONF_SERVICE_DATA: SWITCH_BINARY,
                 CONF_ENSURE_ON: ENL_STATUS,
                 CONF_ON_VALUE: "lock",
