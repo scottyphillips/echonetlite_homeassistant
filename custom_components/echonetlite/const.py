@@ -11,6 +11,7 @@ from homeassistant.const import (
     DEVICE_CLASS_HUMIDITY,
     DEVICE_CLASS_GAS,
     DEVICE_CLASS_CURRENT,
+    DEVICE_CLASS_VOLTAGE,
     PERCENTAGE,
     VOLUME_CUBIC_METERS
 )
@@ -275,7 +276,17 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: DEVICE_CLASS_POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
-            }
+            },
+            0xC7: {
+                CONF_TYPE: DEVICE_CLASS_CURRENT,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_DATA_DICT: ["r_phase_amperes", "t_phase_amperes"]
+            },
+            0xC8: {
+                CONF_TYPE: DEVICE_CLASS_VOLTAGE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_DATA_DICT: ["r_sn_voltage", "sn_t_voltage"]
+            },
         },
         0x88: {
             0xE0: {

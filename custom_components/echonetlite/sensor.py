@@ -6,7 +6,8 @@ from homeassistant.const import (
     CONF_ICON, CONF_SERVICE, CONF_TYPE, CONF_UNIT_OF_MEASUREMENT, DEVICE_CLASS_HUMIDITY, DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE, DEVICE_CLASS_ENERGY, DEVICE_CLASS_CURRENT, PERCENTAGE, POWER_WATT,
     TEMP_CELSIUS, ENERGY_WATT_HOUR, VOLUME_CUBIC_METERS, ELECTRIC_CURRENT_AMPERE,
-    STATE_UNAVAILABLE, DEVICE_CLASS_GAS
+    STATE_UNAVAILABLE, DEVICE_CLASS_GAS,
+    DEVICE_CLASS_VOLTAGE, ELECTRIC_POTENTIAL_VOLT,
 )
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.sensor import SensorEntity
@@ -164,6 +165,8 @@ class EchonetSensor(SensorEntity):
             self._unit_of_measurement = POWER_WATT
         elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_CURRENT:
             self._unit_of_measurement = ELECTRIC_CURRENT_AMPERE
+        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_VOLTAGE:
+            self._unit_of_measurement = ELECTRIC_POTENTIAL_VOLT
         elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_HUMIDITY:
             self._unit_of_measurement = PERCENTAGE
         elif self._sensor_attributes[CONF_TYPE] == PERCENTAGE:
