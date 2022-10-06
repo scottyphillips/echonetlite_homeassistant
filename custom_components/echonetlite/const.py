@@ -10,6 +10,7 @@ from homeassistant.const import (
     DEVICE_CLASS_ENERGY,
     DEVICE_CLASS_HUMIDITY,
     DEVICE_CLASS_GAS,
+    DEVICE_CLASS_CURRENT,
     PERCENTAGE,
     VOLUME_CUBIC_METERS
 )
@@ -43,6 +44,7 @@ CONF_OFF_VALUE = 'off_val'
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
+TYPE_DATA_DICT = "type_data_dict"
 SERVICE_SET_ON_TIMER_TIME = "set_on_timer_time"
 SERVICE_SET_INT_1B = "set_value_int_1b"
 OPEN = "open"
@@ -277,10 +279,26 @@ ENL_OP_CODES = {
         },
         0x88: {
             0xE0: {
-                CONF_ICON: "mdi:flash",
+                CONF_ICON: None,
                 CONF_TYPE: DEVICE_CLASS_ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
-            }
+            },
+            0xE3: {
+                CONF_ICON: None,
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
+            },
+            0xE7: {
+                CONF_ICON: None,
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xE8: {
+                CONF_ICON: None,
+                CONF_TYPE: DEVICE_CLASS_CURRENT,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_DATA_DICT: ["r_phase_amperes", "t_phase_amperes"]
+            },
         },
     },
     'default':  {
