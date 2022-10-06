@@ -85,19 +85,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 
                             if TYPE_DATA_DICT in _keys:
                                 type_data = ENL_OP_CODES[eojgc][eojcc][op_code][TYPE_DATA_DICT]
-                                if isinstance(type_data, int):
-                                    for x in range(1, type_data):
-                                        attr = ENL_OP_CODES[eojgc][eojcc][op_code].copy()
-                                        attr['dict_key'] = x
-                                        entities.append(
-                                            EchonetSensor(
-                                                entity['echonetlite'],
-                                                op_code,
-                                                attr,
-                                                config.title
-                                            )
-                                        )
-                                else:
+                                if isinstance(type_data, list):
                                     for attr_key in type_data:
                                         attr = ENL_OP_CODES[eojgc][eojcc][op_code].copy()
                                         attr['dict_key'] = attr_key
@@ -109,6 +97,8 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                                 config.title
                                             )
                                         )
+                                else:
+                                    continue
                             else:
                                 entities.append(
                                     EchonetSensor(
