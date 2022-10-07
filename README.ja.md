@@ -51,8 +51,10 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
 * 'MoekadenRoom' ECHONETLite シミュレーター: https://github.com/SonyCSL/MoekadenRoom
      * エアコンオブジェクト
      * 照明オブジェクト
+     * 電動ブラインドオブジェクト
      * 電子錠オブジェクト
      * 温度計オブジェクト
+     * スマートメーターオブジェクト
 
 * シャープ
      * エアコン

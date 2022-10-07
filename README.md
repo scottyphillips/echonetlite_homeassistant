@@ -48,12 +48,13 @@ compatible ECHONETLite Devices:
   * Ducted
      * PEAD-RP71
 
-
 * 'MoekadenRoom' ECHONETLite Simulator: https://github.com/SonyCSL/MoekadenRoom
-     * Generic HVAC Climate
-     * Light Sensor
+     * Home Air Conditioner
+     * Lighting
+     * Electric blind
      * Lock Sensor
-     * Temperature Sensor
+     * Thermometer
+     * Smart meter
 
 * Sharp
      * Air Conditioners
