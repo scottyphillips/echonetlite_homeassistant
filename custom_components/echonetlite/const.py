@@ -42,6 +42,7 @@ CONF_OTHER_MODE = "other_mode"
 CONF_FORCE_POLLING = 'force_polling'
 CONF_ON_VALUE = 'on_val'
 CONF_OFF_VALUE = 'off_val'
+CONF_DISABLED_DEFAULT = 'disabled_default'
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
@@ -280,12 +281,14 @@ ENL_OP_CODES = {
             0xC7: {
                 CONF_TYPE: DEVICE_CLASS_CURRENT,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                TYPE_DATA_DICT: ["r_phase_amperes", "t_phase_amperes"]
+                TYPE_DATA_DICT: ["r_phase_amperes", "t_phase_amperes"],
+                CONF_DISABLED_DEFAULT: True
             },
             0xC8: {
                 CONF_TYPE: DEVICE_CLASS_VOLTAGE,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                TYPE_DATA_DICT: ["r_sn_voltage", "sn_t_voltage"]
+                TYPE_DATA_DICT: ["r_sn_voltage", "sn_t_voltage"],
+                CONF_DISABLED_DEFAULT: True
             },
         },
         0x88: {
@@ -308,7 +311,8 @@ ENL_OP_CODES = {
                 CONF_ICON: None,
                 CONF_TYPE: DEVICE_CLASS_CURRENT,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                TYPE_DATA_DICT: ["r_phase_amperes", "t_phase_amperes"]
+                TYPE_DATA_DICT: ["r_phase_amperes", "t_phase_amperes"],
+                CONF_DISABLED_DEFAULT: True
             },
         },
     },

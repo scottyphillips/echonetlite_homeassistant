@@ -17,7 +17,7 @@ from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.ElectricBlind import ENL_OPENSTATE
-from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, SERVICE_SET_INT_1B, ENL_STATUS, CONF_FORCE_POLLING, TYPE_DATA_DICT
+from .const import DOMAIN, ENL_OP_CODES, CONF_STATE_CLASS, TYPE_SWITCH, SERVICE_SET_ON_TIMER_TIME, SERVICE_SET_INT_1B, ENL_STATUS, CONF_FORCE_POLLING, TYPE_DATA_DICT, CONF_DISABLED_DEFAULT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -285,6 +285,11 @@ class EchonetSensor(SensorEntity):
     def state_class(self):
         """Return the state class type."""
         return self._sensor_attributes[CONF_STATE_CLASS]
+
+    @property
+    def entity_registry_enabled_default(self):
+        """Return if the entity should be enabled when first added to the entity registry."""
+        return not bool(self._sensor_attributes.get(CONF_DISABLED_DEFAULT))
 
     async def async_update(self):
         """Retrieve latest state."""
