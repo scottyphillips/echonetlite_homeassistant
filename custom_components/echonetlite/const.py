@@ -60,6 +60,10 @@ SWITCH_BINARY = {
     DATA_STATE_ON: 0x41,
     DATA_STATE_OFF: 0x42
 }
+SWITCH_BINARY_INVERT = {
+    DATA_STATE_ON: 0x42,
+    DATA_STATE_OFF: 0x41
+}
 
 HVAC_SELECT_OP_CODES = {
     0xA0: FAN_SPEED,
@@ -142,18 +146,18 @@ ENL_OP_CODES = {
         0x6F: { # Electric lock
             0xE0: {
                 CONF_ICON: "mdi:lock",
-                CONF_SERVICE_DATA: SWITCH_BINARY,
+                CONF_SERVICE_DATA: SWITCH_BINARY_INVERT,
                 CONF_ENSURE_ON: ENL_STATUS,
-                CONF_ON_VALUE: "lock",
-                CONF_OFF_VALUE: 'unlock',
+                CONF_ON_VALUE: "unlock",
+                CONF_OFF_VALUE: "lock",
                 TYPE_SWITCH: True
             },
             0xE1: {
                 CONF_ICON: "mdi:lock",
-                CONF_SERVICE_DATA: SWITCH_BINARY,
+                CONF_SERVICE_DATA: SWITCH_BINARY_INVERT,
                 CONF_ENSURE_ON: ENL_STATUS,
-                CONF_ON_VALUE: "lock",
-                CONF_OFF_VALUE: 'unlock',
+                CONF_ON_VALUE: "unlock",
+                CONF_OFF_VALUE: "lock",
                 TYPE_SWITCH: True
             },
             0xE6: {
