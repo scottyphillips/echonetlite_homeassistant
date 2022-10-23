@@ -68,8 +68,8 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
     _LOGGER.debug("Beginning ECHONET node discovery")
     await server.discover(host)
 
-    # Timeout after 5 seconds
-    for x in range(0, 500):
+    # Timeout after 10 seconds
+    for x in range(0, 1000):
         await asyncio.sleep(0.01)
         if 'discovered' in list(server._state[host]):
             _LOGGER.debug("ECHONET Node Discovery Successful!")
