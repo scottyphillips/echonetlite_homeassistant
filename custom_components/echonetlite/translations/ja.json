@@ -8,7 +8,8 @@
             "invalid_auth": "認証が無効です。",
             "unknown": "予期しないエラーです。",
             "not_found": "機器を検出できませんでした。",
-            "already_configured": "その IP のデバイスは既に構成されています。"
+            "already_configured": "その IP のデバイスは既に構成されています。",
+            "cannot_get_property_maps": "操作に必要なプロパティマップの取得ができませんでした。"
         },
         "step": {
             "user": {

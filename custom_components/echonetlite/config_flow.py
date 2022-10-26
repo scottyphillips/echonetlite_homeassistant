@@ -94,7 +94,12 @@ async def validate_input(hass: HomeAssistant,  user_input: dict[str, Any]) -> di
             for instance in list(state['instances'][eojgc][eojcc].keys()):
                 _LOGGER.debug(f"instance is {instance}")
 
-                await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
+                cnt = 0
+                while(await server.getAllPropertyMaps(host, eojgc, eojcc, instance) is False):
+                    cnt += 1
+                    if cnt > 2:
+                        raise ErrorConnect("cannot_get_property_maps")
+
                 _LOGGER.debug(f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!")
                 ntfmap = state['instances'][eojgc][eojcc][instance].get(ENL_STATMAP, [])
                 getmap = state['instances'][eojgc][eojcc][instance][ENL_GETMAP]

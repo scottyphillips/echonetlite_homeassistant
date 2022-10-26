@@ -8,7 +8,8 @@
             "invalid_auth": "Invalid authentication.",
             "unknown": "Unexpected error.",
             "not_found": "Device could not be detected.",
-            "already_configured": "That IP's Device is already configured."
+            "already_configured": "That IP's Device is already configured.",
+            "cannot_get_property_maps": "Could not get the property maps required for operation."
         },
         "step": {
             "user": {
