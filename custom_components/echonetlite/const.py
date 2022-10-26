@@ -299,12 +299,14 @@ ENL_OP_CODES = {
             0xE0: {
                 CONF_ICON: None,
                 CONF_TYPE: DEVICE_CLASS_ENERGY,
-                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: "kWh"
             },
             0xE3: {
                 CONF_ICON: None,
                 CONF_TYPE: DEVICE_CLASS_ENERGY,
-                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: "kWh"
             },
             0xE7: {
                 CONF_ICON: None,
@@ -315,9 +317,15 @@ ENL_OP_CODES = {
                 CONF_ICON: None,
                 CONF_TYPE: DEVICE_CLASS_CURRENT,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                TYPE_DATA_DICT: ["r_phase_amperes", "t_phase_amperes"],
+                TYPE_DATA_DICT: ["r_phase_amperes", "t_phase_amperes"]
+            },
+            0xD3: {
                 CONF_DISABLED_DEFAULT: True
             },
+            0xE1: {
+                CONF_DISABLED_DEFAULT: True
+            },
+
         },
     },
     'default':  {

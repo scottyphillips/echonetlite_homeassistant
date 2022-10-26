@@ -245,7 +245,7 @@ class EchonetSensor(SensorEntity):
             if self._op_code in [0xE0, 0xE3]: # Measured cumulative amounts normal or revers
                 if self._eojgc == 0x02 and self._eojcc == 0x88 and self._connector._update_data.get(0xE1):
                     coef = self._connector._update_data.get(0xD3) or 1
-                    return self._state_value * coef * self._connector._update_data[0xE1] * 1000 # value in Wh
+                    return self._state_value * coef * self._connector._update_data[0xE1] # value in kWh
 
             if self._state_value is None:
                 return STATE_UNAVAILABLE
