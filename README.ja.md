@@ -47,11 +47,6 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
   * 換気システム
      * PEAD-RP71
 
-* 低圧スマートメーター(Bルートサービス)
-  * Wi-SUN <-> Ethernet/Wifi ブリッジが必要
-  　　* [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite)
-  　　* など
-
 * 'MoekadenRoom' ECHONETLite シミュレーター: https://github.com/SonyCSL/MoekadenRoom
      * エアコンオブジェクト
      * 照明オブジェクト
@@ -89,6 +84,11 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
     * 太陽光発電用ゲートウェイ
         * 太陽光発電とグリッド消費を含むホームアシスタントエネルギーダッシュボードの完全サポート。
         * 各種センサーの負荷状態。
+
+* 低圧スマートメーター(Bルートサービス)
+    * Wi-SUN <-> Ethernet/Wifi ブリッジが必要
+        * [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite)
+        * など
 
 上記の他にも[ECHONET Lite規格](https://echonet.jp/product/echonet-lite/)にリストアップされている多くの機器がコントロールできる可能性があります。
 
