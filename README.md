@@ -1,9 +1,10 @@
-# ECHONETLite Platform Custom Component for Home Assistant ([日本語](https://github.com/scottyphillips/echonetlite_homeassistant/blob/master/README.ja.md))
+# ECHONETLite Platform Custom Component for Home Assistant
 
 [![GitHub Release][releases-shield]][releases]
 [![License][license-shield]](LICENSE)
 [![hacs][hacsbadge]][hacs]
 ![Project Maintenance][maintenance-shield]
+([日本語](https://github.com/scottyphillips/echonetlite_homeassistant/blob/master/README.ja.md))
 
 A Home Assistant custom component for use with ECHONETLite compatible devices.
 This custom component makes use of the 'pychonet'
