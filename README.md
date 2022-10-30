@@ -1,4 +1,4 @@
-# ECHONETLite Platform Custom Component for Home Assistant
+# ECHONETLite Platform Custom Component for Home Assistant ([日本語](https://github.com/scottyphillips/echonetlite_homeassistant/blob/master/README.ja.md))
 
 [![GitHub Release][releases-shield]][releases]
 [![License][license-shield]](LICENSE)
@@ -83,6 +83,11 @@ compatible ECHONETLite Devices:
 * OMRON Home Solar Power Generation
     * Full support for Home Assistant Energy Dashboard including solar production and grid consumption.
     * Loads of interesting sensors.
+
+* Low voltage smart meter (B route service)
+  * Require Wi-SUN <-> Ethernet/Wifi bridge
+  　　* [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite)
+  　　* etc.
 
 ## Installation - Enable ECHONET protocol
 This Custom Component was originally designed for the Mitsubishi MAC-568IF-E WiFi
