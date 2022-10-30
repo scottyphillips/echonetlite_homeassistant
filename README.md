@@ -86,9 +86,9 @@ compatible ECHONETLite Devices:
     * Loads of interesting sensors.
 
 * Low voltage smart meter (B route service)
-  * Require Wi-SUN <-> Ethernet/Wifi bridge
-  　　* [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite)
-  　　* etc.
+     * Require Wi-SUN <-> Ethernet/Wifi bridge
+          * [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite)
+          * etc.
 
 ## Installation - Enable ECHONET protocol
 This Custom Component was originally designed for the Mitsubishi MAC-568IF-E WiFi
