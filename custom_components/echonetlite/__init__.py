@@ -198,8 +198,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _LOGGER.debug(f"Plaform entry data - {entry.data}")
 
-    # this api is too recent (around April 2021): hass.config_entries.async_setup_platforms(entry, PLATFORMS)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    if hasattr(hass.config_entries, 'async_forward_entry_setups'):
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    else:
+        # this api is too recent (around April 2021) but keep for backwards compatibility
+        hass.config_entries.async_setup_platforms(entry, PLATFORMS)
     return True
 
 
