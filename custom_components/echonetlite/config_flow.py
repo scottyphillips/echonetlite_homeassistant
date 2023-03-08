@@ -210,7 +210,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return await self.async_step_user(user_input)
 
     async def async_step_finish(self, user_input=None):
-        if len(_detected_hosts):
+        if len(_detected_hosts) and self.host in _detected_hosts.keys():
             _detected_hosts.pop(self.host)
         return self.async_create_entry(title=self.title, data={"instances": self.instance_list}, options={"other_mode": "as_off"})
 
