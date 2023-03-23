@@ -245,6 +245,43 @@ ENL_OP_CODES = {
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             }
         },
+        0x7D: {
+            0xA4: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xA5: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xA8: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
+            },
+            0xA9: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
+            },
+            0xD3: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xE2: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xE4: {
+                CONF_ICON: "mdi:percent",
+                CONF_TYPE: PERCENTAGE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+        },
         0x80: {
             0xE0: {
                 CONF_ICON: "mdi:flash",
