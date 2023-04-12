@@ -43,7 +43,8 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             entity['echonetlite'],
                             op_code,
                             ENL_OP_CODES[eojgc][eojcc][op_code],
-                            config.title
+                            config.title,
+                            hass
                         )
                     )
         elif eojgc == 1 and eojcc == 53:
@@ -55,7 +56,8 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             entity['echonetlite'],
                             op_code,
                             ENL_OP_CODES[eojgc][eojcc][op_code],
-                            config.title
+                            config.title,
+                            hass
                         )
                     )
         else:  # For all other devices, sensors will be configured but customise if applicable.
@@ -95,7 +97,8 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                                 entity['echonetlite'],
                                                 op_code,
                                                 attr,
-                                                config.title
+                                                config.title,
+                                                hass
                                             )
                                         )
                                 else:
@@ -106,7 +109,8 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                         entity['echonetlite'],
                                         op_code,
                                         ENL_OP_CODES[eojgc][eojcc][op_code],
-                                        config.title
+                                        config.title,
+                                        hass
                                     )
                                 )
                             continue
@@ -119,7 +123,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetSensor(SensorEntity):
     """Representation of an ECHONETLite Temperature Sensor."""
 
-    def __init__(self, connector, op_code, attributes, name=None) -> None:
+    def __init__(self, connector, op_code, attributes, name=None, hass=None) -> None:
         """Initialize the sensor."""
         self._connector = connector
         self._op_code = op_code
@@ -131,6 +135,7 @@ class EchonetSensor(SensorEntity):
         self._device_name = name
         self._should_poll = True
         self._state_value = None
+        self._hass = hass
 
         _attr_keys = self._sensor_attributes.keys()
         if CONF_ICON not in _attr_keys:
@@ -228,10 +233,39 @@ class EchonetSensor(SensorEntity):
                 if self._eojgc == 0x02 and self._eojcc == 0x87 and 0xC2 in self._connector._update_data:
                    if self._connector._update_data[0xC2] is not None and self._state_value is not None:
                         return self._state_value * self._connector._update_data[0xC2] * 1000 # value in Wh
-
+            if self._op_code == 0xD3: # for Measured instantaneous charging/discharging electric energy
+                if self._eojgc == 0x02 and self._eojcc == 0x7D: # for home battery storage
+                    if self._state_value is not None: # electric energy
+                       # Change icon
+                        if self._state_value > 0:
+                            self._sensor_attributes[CONF_ICON] = "mdi:battery-arrow-up"
+                        elif self._state_value < 0:
+                            self._sensor_attributes[CONF_ICON] = "mdi:battery-arrow-down"
+                        else:
+                            self._sensor_attributes[CONF_ICON] = "mdi:battery"
+                        self._hass.services.async_call('homeassistant', 'set_entity_icon', {
+                                                                    'entity_id': self.entity_id,
+                                                                    'icon_path': self._sensor_attributes[CONF_ICON]
+                                                                     }, blocking=True)
+                        _LOGGER.info("Set icon to %s", self._sensor_attributes[CONF_ICON])
+                        return self._state_value
+                   
             if self._op_code == 0xE0: # kludge for electric energy meter and water volume meters
+                if self._eojgc == 0x02 and self._eojcc == 0x79: # for solar power
+                    if self._state_value is not None: # electric energy
+                       # Change icon
+                        if self._state_value > 0:
+                            self._sensor_attributes[CONF_ICON] = "mdi:solar-power-variant"
+                        else:
+                            self._sensor_attributes[CONF_ICON] = "mdi:solar-power-variant-outline"
+                        self._hass.services.async_call('homeassistant', 'set_entity_icon', {
+                                                                    'entity_id': self.entity_id,
+                                                                    'icon_path': self._sensor_attributes[CONF_ICON]
+                                                                     }, blocking=True)
+                        _LOGGER.info("Set icon to %s", self._sensor_attributes[CONF_ICON])
+                        return self._state_value
                 if self._eojgc == 0x02 and self._eojcc == 0x80 and 0xE2 in self._connector._update_data:
-                   if self._connector._update_data[0xE2] is not None and self._state_value is not None: # electric energy
+                   if self._connector._update_data[0xE2] is not None and self._state_value is not None: # electric energy              
                        return self._state_value * self._connector._update_data[0xE2] * 1000 # value in Wh
 
                 if self._eojgc == 0x02 and self._eojcc == 0x81 and 0xE1 in self._connector._update_data: # water flow
