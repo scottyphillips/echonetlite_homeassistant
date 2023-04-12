@@ -243,11 +243,8 @@ class EchonetSensor(SensorEntity):
                             self._sensor_attributes[CONF_ICON] = "mdi:battery-arrow-down"
                         else:
                             self._sensor_attributes[CONF_ICON] = "mdi:battery"
-                        self._hass.services.async_call('homeassistant', 'set_entity_icon', {
-                                                                    'entity_id': self.entity_id,
-                                                                    'icon_path': self._sensor_attributes[CONF_ICON]
-                                                                     }, blocking=True)
-                        _LOGGER.info("Set icon to %s", self._sensor_attributes[CONF_ICON])
+                        self._push_icon_to_frontent()
+        
                         return self._state_value
                    
             if self._op_code == 0xE0: # kludge for electric energy meter and water volume meters
@@ -258,11 +255,8 @@ class EchonetSensor(SensorEntity):
                             self._sensor_attributes[CONF_ICON] = "mdi:solar-power-variant"
                         else:
                             self._sensor_attributes[CONF_ICON] = "mdi:solar-power-variant-outline"
-                        self._hass.services.async_call('homeassistant', 'set_entity_icon', {
-                                                                    'entity_id': self.entity_id,
-                                                                    'icon_path': self._sensor_attributes[CONF_ICON]
-                                                                     }, blocking=True)
-                        _LOGGER.info("Set icon to %s", self._sensor_attributes[CONF_ICON])
+                        self._push_icon_to_frontent()
+                        
                         return self._state_value
                 if self._eojgc == 0x02 and self._eojcc == 0x80 and 0xE2 in self._connector._update_data:
                    if self._connector._update_data[0xE2] is not None and self._state_value is not None: # electric energy              
@@ -331,6 +325,12 @@ class EchonetSensor(SensorEntity):
     async def async_update(self):
         """Retrieve latest state."""
         await self._connector.async_update()
+        
+    def push_icon_to_frontent(self):
+        self._hass.services.async_call('homeassistant', 'set_entity_icon', {
+                                                                    'entity_id': self.entity_id,
+                                                                    'icon_path': self._sensor_attributes[CONF_ICON]
+                                                                     }, blocking=True)
 
     async def async_set_on_timer_time(self, timer_time):
         val = str(timer_time).split(':')
