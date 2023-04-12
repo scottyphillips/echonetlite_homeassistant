@@ -326,7 +326,7 @@ class EchonetSensor(SensorEntity):
         """Retrieve latest state."""
         await self._connector.async_update()
         
-    def push_icon_to_frontent(self):
+    def _push_icon_to_frontent(self):
         self._hass.services.async_call('homeassistant', 'set_entity_icon', {
                                                                     'entity_id': self.entity_id,
                                                                     'icon_path': self._sensor_attributes[CONF_ICON]
