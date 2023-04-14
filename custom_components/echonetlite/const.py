@@ -13,7 +13,8 @@ from homeassistant.const import (
     DEVICE_CLASS_CURRENT,
     DEVICE_CLASS_VOLTAGE,
     PERCENTAGE,
-    VOLUME_CUBIC_METERS
+    VOLUME_CUBIC_METERS,
+    DEVICE_CLASS_BATTERY
 )
 from homeassistant.components.sensor import ATTR_STATE_CLASS, SensorStateClass
 from pychonet.HomeAirConditioner import (
@@ -215,7 +216,7 @@ ENL_OP_CODES = {
         },
         0x79:{
             0xE0: {
-                CONF_ICON: "mdi:flash",
+                CONF_ICON: "mdi:solar-power-variant-outline",
                 CONF_TYPE: DEVICE_CLASS_POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             },
@@ -244,6 +245,43 @@ ENL_OP_CODES = {
                 CONF_TYPE: DEVICE_CLASS_POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
             }
+        },
+        0x7D: {
+            0xA4: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xA5: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xA8: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
+            },
+            0xA9: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING
+            },
+            0xD3: {
+                CONF_ICON: "mdi:battery",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xE2: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: DEVICE_CLASS_POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
+            0xE4: {
+                CONF_ICON: None,
+                CONF_TYPE: DEVICE_CLASS_BATTERY,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT
+            },
         },
         0x80: {
             0xE0: {
