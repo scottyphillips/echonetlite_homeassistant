@@ -16,30 +16,45 @@ _LOGGER = logging.getLogger(__name__)
 ENL_FANSPEED = 0xA0
 SUPPORT_FLAGS = 0
 
-DEFAULT_FAN_MODES = ['auto', 'minimum', 'low', 'medium-low', 'medium', 'medium-high', 'high', 'very-high', 'max']
+DEFAULT_FAN_MODES = [
+    "auto",
+    "minimum",
+    "low",
+    "medium-low",
+    "medium",
+    "medium-high",
+    "high",
+    "very-high",
+    "max",
+]
 
 
 async def async_setup_entry(hass, config_entry, async_add_devices):
     """Set up entry."""
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
-        if entity['instance']['eojgc'] == 0x01 and entity['instance']['eojcc'] == 0x35:  # Home Air Cleaner
-            entities.append(EchonetFan(config_entry.title, entity['echonetlite']))
+        if (
+            entity["instance"]["eojgc"] == 0x01 and entity["instance"]["eojcc"] == 0x35
+        ):  # Home Air Cleaner
+            entities.append(EchonetFan(config_entry.title, entity["echonetlite"]))
     async_add_devices(entities, True)
 
 
 class EchonetFan(FanEntity):
     """Representation of an ECHONETLite Fan device (eg Air purifier)."""
+
     def __init__(self, name, connector):
         """Initialize the climate device."""
         self._name = name
         self._device_name = name
         self._connector = connector  # new line
-        self._uid = self._connector._uidi if self._connector._uidi else self._connector._uid
+        self._uid = (
+            self._connector._uidi if self._connector._uidi else self._connector._uid
+        )
         self._precision = 1.0
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
-        self._support_flags = self._support_flags |  SUPPORT_PRESET_MODE
+        self._support_flags = self._support_flags | SUPPORT_PRESET_MODE
         self._olddata = {}
         self._should_poll = True
 
@@ -63,15 +78,20 @@ class EchonetFan(FanEntity):
     @property
     def device_info(self):
         return {
-            "identifiers": {(
-                DOMAIN, self._connector._uid,
-                self._connector._instance._eojgc,
-                self._connector._instance._eojcc,
-                self._connector._instance._eojci
-            )},
+            "identifiers": {
+                (
+                    DOMAIN,
+                    self._connector._uid,
+                    self._connector._instance._eojgc,
+                    self._connector._instance._eojcc,
+                    self._connector._instance._eojci,
+                )
+            },
             "name": self._device_name,
             "manufacturer": self._connector._manufacturer,
-            "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc]
+            "model": EOJX_CLASS[self._connector._instance._eojgc][
+                self._connector._instance._eojcc
+            ]
             # "sw_version": "",
         }
 
@@ -107,7 +127,11 @@ class EchonetFan(FanEntity):
     @property
     def preset_mode(self):
         """Return the fan setting."""
-        return self._connector._update_data[ENL_FANSPEED] if ENL_FANSPEED in self._connector._update_data else "unavailable"
+        return (
+            self._connector._update_data[ENL_FANSPEED]
+            if ENL_FANSPEED in self._connector._update_data
+            else "unavailable"
+        )
 
     @property
     def preset_modes(self):
@@ -126,9 +150,9 @@ class EchonetFan(FanEntity):
         """Register callbacks."""
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
-    async def async_update_callback(self, isPush = False):
+    async def async_update_callback(self, isPush=False):
         changed = self._olddata != self._connector._update_data
-        if (changed):
+        if changed:
             self._olddata = self._connector._update_data.copy()
             self.async_schedule_update_ha_state()
             if isPush:
