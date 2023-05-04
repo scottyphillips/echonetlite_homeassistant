@@ -148,7 +148,6 @@ Some ideas in his own repo got implemented in my own code.
 Thanks to Futomi Hatano for open sourcing a high quality and well documented ECHONET Lite library in Node JS that formed the basis of the 'Pychonet' library.
 (https://github.com/futomi/node-echonet-lite)
 
-
 ## License
 
 This application is licensed under an MIT license, refer to LICENSE for details.
