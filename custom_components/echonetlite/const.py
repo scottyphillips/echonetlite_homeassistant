@@ -171,7 +171,6 @@ ENL_OP_CODES = {
             0x91: {  # Sensor with service
                 CONF_ICON: "mdi:timer-outline",
                 CONF_TYPE: None,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
                 CONF_SERVICE: [SERVICE_SET_ON_TIMER_TIME],
             },
             0xD1: {  # Sensor
