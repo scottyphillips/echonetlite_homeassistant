@@ -32,6 +32,7 @@ from homeassistant.components.climate.const import (
     HVAC_MODE_DRY,
     HVAC_MODE_FAN_ONLY,
     HVAC_MODE_OFF,
+    ATTR_HVAC_MODE,
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
@@ -321,6 +322,11 @@ class EchonetClimate(ClimateEntity):
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
+        # Check has HVAC Mode
+        hvac_mode = kwargs.get(ATTR_HVAC_MODE)
+        if hvac_mode is not None:
+            await self.async_set_hvac_mode(hvac_mode)
+
         if kwargs.get(ATTR_TEMPERATURE) is not None:
             await self._connector._instance.setOperationalTemperature(
                 kwargs.get(ATTR_TEMPERATURE)
