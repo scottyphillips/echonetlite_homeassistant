@@ -78,7 +78,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 
 
 class EchonetSelect(SelectEntity):
-
     _attr_translation_key = DOMAIN
 
     def __init__(self, hass, connector, config, code, options, name=None):
