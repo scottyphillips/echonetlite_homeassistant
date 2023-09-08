@@ -303,10 +303,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             if (
                 instance["eojgc"] == 0x01 and instance["eojcc"] == 0x30
             ):  # HomeAirConditioner
-                ha_swing_list = [];
+                ha_swing_list = []
                 for option in list(USER_OPTIONS.keys()):
                     if option in instance["setmap"]:
-                        if (option in [ENL_AIR_VERT, ENL_AUTO_DIRECTION, ENL_SWING_MODE]):
+                        if option in [ENL_AIR_VERT, ENL_AUTO_DIRECTION, ENL_SWING_MODE]:
                             ha_swing_list.append(option)
                         option_default = []
                         if (
@@ -328,16 +328,25 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         )
 
                 # Handle setting Climate entity UI swing mode
-                if (len(ha_swing_list) > 0):
+                if len(ha_swing_list) > 0:
                     option_list = {}
                     for opt in ha_swing_list:
                         option_list.update(USER_OPTIONS[opt]["option_list"])
                     if ENL_AIR_VERT in instance["setmap"]:
-                        for del_key in ['auto', 'non-auto', 'auto-horiz', 'not-used', 'horiz', 'vert-horiz']:
-                            option_list.pop(del_key , None)
+                        for del_key in [
+                            "auto",
+                            "non-auto",
+                            "auto-horiz",
+                            "not-used",
+                            "horiz",
+                            "vert-horiz",
+                        ]:
+                            option_list.pop(del_key, None)
                     option_default = []
-                    if (self._config_entry.options.get(OPTION_HA_UI_SWING) is not None):
-                        option_default = self._config_entry.options.get(OPTION_HA_UI_SWING)
+                    if self._config_entry.options.get(OPTION_HA_UI_SWING) is not None:
+                        option_default = self._config_entry.options.get(
+                            OPTION_HA_UI_SWING
+                        )
                     data_schema_structure.update(
                         {
                             vol.Optional(
