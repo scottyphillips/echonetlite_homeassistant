@@ -413,15 +413,14 @@ SILENT_MODE_OPTIONS = {
 
 HVAC_MODE_OPTIONS = {"as_off": "As Off", "as_idle": "As Idle"}
 
+OPTION_HA_UI_SWING = "ha_ui_swing"
+
 USER_OPTIONS = {
     ENL_FANSPEED: {"option": "fan_settings", "option_list": FAN_SPEED_OPTIONS},
-    ENL_AIR_HORZ: {"option": "swing_horiz", "option_list": AIRFLOW_HORIZ_OPTIONS},
-    ENL_AIR_VERT: {"option": "swing_vert", "option_list": AIRFLOW_VERT_OPTIONS},
-    ENL_AUTO_DIRECTION: {
-        "option": "auto_direction",
-        "option_list": AUTO_DIRECTION_OPTIONS,
-    },
     ENL_SWING_MODE: {"option": "swing_mode", "option_list": SWING_MODE_OPTIONS},
+    ENL_AUTO_DIRECTION: {"option": "auto_direction", "option_list": AUTO_DIRECTION_OPTIONS},
+    ENL_AIR_VERT: {"option": "swing_vert", "option_list": AIRFLOW_VERT_OPTIONS},
+    ENL_AIR_HORZ: {"option": "swing_horiz", "option_list": AIRFLOW_HORIZ_OPTIONS},
     ENL_HVAC_MODE: {
         "option": CONF_OTHER_MODE,
         "option_list": [
@@ -429,6 +428,7 @@ USER_OPTIONS = {
             {"value": "as_idle", "label": "As Idle"},
         ],
     },
+    OPTION_HA_UI_SWING: {"option": OPTION_HA_UI_SWING, "option_list": []},
 }
 
 TEMP_OPTIONS = {

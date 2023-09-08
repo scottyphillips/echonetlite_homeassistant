@@ -4,6 +4,8 @@ from pychonet.HomeAirConditioner import (
     ENL_STATUS,
     ENL_FANSPEED,
     ENL_AIR_VERT,
+    ENL_AUTO_DIRECTION,
+    ENL_SWING_MODE,
     ENL_HVAC_MODE,
     ENL_HVAC_SET_TEMP,
     ENL_HVAC_ROOM_TEMP,
@@ -38,7 +40,7 @@ from homeassistant.const import (
     ATTR_TEMPERATURE,
     PRECISION_WHOLE,
 )
-from .const import DOMAIN, SILENT_MODE_OPTIONS
+from .const import DOMAIN, SILENT_MODE_OPTIONS, OPTION_HA_UI_SWING
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,7 +58,7 @@ DEFAULT_FAN_MODES = [
     "max",
 ]
 DEFAULT_HVAC_MODES = ["heat", "cool", "dry", "fan_only", "heat_cool", "off"]
-DEFAULT_SWING_MODES = ["upper", "upper-central", "central", "lower-central", "lower"]
+DEFAULT_SWING_MODES = ["auto-vert", "upper", "upper-central", "central", "lower-central", "lower"]
 DEFAULT_PRESET_MODES = ["normal", "high-speed", "silent"]
 
 
@@ -77,6 +79,8 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
 class EchonetClimate(ClimateEntity):
     """Representation of an ECHONETLite climate device."""
+
+    _attr_translation_key = DOMAIN
 
     def __init__(
         self, name, connector, units: UnitSystem, fan_modes=None, swing_vert=None
@@ -284,6 +288,9 @@ class EchonetClimate(ClimateEntity):
     @property
     def swing_modes(self):
         """Return the list of available swing modes."""
+        if OPTION_HA_UI_SWING in list(self._connector._user_options.keys()):
+            if self._connector._user_options[OPTION_HA_UI_SWING] is not False and len(self._connector._user_options[OPTION_HA_UI_SWING]):
+                return self._connector._user_options[OPTION_HA_UI_SWING]
         if ENL_AIR_VERT in list(self._connector._user_options.keys()):
             if self._connector._user_options[ENL_AIR_VERT] is not False:
                 return self._connector._user_options[ENL_AIR_VERT]
@@ -309,16 +316,28 @@ class EchonetClimate(ClimateEntity):
     @property
     def swing_mode(self):
         """Return the swing mode setting."""
-        return (
-            self._connector._update_data[ENL_AIR_VERT]
-            if ENL_AIR_VERT in self._connector._update_data
-            else None
-        )
+        if self._connector._update_data.get(ENL_AUTO_DIRECTION) in self.swing_modes:
+            return self._connector._update_data.get(ENL_AUTO_DIRECTION)
+        elif self._connector._update_data.get(ENL_SWING_MODE) in self.swing_modes:
+            return self._connector._update_data.get(ENL_SWING_MODE)
+        else:
+            return (
+                self._connector._update_data[ENL_AIR_VERT]
+                if ENL_AIR_VERT in self._connector._update_data
+                else None
+            )
 
     async def async_set_swing_mode(self, swing_mode):
         """Set new swing mode."""
-        await self._connector._instance.setAirflowVert(swing_mode)
-        self._connector._update_data[ENL_AIR_VERT] = swing_mode
+        if (self._connector._user_options.get(ENL_AUTO_DIRECTION) and swing_mode in self._connector._user_options[ENL_AUTO_DIRECTION]):
+            if (await self._connector._instance.setAutoDirection(swing_mode)):
+                self._connector._update_data[ENL_AUTO_DIRECTION] = swing_mode
+        elif (self._connector._user_options.get(ENL_SWING_MODE) and swing_mode in self._connector._user_options[ENL_SWING_MODE]):
+            if (await self._connector._instance.setSwingMode(swing_mode)):
+                self._connector._update_data[ENL_AUTO_DIRECTION] = swing_mode
+        else:
+            if (await self._connector._instance.setAirflowVert(swing_mode)):
+                self._connector._update_data[ENL_AIR_VERT] = swing_mode
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
