@@ -41,145 +41,136 @@
             "init": {
                 "title": "ECHONET Lite オプション",
                 "data": {
-                   "other_mode": "運転モード「その他」の取り扱い",
-                   "fan_settings": "風量設定の構成",
-                   "swing_horiz": "風向左右設定の構成",
-                   "swing_vert": "風向上下設定の構成",
-                   "auto_direction": "自動風向の構成",
-                   "swing_mode": "スイングモードの構成",
-                   "ha_ui_swing": "エアコンエンティティUIでのスイングモードの構成",
-                   "min_temp_heat": "暖房時の最低温度設定",
-                   "max_temp_heat": "暖房時の最高温度設定",
-                   "min_temp_cool": "冷房時の最低温度設定",
-                   "max_temp_cool": "冷房時の最高温度設定",
-                   "min_temp_auto": "自動モード時の最低温度設定",
-                   "max_temp_auto": "自動モード時の最高温度設定",
-                   "force_polling": "即時通知が見込める場合でもポーリングを止めない。"
+                    "other_mode": "運転モード「その他」の取り扱い",
+                    "fan_settings": "風量設定の構成",
+                    "swing_horiz": "風向左右設定の構成",
+                    "swing_vert": "風向上下設定の構成",
+                    "auto_direction": "自動風向の構成",
+                    "swing_mode": "スイングモードの構成",
+                    "ha_ui_swing": "エアコンエンティティUIでのスイングモードの構成",
+                    "min_temp_heat": "暖房時の最低温度設定",
+                    "max_temp_heat": "暖房時の最高温度設定",
+                    "min_temp_cool": "冷房時の最低温度設定",
+                    "max_temp_cool": "冷房時の最高温度設定",
+                    "min_temp_auto": "自動モード時の最低温度設定",
+                    "max_temp_auto": "自動モード時の最高温度設定",
+                    "force_polling": "即時通知が見込める場合でもポーリングを止めない。"
                 },
                 "description": "オプション設定を構成する"
             }
         }
     },
-
     "entity": {
-      "select": {
-        "echonetlite": {
-          "state": {
-            "auto": "自動",
-            "minimum": "微風",
-            "low": "弱",
-            "medium-low": "中弱",
-            "medium": "中",
-            "medium-high": "中強",
-            "high": "強",
-            "very-high": "強々",
-            "max": "最大",
-
-            "rc-right": "中右・右",
-            "left-lc": "左・中左",
-            "lc-center-rc": "中左・中・中右",
-            "left-lc-rc-right": "左・中左・中右・右",
-            "right": "右",
-            "rc": "中右",
-            "center": "中央",
-            "center-right": "中央・右",
-            "center-rc": "中央・中右",
-            "center-rc-right": "中央・中右・右",
-            "lc": "中左",
-            "lc-right": "中左・右",
-            "lc-rc": "中左・中右",
-            "left": "左",
-            "left-right": "左・右",
-            "left-rc": "左・中右",
-            "left-rc-right": "左・中右・右",
-            "left-center": "左・中央",
-            "left-center-right": "左・中央・右",
-            "left-center-rc": "左・中央・中右",
-            "left-center-rc-right": "左・中央・中右・右",
-            "left-lc-right": "左・中左・右",
-            "left-lc-rc": "左・中左・中右",
-
-            "upper": "上",
-            "upper-central": "中上",
-            "central": "中",
-            "lower-central": "中下",
-            "lower": "下",
-
-            "not-used": "スイングなし",
-            "vert": "上下スイング",
-            "horiz": "左右スイング",
-            "vert-horiz": "上下左右スイング",
-
-            "non-auto": "非自動",
-            "auto-vert": "上下自動",
-            "auto-horiz": "左右自動"
-          }
-        }
-      },
-
-      "climate": {
-        "echonetlite": {
-          "state_attributes": {
-            "fan_mode": {
-              "state": {
-                "auto": "自動",
-                "minimum": "微風",
-                "low": "弱",
-                "medium-low": "中弱",
-                "medium": "中",
-                "medium-high": "中強",
-                "high": "強",
-                "very-high": "強々",
-                "max": "最大"
-              }
-            },
-            "swing_mode": {
-              "name": "風向設定",
-              "state": {
-                "rc-right": "中右・右",
-                "left-lc": "左・中左",
-                "lc-center-rc": "中左・中・中右",
-                "left-lc-rc-right": "左・中左・中右・右",
-                "right": "右",
-                "rc": "中右",
-                "center": "中央",
-                "center-right": "中央・右",
-                "center-rc": "中央・中右",
-                "center-rc-right": "中央・中右・右",
-                "lc": "中左",
-                "lc-right": "中左・右",
-                "lc-rc": "中左・中右",
-                "left": "左",
-                "left-right": "左・右",
-                "left-rc": "左・中右",
-                "left-rc-right": "左・中右・右",
-                "left-center": "左・中央",
-                "left-center-right": "左・中央・右",
-                "left-center-rc": "左・中央・中右",
-                "left-center-rc-right": "左・中央・中右・右",
-                "left-lc-right": "左・中左・右",
-                "left-lc-rc": "左・中左・中右",
-
-                "upper": "上",
-                "upper-central": "中上",
-                "central": "中",
-                "lower-central": "中下",
-                "lower": "下",
-
-                "not-used": "スイングなし",
-                "vert": "上下スイング",
-                "horiz": "左右スイング",
-                "vert-horiz": "上下左右スイング",
-
-                "auto": "自動",
-                "non-auto": "手動",
-                "auto-vert": "上下自動",
-                "auto-horiz": "左右自動"
-              }
+        "select": {
+            "echonetlite": {
+                "state": {
+                    "auto": "自動",
+                    "minimum": "微風",
+                    "low": "弱",
+                    "medium-low": "中弱",
+                    "medium": "中",
+                    "medium-high": "中強",
+                    "high": "強",
+                    "very-high": "強々",
+                    "max": "最大",
+                    "rc-right": "中右・右",
+                    "left-lc": "左・中左",
+                    "lc-center-rc": "中左・中・中右",
+                    "left-lc-rc-right": "左・中左・中右・右",
+                    "right": "右",
+                    "rc": "中右",
+                    "center": "中央",
+                    "center-right": "中央・右",
+                    "center-rc": "中央・中右",
+                    "center-rc-right": "中央・中右・右",
+                    "lc": "中左",
+                    "lc-right": "中左・右",
+                    "lc-rc": "中左・中右",
+                    "left": "左",
+                    "left-right": "左・右",
+                    "left-rc": "左・中右",
+                    "left-rc-right": "左・中右・右",
+                    "left-center": "左・中央",
+                    "left-center-right": "左・中央・右",
+                    "left-center-rc": "左・中央・中右",
+                    "left-center-rc-right": "左・中央・中右・右",
+                    "left-lc-right": "左・中左・右",
+                    "left-lc-rc": "左・中左・中右",
+                    "upper": "上",
+                    "upper-central": "中上",
+                    "central": "中",
+                    "lower-central": "中下",
+                    "lower": "下",
+                    "not-used": "スイングなし",
+                    "vert": "上下スイング",
+                    "horiz": "左右スイング",
+                    "vert-horiz": "上下左右スイング",
+                    "non-auto": "非自動",
+                    "auto-vert": "上下自動",
+                    "auto-horiz": "左右自動"
+                }
             }
-          }
+        },
+        "climate": {
+            "echonetlite": {
+                "state_attributes": {
+                    "fan_mode": {
+                        "state": {
+                            "auto": "自動",
+                            "minimum": "微風",
+                            "low": "弱",
+                            "medium-low": "中弱",
+                            "medium": "中",
+                            "medium-high": "中強",
+                            "high": "強",
+                            "very-high": "強々",
+                            "max": "最大"
+                        }
+                    },
+                    "swing_mode": {
+                        "name": "風向設定",
+                        "state": {
+                            "rc-right": "中右・右",
+                            "left-lc": "左・中左",
+                            "lc-center-rc": "中左・中・中右",
+                            "left-lc-rc-right": "左・中左・中右・右",
+                            "right": "右",
+                            "rc": "中右",
+                            "center": "中央",
+                            "center-right": "中央・右",
+                            "center-rc": "中央・中右",
+                            "center-rc-right": "中央・中右・右",
+                            "lc": "中左",
+                            "lc-right": "中左・右",
+                            "lc-rc": "中左・中右",
+                            "left": "左",
+                            "left-right": "左・右",
+                            "left-rc": "左・中右",
+                            "left-rc-right": "左・中右・右",
+                            "left-center": "左・中央",
+                            "left-center-right": "左・中央・右",
+                            "left-center-rc": "左・中央・中右",
+                            "left-center-rc-right": "左・中央・中右・右",
+                            "left-lc-right": "左・中左・右",
+                            "left-lc-rc": "左・中左・中右",
+                            "upper": "上",
+                            "upper-central": "中上",
+                            "central": "中",
+                            "lower-central": "中下",
+                            "lower": "下",
+                            "not-used": "スイングなし",
+                            "vert": "上下スイング",
+                            "horiz": "左右スイング",
+                            "vert-horiz": "上下左右スイング",
+                            "auto": "自動",
+                            "non-auto": "手動",
+                            "auto-vert": "上下自動",
+                            "auto-horiz": "左右自動"
+                        }
+                    }
+                }
+            }
         }
-      }
     },
     "title": "ECHONETLite"
 }
