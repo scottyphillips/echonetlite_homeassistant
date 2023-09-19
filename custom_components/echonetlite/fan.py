@@ -40,10 +40,8 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     """Set up entry."""
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
-        if (
-            entity["instance"]["eojgc"] == 0x01 and (
-                entity["instance"]["eojcc"] == 0x35 or entity["instance"]["eojcc"] == 0x3A
-            )
+        if entity["instance"]["eojgc"] == 0x01 and (
+            entity["instance"]["eojcc"] == 0x35 or entity["instance"]["eojcc"] == 0x3A
         ):  # Home Air Cleaner or Celing Fan
             entities.append(EchonetFan(config_entry.title, entity["echonetlite"]))
     async_add_devices(entities, True)
@@ -171,7 +169,7 @@ class EchonetFan(FanEntity):
             if ENL_FAN_DIRECTION in self._connector._update_data
             else "unavailable"
         )
-    
+
     async def async_set_direction(self, direction: str) -> None:
         await self._connector._instance.setMessage(
             ENL_FAN_DIRECTION, 0x41 if direction == "forward" else 0x42
@@ -186,12 +184,12 @@ class EchonetFan(FanEntity):
             if ENL_FAN_OSCILLATION in self._connector._update_data
             else "unavailable"
         )
-    
+
     async def async_oscillate(self, oscillating: bool) -> None:
         await self._connector._instance.setMessage(
             ENL_FAN_OSCILLATION, 0x30 if oscillating else 0x31
         )
-    
+
     @property
     def preset_modes(self):
         """Return the list of available fan modes."""
