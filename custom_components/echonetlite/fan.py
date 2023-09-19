@@ -178,7 +178,7 @@ class EchonetFan(FanEntity):
         self._connector._update_data[ENL_FAN_DIRECTION] = direction
 
     @property
-    def oscillating(self, direction: str) -> None:
+    def oscillating(self):
         """Return the fan oscillating."""
         return (
             self._connector._update_data[ENL_FAN_OSCILLATION]
