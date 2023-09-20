@@ -122,9 +122,12 @@ Many other products will work using this custom-component, but they must correct
 4. If you have additional devices to configure then repeat step 1.
 
 ## Configuring Options for Fan and swing mode settings for supported HVAC and Air Purifiers.
-Once you have added the integration, you can go back to configuration -> integrations
+Once you have added the integration, you can go back to configuration -> integrations.
+
 Under your ECHONETLite device click 'configure'.
+
 Fine tune your required fan and swing mode settings. The integration will be able to determine what settings are supported for your system in question.
+
 NOTE: Selecting which specific options are suitable is a 'trial and error' process as ECHONETLite does not provide a means of returning permittted values for these settings.
 
 As soon as you configure your options and save, the settings will take effect.
