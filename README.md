@@ -89,7 +89,10 @@ compatible ECHONETLite Devices:
      * Require Wi-SUN <-> Ethernet/Wifi bridge
           * [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite)
           * etc.
-
+            
+* Noritz bathtub and floor heating system
+     * Yes a smart bathtub and smart floor heating. Japan is surely utopia for tech nerds like me. 
+     
 ## Installation - Enable ECHONET protocol
 This Custom Component was originally designed for the Mitsubishi MAC-568IF-E WiFi
 Adaptor, a basic guide for enabling ECHONETlite is provided below.
