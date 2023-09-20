@@ -150,7 +150,7 @@ class EchonetFan(FanEntity):
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed percentage of the fan."""
         await self._connector._instance.setFanSpeedPercent(percentage)
-        self._connector._update_data[ENL_FANSPEED_PERCENT] = preset_mode
+        self._connector._update_data[ENL_FANSPEED_PERCENT] = percentage
 
     @property
     def percantage(self):
