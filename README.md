@@ -140,6 +140,8 @@ As soon as you configure your options and save, the settings will take effect.
 Thanks Naoki Sawada for creating the switch entity, creating the custom service call framework, and a ton of other improvements.
 Most importantly of all he contributed the translation into 日本語.
 
+Thanks to scumbug, lordCONAN, and xen2 for contributing some very interesting devices. 
+
 Thanks to Jason Nader for all the quality of life updates to the codebase and doco.
 
 Thanks to khcnz (Karl Chaffey) and gvs for helping refector the old code
@@ -154,6 +156,8 @@ Some ideas in his own repo got implemented in my own code.
 
 Thanks to Futomi Hatano for open sourcing a high quality and well documented ECHONET Lite library in Node JS that formed the basis of the 'Pychonet' library.
 (https://github.com/futomi/node-echonet-lite)
+
+Thanks to all other contributers who I might have missed for raising PRs and issues which has made this little weekend project into something useful for many people. 
 
 ## License
 
