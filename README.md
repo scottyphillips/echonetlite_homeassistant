@@ -138,6 +138,7 @@ As soon as you configure your options and save, the settings will take effect.
 
 ## Hall of Fame
 Thanks Naoki Sawada for creating the switch entity, creating the custom service call framework, and a ton of other improvements.
+Most importantly of all he contributed the translation into 日本語.
 
 Thanks to Jason Nader for all the quality of life updates to the codebase and doco.
 
