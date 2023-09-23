@@ -67,6 +67,7 @@ compatible ECHONETLite Devices:
 * Panasonic
      * Air Conditioners
          * CS-221DJ
+         * CS-362DJ2
      * IP/JEM-A conversion adapter
          * HF-JA2-W
 
