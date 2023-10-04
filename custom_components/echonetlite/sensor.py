@@ -18,7 +18,6 @@ from homeassistant.const import (
     ENERGY_WATT_HOUR,
     VOLUME_CUBIC_METERS,
     ELECTRIC_CURRENT_AMPERE,
-    STATE_UNAVAILABLE,
     DEVICE_CLASS_GAS,
     DEVICE_CLASS_VOLTAGE,
     ELECTRIC_POTENTIAL_VOLT,
@@ -394,16 +393,16 @@ class EchonetSensor(SensorEntity):
                             * self._connector._update_data[0xE1]
                         )  # value in kWh
                     else:
-                        return STATE_UNAVAILABLE
+                        return None
 
             if self._state_value is None:
-                return STATE_UNAVAILABLE
+                return None
             elif self._sensor_attributes[CONF_TYPE] in [
                 DEVICE_CLASS_TEMPERATURE,
                 DEVICE_CLASS_HUMIDITY,
             ]:
                 if self._state_value in [126, 253]:
-                    return STATE_UNAVAILABLE
+                    return None
                 else:
                     return self._state_value
             elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_POWER:
@@ -418,8 +417,8 @@ class EchonetSensor(SensorEntity):
                 if len(self._state_value) < 255:
                     return self._state_value
                 else:
-                    return STATE_UNAVAILABLE
-        return STATE_UNAVAILABLE
+                    return None
+        return None
 
     @property
     def native_unit_of_measurement(self):
