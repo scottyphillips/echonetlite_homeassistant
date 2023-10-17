@@ -11,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
 from homeassistant.const import Platform
+from homeassistant.exceptions import ConfigEntryNotReady
 from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS, CONF_FORCE_POLLING, MISC_OPTIONS
 from pychonet.lib.udpserver import UDPServer
 
@@ -144,7 +145,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.debug(
             f"Called unload_config_entry() try to remove {host} from server._state."
         )
-        server._state.pop(host)
+        if server._state.get(host):
+            server._state.pop(host)
 
     entry.async_on_unload(unload_config_entry)
 
@@ -238,10 +240,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
 
         echonetlite = ECHONETConnector(instance, hass.data[DOMAIN]["api"], entry)
-        await echonetlite.async_update()
-        hass.data[DOMAIN][entry.entry_id].append(
-            {"instance": instance, "echonetlite": echonetlite}
-        )
+        try:
+            await asyncio.wait_for(echonetlite.async_update(), timeout=20)
+            hass.data[DOMAIN][entry.entry_id].append(
+                {"instance": instance, "echonetlite": echonetlite}
+            )
+        except asyncio.exceptions.TimeoutError as ex:
+            raise ConfigEntryNotReady(
+                f"Connection error while connecting to {host}: {ex}"
+            ) from ex
 
     _LOGGER.debug(f"Plaform entry data - {entry.data}")
 

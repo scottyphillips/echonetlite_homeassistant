@@ -8,6 +8,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
@@ -106,6 +107,47 @@ async def validate_input(
         raise ErrorConnect("cannot_connect")
     state = server._state[host]
     uid = state["uid"]
+
+    # check ip addr changed
+    if user_input.get("newhost"):
+        config_entry = None
+        old_host = None
+        entries = hass.config_entries.async_entries(DOMAIN)
+
+        for entry in entries:
+            instances = []
+            _data = entry.data
+            for _instance in _data.get("instances", []):
+                instance = _instance.copy()
+                if old_host or instance.get("uid") == uid:
+                    old_host = instance["host"]
+                    instance["host"] = host
+                instances.append(instance)
+            if old_host:
+                config_entry = entry
+                _LOGGER.info(
+                    f"ECHONET registed node found uid is {uid}, conig entry id is {entry.entry_id}."
+                )
+                break
+
+        if old_host:
+            _LOGGER.info(f"ECHONET registed node IP hanged from {old_host} to {host}.")
+            _LOGGER.info(f"New instances data is {instances}")
+            if server._state.get(old_host):
+                server._state.pop(old_host)
+            hass.config_entries.async_update_entry(
+                config_entry, data={"instances": instances}
+            )
+
+            # Wait max 30 secs for entry loaded
+            for x in range(0, 300):
+                await asyncio.sleep(0.1)
+                if entry.state == ConfigEntryState.LOADED:
+                    await hass.config_entries.async_reload(entry.entry_id)
+                    break
+
+            raise ErrorIpChanged(host)
+
     manufacturer = state["manufacturer"]
     if not isinstance(manufacturer, str):
         # If unable to resolve the manufacturer,
@@ -274,10 +316,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         _LOGGER.info(f"received newip discovery: {host}")
         if host not in _detected_hosts.keys():
             try:
-                instance_list = await validate_input(hass, {"host": host})
+                instance_list = await validate_input(
+                    hass, {"host": host, "newhost": True}
+                )
                 _LOGGER.debug(f"ECHONET Node detected in {host}")
             except ErrorConnect as e:
                 _LOGGER.debug(f"ECHONET Node Error Connect ({e})")
+            except ErrorIpChanged as e:
+                _LOGGER.info(f"ECHONET Detected Node IP Changed to '{e}'")
             else:
                 if len(instance_list):
                     _detected_hosts.update({host: instance_list})
@@ -286,6 +332,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class ErrorConnect(HomeAssistantError):
+    """Error to indicate we cannot connect."""
+
+
+class ErrorIpChanged(HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
