@@ -125,14 +125,16 @@ async def validate_input(
                 instances.append(instance)
             if old_host:
                 config_entry = entry
-                _LOGGER.info(
+                _LOGGER.debug(
                     f"ECHONET registed node found uid is {uid}, conig entry id is {entry.entry_id}."
                 )
                 break
 
         if old_host:
-            _LOGGER.info(f"ECHONET registed node IP hanged from {old_host} to {host}.")
-            _LOGGER.info(f"New instances data is {instances}")
+            _LOGGER.debug(
+                f"ECHONET registed node IP changed from {old_host} to {host}."
+            )
+            _LOGGER.debug(f"New instances data is {instances}")
             if server._state.get(old_host):
                 server._state[host] = server._state.pop(old_host)
             hass.config_entries.async_update_entry(
@@ -313,7 +315,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     async def async_discover_newhost(hass, host):
-        _LOGGER.info(f"received newip discovery: {host}")
+        _LOGGER.debug(f"received newip discovery: {host}")
         if host not in _detected_hosts.keys():
             try:
                 instance_list = await validate_input(
@@ -323,7 +325,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except ErrorConnect as e:
                 _LOGGER.debug(f"ECHONET Node Error Connect ({e})")
             except ErrorIpChanged as e:
-                _LOGGER.info(f"ECHONET Detected Node IP Changed to '{e}'")
+                _LOGGER.debug(f"ECHONET Detected Node IP Changed to '{e}'")
             else:
                 if len(instance_list):
                     _detected_hosts.update({host: instance_list})
