@@ -134,7 +134,7 @@ async def validate_input(
             _LOGGER.info(f"ECHONET registed node IP hanged from {old_host} to {host}.")
             _LOGGER.info(f"New instances data is {instances}")
             if server._state.get(old_host):
-                server._state.pop(old_host)
+                server._state[host] = server._state.pop(old_host)
             hass.config_entries.async_update_entry(
                 config_entry, data={"instances": instances}
             )

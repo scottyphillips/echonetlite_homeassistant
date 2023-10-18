@@ -241,13 +241,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         echonetlite = ECHONETConnector(instance, hass.data[DOMAIN]["api"], entry)
         try:
-            await asyncio.wait_for(echonetlite.async_update(), timeout=20)
+            await asyncio.wait_for(
+                echonetlite.async_update(), timeout=60
+            )  # 20 secs * retry 3 times = 60
             hass.data[DOMAIN][entry.entry_id].append(
                 {"instance": instance, "echonetlite": echonetlite}
             )
-        except asyncio.exceptions.TimeoutError as ex:
+        except (asyncio.TimeoutError, asyncio.CancelledError) as ex:
             raise ConfigEntryNotReady(
                 f"Connection error while connecting to {host}: {ex}"
+            ) from ex
+        except KeyError as ex:
+            raise ConfigEntryNotReady(
+                f"IP address change was detected during setup of {host}"
             ) from ex
 
     _LOGGER.debug(f"Plaform entry data - {entry.data}")
