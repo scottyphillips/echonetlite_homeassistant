@@ -349,7 +349,7 @@ class EchonetSensor(SensorEntity):
                             self._sensor_attributes[
                                 CONF_ICON
                             ] = "mdi:solar-power-variant-outline"
-                        self._push_icon_to_frontent()
+                        # self._push_icon_to_frontent()
 
                         return self._state_value
                 if (
