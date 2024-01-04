@@ -15,7 +15,7 @@ from pychonet.HomeAirConditioner import (
 from pychonet.EchonetInstance import ENL_GETMAP
 from pychonet.lib.eojx import EOJX_CLASS
 
-from homeassistant.components.climate import ( 
+from homeassistant.components.climate import (
     ClimateEntity,
 )
 
@@ -93,7 +93,9 @@ class EchonetClimate(ClimateEntity):
         self._precision = 1.0
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
-        self._support_flags = self._support_flags | ClimateEntityFeature.TARGET_TEMPERATURE
+        self._support_flags = (
+            self._support_flags | ClimateEntityFeature.TARGET_TEMPERATURE
+        )
         if ENL_FANSPEED in list(self._connector._setPropertyMap):
             self._support_flags = self._support_flags | ClimateEntityFeature.FAN_MODE
         if ENL_AIR_VERT in list(self._connector._setPropertyMap):
