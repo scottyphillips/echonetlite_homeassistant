@@ -28,9 +28,10 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     """Set up entry."""
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
-        if (
-            entity["instance"]["eojgc"] == 0x02 and entity["instance"]["eojcc"] == 0x90
-        ):  # General Lighting
+        eojgc = entity["instance"]["eojgc"]
+        eojcc = entity["instance"]["eojcc"]
+        if eojgc == 0x02 and eojcc in (0x90, 0x91):
+            # General Lighting (0x90), Mono Functional Lighting (0x91)
             _LOGGER.debug("Configuring ECHONETlite Light entity")
             entities.append(EchonetLight(config_entry.title, entity["echonetlite"]))
     _LOGGER.debug(f"Number of light devices to be added: {len(entities)}")
