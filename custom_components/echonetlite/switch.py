@@ -50,9 +50,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                 set_enl_status = True
         # Auto configure of the power switch
         if (eojgc == 0x01 and eojcc in (0x30, 0x35)) or (
-            eojgc == 0x02 and eojcc == 0x90
+            eojgc == 0x02 and eojcc in (0x90, 0x91)
         ):
-            # Home air conditioner, Air cleaner, General Lighting
+            # Home air conditioner, Air cleaner, General Lighting, Mono Functional Lighting
             continue
         if not set_enl_status and ENL_STATUS in entity["instance"]["setmap"]:
             entities.append(
