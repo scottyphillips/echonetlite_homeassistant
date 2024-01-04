@@ -15,25 +15,15 @@ from pychonet.HomeAirConditioner import (
 from pychonet.EchonetInstance import ENL_GETMAP
 from pychonet.lib.eojx import EOJX_CLASS
 
-from homeassistant.components.climate import ClimateEntity
+from homeassistant.components.climate import ( 
+    ClimateEntity,
+)
+
 from homeassistant.util.unit_system import UnitSystem
 from homeassistant.components.climate.const import (
-    SUPPORT_TARGET_TEMPERATURE,
-    SUPPORT_FAN_MODE,
-    SUPPORT_SWING_MODE,
-    SUPPORT_PRESET_MODE,
-    CURRENT_HVAC_OFF,
-    CURRENT_HVAC_HEAT,
-    CURRENT_HVAC_COOL,
-    CURRENT_HVAC_DRY,
-    CURRENT_HVAC_IDLE,
-    CURRENT_HVAC_FAN,
-    HVAC_MODE_HEAT,
-    HVAC_MODE_COOL,
-    HVAC_MODE_HEAT_COOL,
-    HVAC_MODE_DRY,
-    HVAC_MODE_FAN_ONLY,
-    HVAC_MODE_OFF,
+    ClimateEntityFeature,
+    HVACAction,
+    HVACMode,
     ATTR_HVAC_MODE,
 )
 from homeassistant.const import (
@@ -103,19 +93,19 @@ class EchonetClimate(ClimateEntity):
         self._precision = 1.0
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
-        self._support_flags = self._support_flags | SUPPORT_TARGET_TEMPERATURE
+        self._support_flags = self._support_flags | ClimateEntityFeature.TARGET_TEMPERATURE
         if ENL_FANSPEED in list(self._connector._setPropertyMap):
-            self._support_flags = self._support_flags | SUPPORT_FAN_MODE
+            self._support_flags = self._support_flags | ClimateEntityFeature.FAN_MODE
         if ENL_AIR_VERT in list(self._connector._setPropertyMap):
-            self._support_flags = self._support_flags | SUPPORT_SWING_MODE
+            self._support_flags = self._support_flags | ClimateEntityFeature.SWING_MODE
         if ENL_HVAC_SILENT_MODE in list(self._connector._setPropertyMap):
-            self._support_flags = self._support_flags | SUPPORT_PRESET_MODE
+            self._support_flags = self._support_flags | ClimateEntityFeature.PRESET_MODE
         self._hvac_modes = DEFAULT_HVAC_MODES
         self._min_temp = self._connector._user_options["min_temp_auto"]
         self._max_temp = self._connector._user_options["max_temp_auto"]
         self._olddata = {}
         self._should_poll = True
-        self._last_mode = HVAC_MODE_OFF
+        self._last_mode = HVACMode.OFF
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
@@ -206,32 +196,32 @@ class EchonetClimate(ClimateEntity):
         mode = self._connector._update_data[ENL_HVAC_MODE]
         if self._connector._update_data[ENL_STATUS] == "On":
             if mode == "auto":
-                mode = HVAC_MODE_HEAT_COOL
+                mode = HVACMode.HEAT_COOL
             elif mode == "other":
                 if self._connector._user_options.get(ENL_HVAC_MODE) == "as_idle":
                     mode = self._last_mode
                 else:
-                    mode = HVAC_MODE_OFF
-            if mode != "other" and mode != HVAC_MODE_OFF:
+                    mode = HVACMode.OFF
+            if mode != "other" and mode != HVACMode.OFF:
                 self._last_mode = mode
         else:
-            mode = HVAC_MODE_OFF
+            mode = HVACMode.OFF
         return mode
 
     @property
     def hvac_action(self):
         """Return current operation ie. heat, cool, idle."""
         if self._connector._update_data[ENL_STATUS] == "On":
-            if self._connector._update_data[ENL_HVAC_MODE] == HVAC_MODE_HEAT:
-                return CURRENT_HVAC_HEAT
-            elif self._connector._update_data[ENL_HVAC_MODE] == HVAC_MODE_COOL:
-                return CURRENT_HVAC_COOL
-            elif self._connector._update_data[ENL_HVAC_MODE] == HVAC_MODE_DRY:
-                return CURRENT_HVAC_DRY
-            elif self._connector._update_data[ENL_HVAC_MODE] == HVAC_MODE_FAN_ONLY:
-                return CURRENT_HVAC_FAN
+            if self._connector._update_data[ENL_HVAC_MODE] == HVACMode.HEAT:
+                return HVACAction.HEATING
+            elif self._connector._update_data[ENL_HVAC_MODE] == HVACMode.COOL:
+                return HVACAction.COOLING
+            elif self._connector._update_data[ENL_HVAC_MODE] == HVACMode.DRY:
+                return HVACAction.DRYING
+            elif self._connector._update_data[ENL_HVAC_MODE] == HVACMode.FAN_ONLY:
+                return HVACAction.FAN
             elif (
-                self._connector._update_data[ENL_HVAC_MODE] == HVAC_MODE_HEAT_COOL
+                self._connector._update_data[ENL_HVAC_MODE] == HVACMode.HEAT_COOL
                 or self._connector._update_data[ENL_HVAC_MODE] == "auto"
             ):
                 if ENL_HVAC_ROOM_TEMP in self._connector._update_data:
@@ -240,24 +230,24 @@ class EchonetClimate(ClimateEntity):
                             self._connector._update_data[ENL_HVAC_SET_TEMP]
                             < self._connector._update_data[ENL_HVAC_ROOM_TEMP]
                         ):
-                            return CURRENT_HVAC_COOL
+                            return HVACAction.COOLING
                         elif (
                             self._connector._update_data[ENL_HVAC_SET_TEMP]
                             > self._connector._update_data[ENL_HVAC_ROOM_TEMP]
                         ):
-                            return CURRENT_HVAC_HEAT
-                return CURRENT_HVAC_IDLE
+                            return HVACAction.HEATING
+                return HVACAction.IDLE
             elif self._connector._update_data[ENL_HVAC_MODE] == "other":
                 if self._connector._user_options.get(ENL_HVAC_MODE) == "as_idle":
-                    return CURRENT_HVAC_IDLE
+                    return HVACAction.IDLE
                 else:
-                    return CURRENT_HVAC_OFF
+                    return HVACAction.OFF
             else:
                 _LOGGER.warning(
                     f"Unknown HVAC mode {self._connector._update_data[ENL_HVAC_MODE]}"
                 )
-                return CURRENT_HVAC_IDLE
-        return CURRENT_HVAC_OFF
+                return HVACAction.IDLE
+        return HVACAction.OFF
 
     @property
     def hvac_modes(self):
@@ -393,22 +383,22 @@ class EchonetClimate(ClimateEntity):
     @property
     def min_temp(self) -> int:
         """Return the minimum temperature supported by the HVAC."""
-        if self.hvac_mode == HVAC_MODE_HEAT:
+        if self.hvac_mode == HVACMode.HEAT:
             self._min_temp = self._connector._user_options["min_temp_heat"]
-        if self.hvac_mode == HVAC_MODE_COOL:
+        if self.hvac_mode == HVACMode.COOL:
             self._min_temp = self._connector._user_options["min_temp_cool"]
-        if self.hvac_mode == HVAC_MODE_HEAT_COOL:
+        if self.hvac_mode == HVACMode.HEAT_COOL:
             self._min_temp = self._connector._user_options["min_temp_auto"]
         return self._min_temp
 
     @property
     def max_temp(self) -> int:
         """Return the maximum temperature supported by the HVAC."""
-        if self.hvac_mode == HVAC_MODE_HEAT:
+        if self.hvac_mode == HVACMode.HEAT:
             self._max_temp = self._connector._user_options["max_temp_heat"]
-        if self.hvac_mode == HVAC_MODE_COOL:
+        if self.hvac_mode == HVACMode.COOL:
             self._max_temp = self._connector._user_options["max_temp_cool"]
-        if self.hvac_mode == HVAC_MODE_HEAT_COOL:
+        if self.hvac_mode == HVACMode.HEAT_COOL:
             self._max_temp = self._connector._user_options["max_temp_auto"]
         return self._max_temp
 
