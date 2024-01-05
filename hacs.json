@@ -2,6 +2,6 @@
   "name": "ECHONETLite Platform",
   "render_readme": true,
   "domains": ["climate", "sensor", "select", "light", "fan", "switch"],
-  "homeassistant": "2021.9.2",
+  "homeassistant": "2024.1.0",
   "iot_class": ["Local Push", "Local Polling"]
 }

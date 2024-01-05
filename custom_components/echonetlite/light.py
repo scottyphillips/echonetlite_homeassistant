@@ -4,11 +4,8 @@ from pychonet.GeneralLighting import ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
 
 from pychonet.lib.eojx import EOJX_CLASS
 
-from homeassistant.components.light import LightEntity
+from homeassistant.components.light import LightEntity, ColorMode
 from homeassistant.components.light import (
-    COLOR_MODE_ONOFF,
-    COLOR_MODE_BRIGHTNESS,
-    COLOR_MODE_COLOR_TEMP,
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP,
 )
@@ -61,9 +58,9 @@ class EchonetLight(LightEntity):
         self._min_mireds = MIN_MIREDS
         self._max_mireds = MAX_MIREDS
         if ENL_BRIGHTNESS in list(self._connector._setPropertyMap):
-            self._supported_color_modes.add(COLOR_MODE_BRIGHTNESS)
+            self._supported_color_modes.add(ColorMode.BRIGHTNESS)
         if ENL_COLOR_TEMP in list(self._connector._setPropertyMap):
-            self._supported_color_modes.add(COLOR_MODE_COLOR_TEMP)
+            self._supported_color_modes.add(ColorMode.COLOR_TEMP)
 
         self._echonet_mireds = [
             "daylight_color",
@@ -132,7 +129,7 @@ class EchonetLight(LightEntity):
 
         if (
             ATTR_BRIGHTNESS in kwargs
-            and COLOR_MODE_BRIGHTNESS in self._supported_color_modes
+            and ColorMode.BRIGHTNESS in self._supported_color_modes
         ):
             normalized_brightness = (
                 float(kwargs[ATTR_BRIGHTNESS]) / DEFAULT_BRIGHTNESS_SCALE
