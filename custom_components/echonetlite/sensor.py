@@ -7,23 +7,17 @@ from homeassistant.const import (
     CONF_SERVICE,
     CONF_TYPE,
     CONF_UNIT_OF_MEASUREMENT,
-    DEVICE_CLASS_HUMIDITY,
-    DEVICE_CLASS_POWER,
-    DEVICE_CLASS_TEMPERATURE,
-    DEVICE_CLASS_ENERGY,
-    DEVICE_CLASS_CURRENT,
     PERCENTAGE,
-    POWER_WATT,
-    TEMP_CELSIUS,
-    ENERGY_WATT_HOUR,
-    VOLUME_CUBIC_METERS,
-    ELECTRIC_CURRENT_AMPERE,
-    DEVICE_CLASS_GAS,
-    DEVICE_CLASS_VOLTAGE,
-    ELECTRIC_POTENTIAL_VOLT,
+    UnitOfPower,
+    UnitOfTemperature,
+    UnitOfEnergy,
+    UnitOfVolume,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
 )
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.typing import StateType
 from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
@@ -225,24 +219,24 @@ class EchonetSensor(SensorEntity):
             self._unit_of_measurement = self._sensor_attributes[
                 CONF_UNIT_OF_MEASUREMENT
             ]
-        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_TEMPERATURE:
-            self._unit_of_measurement = TEMP_CELSIUS
-        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_ENERGY:
-            self._unit_of_measurement = ENERGY_WATT_HOUR
-        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_POWER:
-            self._unit_of_measurement = POWER_WATT
-        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_CURRENT:
-            self._unit_of_measurement = ELECTRIC_CURRENT_AMPERE
-        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_VOLTAGE:
-            self._unit_of_measurement = ELECTRIC_POTENTIAL_VOLT
-        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_HUMIDITY:
+        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.TEMPERATURE:
+            self._unit_of_measurement = UnitOfTemperature.CELSIUS
+        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.ENERGY:
+            self._unit_of_measurement = UnitOfEnergy.WATT_HOUR
+        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.POWER:
+            self._unit_of_measurement = UnitOfPower.WATT
+        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.CURRENT:
+            self._unit_of_measurement = UnitOfElectricCurrent.AMPERE
+        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.VOLTAGE:
+            self._unit_of_measurement = UnitOfElectricPotential.VOLT
+        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.HUMIDITY:
             self._unit_of_measurement = PERCENTAGE
         elif self._sensor_attributes[CONF_TYPE] == PERCENTAGE:
             self._unit_of_measurement = PERCENTAGE
-        elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_GAS:
-            self._unit_of_measurement = VOLUME_CUBIC_METERS
-        elif self._sensor_attributes[CONF_TYPE] == VOLUME_CUBIC_METERS:
-            self._unit_of_measurement = VOLUME_CUBIC_METERS
+        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.GAS:
+            self._unit_of_measurement = UnitOfVolume.CUBIC_METERS
+        elif self._sensor_attributes[CONF_TYPE] == UnitOfVolume.CUBIC_METERS:
+            self._unit_of_measurement = UnitOfVolume.CUBIC_METERS
         else:
             self._unit_of_measurement = None
 
@@ -349,7 +343,7 @@ class EchonetSensor(SensorEntity):
                             self._sensor_attributes[
                                 CONF_ICON
                             ] = "mdi:solar-power-variant-outline"
-                        # self._push_icon_to_frontent()
+                        self._push_icon_to_frontent()
 
                         return self._state_value
                 if (
@@ -400,14 +394,14 @@ class EchonetSensor(SensorEntity):
             if self._state_value is None:
                 return None
             elif self._sensor_attributes[CONF_TYPE] in [
-                DEVICE_CLASS_TEMPERATURE,
-                DEVICE_CLASS_HUMIDITY,
+                SensorDeviceClass.TEMPERATURE,
+                SensorDeviceClass.HUMIDITY,
             ]:
                 if self._state_value in [126, 253]:
                     return None
                 else:
                     return self._state_value
-            elif self._sensor_attributes[CONF_TYPE] == DEVICE_CLASS_POWER:
+            elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.POWER:
                 # Underflow (less than 1 W)
                 if self._state_value == 65534:
                     return 1

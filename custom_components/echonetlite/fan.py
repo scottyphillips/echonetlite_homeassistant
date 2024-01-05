@@ -2,13 +2,7 @@ import logging
 
 from pychonet.EchonetInstance import ENL_GETMAP
 from pychonet.lib.eojx import EOJX_CLASS
-from homeassistant.components.fan import (
-    SUPPORT_PRESET_MODE,
-    SUPPORT_DIRECTION,
-    SUPPORT_SET_SPEED,
-    SUPPORT_OSCILLATE,
-    FanEntity,
-)
+from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.const import (
     PRECISION_WHOLE,
 )
@@ -62,13 +56,13 @@ class EchonetFan(FanEntity):
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
         if ENL_FANSPEED in list(self._connector._setPropertyMap):
-            self._support_flags = self._support_flags | SUPPORT_PRESET_MODE
+            self._support_flags = self._support_flags | FanEntityFeature.PRESET_MODE
         if ENL_FANSPEED_PERCENT in list(self._connector._setPropertyMap):
-            self._support_flags = self._support_flags | SUPPORT_SET_SPEED
+            self._support_flags = self._support_flags | FanEntityFeature.SET_SPEED
         if ENL_FAN_DIRECTION in list(self._connector._setPropertyMap):
-            self._support_flags = self._support_flags | SUPPORT_DIRECTION
+            self._support_flags = self._support_flags | FanEntityFeature.DIRECTION
         if ENL_FAN_OSCILLATION in list(self._connector._setPropertyMap):
-            self._support_flags = self._support_flags | SUPPORT_OSCILLATE
+            self._support_flags = self._support_flags | FanEntityFeature.OSCILLATE
         self._olddata = {}
         self._should_poll = True
 
