@@ -145,7 +145,7 @@ class EchonetLight(LightEntity):
 
         if (
             ATTR_COLOR_TEMP in kwargs
-            and COLOR_MODE_COLOR_TEMP in self._supported_color_modes
+            and ColorMode.COLOR_TEMP in self._supported_color_modes
         ):
             # bring the selected color to something we can calculate on
             color_scale = (
