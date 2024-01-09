@@ -33,6 +33,7 @@ CONF_STATE_CLASS = ATTR_STATE_CLASS
 CONF_ENSURE_ON = "ensureon"
 CONF_OTHER_MODE = "other_mode"
 CONF_FORCE_POLLING = "force_polling"
+CONF_BATCH_SIZE_MAX = "batch_size_max"
 CONF_ON_VALUE = "on_val"
 CONF_OFF_VALUE = "off_val"
 CONF_DISABLED_DEFAULT = "disabled_default"
@@ -439,4 +440,7 @@ TEMP_OPTIONS = {
     "max_temp_auto": {"min": 18, "max": 30},
 }
 
-MISC_OPTIONS = {CONF_FORCE_POLLING: {"type": bool, "default": False}}
+MISC_OPTIONS = {
+    CONF_FORCE_POLLING: {"type": bool, "default": False},
+    CONF_BATCH_SIZE_MAX: {"type": int, "default": 10, "min": 1, "max": 30},
+}
