@@ -454,9 +454,7 @@ class ECHONETConnector:
                     update_data.update(batch_data)
                 elif len(flags) == 1:
                     update_data[flags[0]] = batch_data
-        _LOGGER.debug(
-            polling_update_debug_log(update_data, self._eojgc, self._eojcc)
-        )
+        _LOGGER.debug(polling_update_debug_log(update_data, self._eojgc, self._eojcc))
         # check if polling succeeded
         polling_none = 0
         update_len = len(update_data)
