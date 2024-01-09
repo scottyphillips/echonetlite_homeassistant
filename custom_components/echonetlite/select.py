@@ -135,7 +135,10 @@ class EchonetSelect(SelectEntity):
 
     async def async_update(self):
         """Retrieve latest state."""
-        await self._connector.async_update()
+        try:
+            await self._connector.async_update()
+        except TimeoutError:
+            pass
 
     def update_attr(self):
         self._attr_options = list(self._options.keys())

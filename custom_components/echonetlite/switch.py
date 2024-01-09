@@ -168,7 +168,10 @@ class EchonetSwitch(SwitchEntity):
 
     async def async_update(self):
         """Retrieve latest state."""
-        await self._connector.async_update()
+        try:
+            await self._connector.async_update()
+        except TimeoutError:
+            pass
 
     async def async_added_to_hass(self):
         """Register callbacks."""

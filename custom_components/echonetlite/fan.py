@@ -67,7 +67,10 @@ class EchonetFan(FanEntity):
         self._should_poll = True
 
     async def async_update(self):
-        await self._connector.async_update()
+        try:
+            await self._connector.async_update()
+        except TimeoutError:
+            pass
 
     @property
     def supported_features(self):
@@ -203,4 +206,7 @@ class EchonetFan(FanEntity):
             self._olddata = self._connector._update_data.copy()
             self.async_schedule_update_ha_state()
             if isPush:
-                await self._connector.async_update()
+                try:
+                    await self._connector.async_update()
+                except TimeoutError:
+                    pass

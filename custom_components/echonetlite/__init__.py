@@ -241,13 +241,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         echonetlite = ECHONETConnector(instance, hass.data[DOMAIN]["api"], entry)
         try:
-            await asyncio.wait_for(
-                echonetlite.async_update(), timeout=60
-            )  # 20 secs * retry 3 times = 60
+            await echonetlite.async_update()
             hass.data[DOMAIN][entry.entry_id].append(
                 {"instance": instance, "echonetlite": echonetlite}
             )
-        except (asyncio.TimeoutError, asyncio.CancelledError) as ex:
+        except (TimeoutError, asyncio.CancelledError) as ex:
             raise ConfigEntryNotReady(
                 f"Connection error while connecting to {host}: {ex}"
             ) from ex
@@ -447,41 +445,30 @@ class ECHONETConnector:
         return await self.async_update_data(kwargs=kwargs)
 
     async def async_update_data(self, kwargs):
-        for retry in range(1, 4):
-            update_data = {}
-            no_request = "no_request" in kwargs and kwargs["no_request"]
-            for flags in self._update_flag_batches:
-                batch_data = await self._instance.update(flags, no_request)
-                if batch_data is not False:
-                    if isinstance(batch_data, dict):
-                        update_data.update(batch_data)
-                    elif len(flags) == 1:
-                        update_data[flags[0]] = batch_data
-            _LOGGER.debug(
-                polling_update_debug_log(update_data, self._eojgc, self._eojcc)
-            )
-            # check if polling succeeded
-            polling_succeeded = False
-            for value in list(update_data.values()):
-                if value is not None:
-                    polling_succeeded = True
-            if len(update_data) > 0 and polling_succeeded == True:
-                # polling succeded.
-                if retry > 1:
-                    _LOGGER.debug(
-                        f"Polling ECHONET Instance host at {self._host} succeeded. Retry {retry} of 3"
-                    )
-                self._update_data.update(update_data)
-                return self._update_data
-            else:
-                _LOGGER.debug(
-                    f"Polling ECHONET Instance host {self._host} timed out. Retry {retry} of 3"
-                )
-                _LOGGER.debug(
-                    f"Number of missed ECHONETLite msssages since reboot is {len(self._api._message_list)}"
-                )
-        self._update_data.update(update_data)
-        return self._update_data
+        update_data = {}
+        no_request = "no_request" in kwargs and kwargs["no_request"]
+        for flags in self._update_flag_batches:
+            batch_data = await self._instance.update(flags, no_request)
+            if batch_data is not False:
+                if isinstance(batch_data, dict):
+                    update_data.update(batch_data)
+                elif len(flags) == 1:
+                    update_data[flags[0]] = batch_data
+        _LOGGER.debug(
+            polling_update_debug_log(update_data, self._eojgc, self._eojcc)
+        )
+        # check if polling succeeded
+        polling_none = 0
+        update_len = len(update_data)
+        for value in list(update_data.values()):
+            if value == None:
+                polling_none += 1
+        if update_len > polling_none:
+            # polling succeded.
+            self._update_data.update(update_data)
+            return self._update_data
+        else:
+            raise TimeoutError("Polling request timeout.")
 
     async def async_update_callback(self, isPush=False):
         await self.async_update_data(kwargs={"no_request": True})

@@ -438,7 +438,10 @@ class EchonetSensor(SensorEntity):
 
     async def async_update(self):
         """Retrieve latest state."""
-        await self._connector.async_update()
+        try:
+            await self._connector.async_update()
+        except TimeoutError:
+            pass
 
     def _push_icon_to_frontent(self):
         self._hass.services.async_call(

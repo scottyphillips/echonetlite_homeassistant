@@ -75,7 +75,10 @@ class EchonetLight(LightEntity):
 
     async def async_update(self):
         """Get the latest state from the Light."""
-        await self._connector.async_update()
+        try:
+            await self._connector.async_update()
+        except TimeoutError:
+            pass
 
     @property
     def supported_features(self):
@@ -244,4 +247,7 @@ class EchonetLight(LightEntity):
             self._olddata = self._connector._update_data.copy()
             self.async_schedule_update_ha_state()
             if isPush:
-                await self._connector.async_update()
+                try:
+                    await self._connector.async_update()
+                except TimeoutError:
+                    pass
