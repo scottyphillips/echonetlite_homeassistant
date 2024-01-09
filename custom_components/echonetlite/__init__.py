@@ -456,13 +456,12 @@ class ECHONETConnector:
                     update_data[flags[0]] = batch_data
         _LOGGER.debug(polling_update_debug_log(update_data, self._eojgc, self._eojcc))
         # check if polling succeeded
-        polling_none = 0
-        update_len = len(update_data)
+        polling_succeeded = False
         for value in list(update_data.values()):
-            if value == None:
-                polling_none += 1
-        if update_len > polling_none:
-            # polling succeded.
+            if value is not None:
+                polling_succeeded = True
+                break
+        if len(update_data) > 0 and polling_succeeded:
             self._update_data.update(update_data)
             return self._update_data
         else:
