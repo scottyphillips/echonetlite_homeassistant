@@ -104,6 +104,7 @@ class EchonetSelect(SelectEntity):
         )
         self._device_name = name
         self._should_poll = True
+        self._available = True
         self.update_option_listener()
 
     @property
@@ -134,11 +135,12 @@ class EchonetSelect(SelectEntity):
     @property
     def available(self) -> bool:
         """Return true if the device is available."""
-        return (
+        self._available = (
             self._server_state["available"]
             if "available" in self._server_state
             else True
         )
+        return self._available
 
     async def async_select_option(self, option: str):
         await self._connector._instance.setMessage(self._code, self._options[option])
@@ -172,7 +174,9 @@ class EchonetSelect(SelectEntity):
 
     async def async_update_callback(self, isPush=False):
         new_val = self._connector._update_data.get(self._code)
-        changed = new_val is not None and self._attr_current_option != new_val
+        changed = (
+            new_val is not None and self._attr_current_option != new_val
+        ) or self._available != self._server_state["available"]
         if changed:
             self._attr_current_option = new_val
             self.update_attr()

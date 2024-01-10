@@ -111,6 +111,7 @@ class EchonetClimate(ClimateEntity):
         self._olddata = {}
         self._should_poll = True
         self._last_mode = HVACMode.OFF
+        self._available = True
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
@@ -199,11 +200,12 @@ class EchonetClimate(ClimateEntity):
     @property
     def available(self) -> bool:
         """Return true if the device is available."""
-        return (
+        self._available = (
             self._server_state["available"]
             if "available" in self._server_state
             else True
         )
+        return self._available
 
     @property
     def hvac_mode(self):
@@ -422,7 +424,10 @@ class EchonetClimate(ClimateEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush=False):
-        changed = self._olddata != self._connector._update_data
+        changed = (
+            self._olddata != self._connector._update_data
+            or self._available != self._server_state["available"]
+        )
         _LOGGER.debug(
             f"Called async_update_callback on {self._device_name}.\nChanged: {changed}\nUpdate data: {self._connector._update_data}\nOld data: {self._olddata}"
         )
