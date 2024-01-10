@@ -96,6 +96,9 @@ class EchonetClimate(ClimateEntity):
         self._support_flags = (
             self._support_flags | ClimateEntityFeature.TARGET_TEMPERATURE
         )
+        self._server_state = self._connector._api._state[
+            self._connector._instance._host
+        ]
         if ENL_FANSPEED in list(self._connector._setPropertyMap):
             self._support_flags = self._support_flags | ClimateEntityFeature.FAN_MODE
         if ENL_AIR_VERT in list(self._connector._setPropertyMap):
@@ -168,9 +171,7 @@ class EchonetClimate(ClimateEntity):
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        getmap = self._connector._api._state[self._connector._instance._host][
-            "instances"
-        ][1][48][1][ENL_GETMAP]
+        getmap = self._server_state["instances"][1][48][1][ENL_GETMAP]
         if ENL_HVAC_ROOM_TEMP in getmap:
             if ENL_HVAC_ROOM_TEMP in self._connector._update_data:
                 if self._connector._update_data[ENL_HVAC_ROOM_TEMP] == 126:
@@ -194,6 +195,15 @@ class EchonetClimate(ClimateEntity):
     def target_temperature_step(self):
         """Return the supported step of target temperature."""
         return self._target_temperature_step
+
+    @property
+    def available(self) -> bool:
+        """Return true if the device is available."""
+        return (
+            self._server_state["available"]
+            if "available" in self._server_state
+            else True
+        )
 
     @property
     def hvac_mode(self):

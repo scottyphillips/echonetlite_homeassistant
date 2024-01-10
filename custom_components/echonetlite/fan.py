@@ -55,6 +55,9 @@ class EchonetFan(FanEntity):
         self._precision = 1.0
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
+        self._server_state = self._connector._api._state[
+            self._connector._instance._host
+        ]
         if ENL_FANSPEED in list(self._connector._setPropertyMap):
             self._support_flags = self._support_flags | FanEntityFeature.PRESET_MODE
         if ENL_FANSPEED_PERCENT in list(self._connector._setPropertyMap):
@@ -115,6 +118,15 @@ class EchonetFan(FanEntity):
     def name(self):
         """Return the name of the climate device."""
         return self._name
+
+    @property
+    def available(self) -> bool:
+        """Return true if the device is available."""
+        return (
+            self._server_state["available"]
+            if "available" in self._server_state
+            else True
+        )
 
     @property
     def is_on(self):

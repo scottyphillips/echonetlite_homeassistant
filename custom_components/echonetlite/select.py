@@ -86,6 +86,9 @@ class EchonetSelect(SelectEntity):
         self._config = config
         self._code = code
         self._optimistic = False
+        self._server_state = self._connector._api._state[
+            self._connector._instance._host
+        ]
         self._sub_state = None
         self._options = options
         self._attr_options = list(self._options.keys())
@@ -127,6 +130,15 @@ class EchonetSelect(SelectEntity):
             ]
             # "sw_version": "",
         }
+
+    @property
+    def available(self) -> bool:
+        """Return true if the device is available."""
+        return (
+            self._server_state["available"]
+            if "available" in self._server_state
+            else True
+        )
 
     async def async_select_option(self, option: str):
         await self._connector._instance.setMessage(self._code, self._options[option])

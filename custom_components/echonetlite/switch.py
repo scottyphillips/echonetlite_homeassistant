@@ -93,6 +93,9 @@ class EchonetSwitch(SwitchEntity):
         )
         self._device_name = name
         self._should_poll = True
+        self._server_state = self._connector._api._state[
+            self._connector._instance._host
+        ]
         self.update_option_listener()
 
     @property
@@ -127,6 +130,15 @@ class EchonetSwitch(SwitchEntity):
                 self._connector._instance._eojcc
             ],
         }
+
+    @property
+    def available(self) -> bool:
+        """Return true if the device is available."""
+        return (
+            self._server_state["available"]
+            if "available" in self._server_state
+            else True
+        )
 
     @property
     def is_on(self):

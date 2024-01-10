@@ -190,6 +190,9 @@ class EchonetSensor(SensorEntity):
         self._device_name = name
         self._should_poll = True
         self._state_value = None
+        self._server_state = self._connector._api._state[
+            self._connector._instance._host
+        ]
         self._hass = hass
 
         _attr_keys = self._sensor_attributes.keys()
@@ -435,6 +438,15 @@ class EchonetSensor(SensorEntity):
     def entity_registry_enabled_default(self):
         """Return if the entity should be enabled when first added to the entity registry."""
         return not bool(self._sensor_attributes.get(CONF_DISABLED_DEFAULT))
+
+    @property
+    def available(self) -> bool:
+        """Return true if the device is available."""
+        return (
+            self._server_state["available"]
+            if "available" in self._server_state
+            else True
+        )
 
     async def async_update(self):
         """Retrieve latest state."""

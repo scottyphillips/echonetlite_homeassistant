@@ -51,6 +51,9 @@ class EchonetLight(LightEntity):
         self._supports_color = False
         self._supports_rgbw = False
         self._supports_color_temp = False
+        self._server_state = self._connector._api._state[
+            self._connector._instance._host
+        ]
         self._hs_color: tuple[float, float] | None = None
         self._rgbw_color: tuple[int, int, int, int] | None = None
         self._color_mode: str | None = None
@@ -119,6 +122,15 @@ class EchonetLight(LightEntity):
     def name(self):
         """Return the name of the light device."""
         return self._name
+
+    @property
+    def available(self) -> bool:
+        """Return true if the device is available."""
+        return (
+            self._server_state["available"]
+            if "available" in self._server_state
+            else True
+        )
 
     @property
     def is_on(self):
