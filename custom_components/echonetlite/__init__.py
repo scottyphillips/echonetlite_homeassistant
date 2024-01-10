@@ -165,7 +165,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         server = ECHONETAPIClient(udp)
         server._debug_flag = True
         server._logger = _LOGGER.debug
-        server._message_timeout = 600
+        server._message_timeout = 300
         server._discover_callback = discover_callback
         hass.data[DOMAIN].update({"api": server})
 
