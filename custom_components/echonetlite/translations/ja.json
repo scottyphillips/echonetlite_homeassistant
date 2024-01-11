@@ -118,7 +118,7 @@
                     "vert": "上下スイング",
                     "horiz": "左右スイング",
                     "vert-horiz": "上下左右スイング",
-                    "non-auto": "非自動",
+                    "non-auto": "固定",
                     "auto-vert": "上下自動",
                     "auto-horiz": "左右自動"
                 }

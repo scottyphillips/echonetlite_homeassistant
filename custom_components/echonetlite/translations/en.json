@@ -105,7 +105,7 @@
                     "vert": "Vertical",
                     "horiz": "Horizontal",
                     "vert-horiz": "Vertical-Horizontal",
-                    "non-auto": "Non-Auto",
+                    "non-auto": "Fixed",
                     "auto-vert": "Auto Vertical",
                     "auto-horiz": "Auto Horizontal"
                 }
