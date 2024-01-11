@@ -360,7 +360,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     if option in instance["setmap"]:
                         if option in [ENL_AIR_VERT, ENL_AUTO_DIRECTION, ENL_SWING_MODE]:
                             ha_swing_list.append(option)
-                        option_default = []
                         if (
                             self._config_entry.options.get(
                                 USER_OPTIONS[option]["option"]
@@ -370,6 +369,19 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             option_default = self._config_entry.options.get(
                                 USER_OPTIONS[option]["option"]
                             )
+                        else:
+                            if isinstance(USER_OPTIONS[option]["option_list"], list):
+                                # single select
+                                option_default = USER_OPTIONS[option]["option_list"][0][
+                                    "value"
+                                ]
+                            elif isinstance(USER_OPTIONS[option]["option_list"], dict):
+                                # multi selectable
+                                option_default = list(
+                                    USER_OPTIONS[option]["option_list"].keys()
+                                )
+                            else:
+                                option_default = []
                         data_schema_structure.update(
                             {
                                 vol.Optional(
@@ -394,11 +406,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             "vert-horiz",
                         ]:
                             option_list.pop(del_key, None)
-                    option_default = []
                     if self._config_entry.options.get(OPTION_HA_UI_SWING) is not None:
                         option_default = self._config_entry.options.get(
                             OPTION_HA_UI_SWING
                         )
+                    else:
+                        option_default = list(option_list.keys())
                     data_schema_structure.update(
                         {
                             vol.Optional(
@@ -413,6 +426,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     default_temp = TEMP_OPTIONS[option]["min"]
                     if self._config_entry.options.get(option) is not None:
                         default_temp = self._config_entry.options.get(option)
+                    else:
+                        default_temp = TEMP_OPTIONS[option]["default"]
                     data_schema_structure.update(
                         {
                             vol.Required(option, default=default_temp): vol.All(

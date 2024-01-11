@@ -431,12 +431,12 @@ USER_OPTIONS = {
 }
 
 TEMP_OPTIONS = {
-    "min_temp_heat": {"min": 10, "max": 25},
-    "max_temp_heat": {"min": 18, "max": 30},
-    "min_temp_cool": {"min": 15, "max": 25},
-    "max_temp_cool": {"min": 18, "max": 30},
-    "min_temp_auto": {"min": 15, "max": 25},
-    "max_temp_auto": {"min": 18, "max": 30},
+    "min_temp_heat": {"min": 10, "max": 25, "default": 10},
+    "max_temp_heat": {"min": 18, "max": 30, "default": 30},
+    "min_temp_cool": {"min": 15, "max": 25, "default": 15},
+    "max_temp_cool": {"min": 18, "max": 30, "default": 30},
+    "min_temp_auto": {"min": 15, "max": 25, "default": 15},
+    "max_temp_auto": {"min": 18, "max": 30, "default": 30},
 }
 
 MISC_OPTIONS = {CONF_FORCE_POLLING: {"type": bool, "default": False}}
