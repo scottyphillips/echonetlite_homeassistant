@@ -454,7 +454,9 @@ class ECHONETConnector:
             self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
             entry_options = dict(self._entry.options)
             entry_options.update({CONF_BATCH_SIZE_MAX: batch_data_len})
-            self.hass.config_entries.async_update_entry(self._entry, options=entry_options)
+            self.hass.config_entries.async_update_entry(
+                self._entry, options=entry_options
+            )
             self._make_batch_request_flags()
 
             return await self.async_update(kwargs=kwargs)
