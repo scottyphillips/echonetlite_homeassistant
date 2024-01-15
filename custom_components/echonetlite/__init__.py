@@ -246,6 +246,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 {"instance": instance, "echonetlite": echonetlite}
             )
         except (TimeoutError, asyncio.CancelledError) as ex:
+            _LOGGER.debug(f"Connection error while connecting to {host}: {ex}")
             raise ConfigEntryNotReady(
                 f"Connection error while connecting to {host}: {ex}"
             ) from ex
@@ -455,17 +456,9 @@ class ECHONETConnector:
                 elif len(flags) == 1:
                     update_data[flags[0]] = batch_data
         _LOGGER.debug(polling_update_debug_log(update_data, self._eojgc, self._eojcc))
-        # check if polling succeeded
-        polling_succeeded = False
-        for value in list(update_data.values()):
-            if value is not None:
-                polling_succeeded = True
-                break
-        if len(update_data) > 0 and polling_succeeded:
+        if len(update_data) > 0:
             self._update_data.update(update_data)
             return self._update_data
-        else:
-            raise TimeoutError("Polling request timeout.")
 
     async def async_update_callback(self, isPush=False):
         await self.async_update_data(kwargs={"no_request": True})

@@ -51,6 +51,9 @@ class EchonetLight(LightEntity):
         self._supports_color = False
         self._supports_rgbw = False
         self._supports_color_temp = False
+        self._server_state = self._connector._api._state[
+            self._connector._instance._host
+        ]
         self._hs_color: tuple[float, float] | None = None
         self._rgbw_color: tuple[int, int, int, int] | None = None
         self._color_mode: str | None = None
@@ -72,6 +75,7 @@ class EchonetLight(LightEntity):
         self._echonet_mireds_int = [68, 67, 66, 64, 65]  # coolest to warmest
         self._olddata = {}
         self._should_poll = True
+        self._available = True
 
     async def async_update(self):
         """Get the latest state from the Light."""
@@ -119,6 +123,16 @@ class EchonetLight(LightEntity):
     def name(self):
         """Return the name of the light device."""
         return self._name
+
+    @property
+    def available(self) -> bool:
+        """Return true if the device is available."""
+        self._available = (
+            self._server_state["available"]
+            if "available" in self._server_state
+            else True
+        )
+        return self._available
 
     @property
     def is_on(self):
@@ -242,7 +256,10 @@ class EchonetLight(LightEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush=False):
-        changed = self._olddata != self._connector._update_data
+        changed = (
+            self._olddata != self._connector._update_data
+            or self._available != self._server_state["available"]
+        )
         if changed:
             self._olddata = self._connector._update_data.copy()
             self.async_schedule_update_ha_state()

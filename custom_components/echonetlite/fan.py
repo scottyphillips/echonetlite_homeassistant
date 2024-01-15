@@ -55,6 +55,9 @@ class EchonetFan(FanEntity):
         self._precision = 1.0
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
+        self._server_state = self._connector._api._state[
+            self._connector._instance._host
+        ]
         if ENL_FANSPEED in list(self._connector._setPropertyMap):
             self._support_flags = self._support_flags | FanEntityFeature.PRESET_MODE
         if ENL_FANSPEED_PERCENT in list(self._connector._setPropertyMap):
@@ -65,6 +68,7 @@ class EchonetFan(FanEntity):
             self._support_flags = self._support_flags | FanEntityFeature.OSCILLATE
         self._olddata = {}
         self._should_poll = True
+        self._available = True
 
     async def async_update(self):
         try:
@@ -115,6 +119,16 @@ class EchonetFan(FanEntity):
     def name(self):
         """Return the name of the climate device."""
         return self._name
+
+    @property
+    def available(self) -> bool:
+        """Return true if the device is available."""
+        self._available = (
+            self._server_state["available"]
+            if "available" in self._server_state
+            else True
+        )
+        return self._available
 
     @property
     def is_on(self):
@@ -201,7 +215,10 @@ class EchonetFan(FanEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush=False):
-        changed = self._olddata != self._connector._update_data
+        changed = (
+            self._olddata != self._connector._update_data
+            or self._available != self._server_state["available"]
+        )
         if changed:
             self._olddata = self._connector._update_data.copy()
             self.async_schedule_update_ha_state()

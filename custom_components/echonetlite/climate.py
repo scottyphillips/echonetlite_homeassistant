@@ -96,6 +96,9 @@ class EchonetClimate(ClimateEntity):
         self._support_flags = (
             self._support_flags | ClimateEntityFeature.TARGET_TEMPERATURE
         )
+        self._server_state = self._connector._api._state[
+            self._connector._instance._host
+        ]
         if ENL_FANSPEED in list(self._connector._setPropertyMap):
             self._support_flags = self._support_flags | ClimateEntityFeature.FAN_MODE
         if ENL_AIR_VERT in list(self._connector._setPropertyMap):
@@ -108,6 +111,7 @@ class EchonetClimate(ClimateEntity):
         self._olddata = {}
         self._should_poll = True
         self._last_mode = HVACMode.OFF
+        self._available = True
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
@@ -168,9 +172,7 @@ class EchonetClimate(ClimateEntity):
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        getmap = self._connector._api._state[self._connector._instance._host][
-            "instances"
-        ][1][48][1][ENL_GETMAP]
+        getmap = self._server_state["instances"][1][48][1][ENL_GETMAP]
         if ENL_HVAC_ROOM_TEMP in getmap:
             if ENL_HVAC_ROOM_TEMP in self._connector._update_data:
                 if self._connector._update_data[ENL_HVAC_ROOM_TEMP] == 126:
@@ -194,6 +196,16 @@ class EchonetClimate(ClimateEntity):
     def target_temperature_step(self):
         """Return the supported step of target temperature."""
         return self._target_temperature_step
+
+    @property
+    def available(self) -> bool:
+        """Return true if the device is available."""
+        self._available = (
+            self._server_state["available"]
+            if "available" in self._server_state
+            else True
+        )
+        return self._available
 
     @property
     def hvac_mode(self):
@@ -412,7 +424,10 @@ class EchonetClimate(ClimateEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush=False):
-        changed = self._olddata != self._connector._update_data
+        changed = (
+            self._olddata != self._connector._update_data
+            or self._available != self._server_state["available"]
+        )
         _LOGGER.debug(
             f"Called async_update_callback on {self._device_name}.\nChanged: {changed}\nUpdate data: {self._connector._update_data}\nOld data: {self._olddata}"
         )

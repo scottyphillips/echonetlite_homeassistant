@@ -190,7 +190,11 @@ class EchonetSensor(SensorEntity):
         self._device_name = name
         self._should_poll = True
         self._state_value = None
+        self._server_state = self._connector._api._state[
+            self._connector._instance._host
+        ]
         self._hass = hass
+        self._available = True
 
         _attr_keys = self._sensor_attributes.keys()
         if CONF_ICON not in _attr_keys:
@@ -436,6 +440,16 @@ class EchonetSensor(SensorEntity):
         """Return if the entity should be enabled when first added to the entity registry."""
         return not bool(self._sensor_attributes.get(CONF_DISABLED_DEFAULT))
 
+    @property
+    def available(self) -> bool:
+        """Return true if the device is available."""
+        self._available = (
+            self._server_state["available"]
+            if "available" in self._server_state
+            else True
+        )
+        return self._available
+
     async def async_update(self):
         """Retrieve latest state."""
         try:
@@ -493,7 +507,9 @@ class EchonetSensor(SensorEntity):
                 new_val = new_val.get(self._sensor_attributes["dict_key"])
             else:
                 new_val = None
-        changed = new_val is not None and self._state_value != new_val
+        changed = (
+            new_val is not None and self._state_value != new_val
+        ) or self._available != self._server_state["available"]
         if changed:
             self._state_value = new_val
             self.async_schedule_update_ha_state()
