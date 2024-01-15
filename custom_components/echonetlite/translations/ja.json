@@ -54,7 +54,8 @@
                     "max_temp_cool": "冷房時の最高温度設定",
                     "min_temp_auto": "自動モード時の最低温度設定",
                     "max_temp_auto": "自動モード時の最高温度設定",
-                    "force_polling": "即時通知が見込める場合でもポーリングを止めない。"
+                    "force_polling": "即時通知が見込める場合でもポーリングを止めない。",
+                    "batch_size_max": "バッチリクエストの最大プロパティ数"
                 },
                 "description": "オプション設定を構成する"
             }

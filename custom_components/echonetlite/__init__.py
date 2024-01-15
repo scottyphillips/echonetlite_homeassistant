@@ -2,6 +2,7 @@
 from __future__ import annotations
 import logging
 import pychonet as echonet
+from pychonet.echonetapiclient import EchonetMaxOpcError
 from pychonet.lib.epc import EPC_SUPER, EPC_CODE
 from pychonet.lib.const import VERSION, ENL_STATMAP
 from datetime import timedelta
@@ -12,7 +13,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
 from homeassistant.const import Platform
 from homeassistant.exceptions import ConfigEntryNotReady
-from .const import DOMAIN, USER_OPTIONS, TEMP_OPTIONS, CONF_FORCE_POLLING, MISC_OPTIONS
+from .const import (
+    DOMAIN,
+    USER_OPTIONS,
+    TEMP_OPTIONS,
+    CONF_FORCE_POLLING,
+    CONF_BATCH_SIZE_MAX,
+    MISC_OPTIONS,
+)
 from pychonet.lib.udpserver import UDPServer
 
 from pychonet import ECHONETAPIClient
@@ -239,7 +247,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 }
             )
 
-        echonetlite = ECHONETConnector(instance, hass.data[DOMAIN]["api"], entry)
+        echonetlite = ECHONETConnector(instance, hass, entry)
         try:
             await echonetlite.async_update()
             hass.data[DOMAIN][entry.entry_id].append(
@@ -323,7 +331,8 @@ class ECHONETConnector:
     """EchonetAPIConnector is used to centralise API calls for  Echonet devices.
     API calls are aggregated per instance (not per node!)"""
 
-    def __init__(self, instance, api, entry):
+    def __init__(self, instance, hass, entry):
+        self.hass = hass
         self._host = instance["host"]
         self._instance = None
         self._eojgc = instance["eojgc"]
@@ -331,7 +340,7 @@ class ECHONETConnector:
         self._eojci = instance["eojci"]
         self._update_flag_batches = []
         self._update_data = {}
-        self._api = api
+        self._api = hass.data[DOMAIN]["api"]
         self._update_callbacks = []
         self._update_option_func = []
         self._ntfPropertyMap = instance["ntfmap"]
@@ -349,6 +358,7 @@ class ECHONETConnector:
             self._eojci,
             self.async_update_callback,
         )
+        self._entry = entry
 
         # Detect HVAC - eventually we will use factory here.
         self._update_flags_full_list = []
@@ -391,21 +401,6 @@ class ECHONETConnector:
             self._host, self._api, self._eojgc, self._eojcc, self._eojci
         )
 
-        # Split list of codes into batches of 10
-        start_index = 0
-        full_list_length = len(self._update_flags_full_list)
-
-        while start_index + MAX_UPDATE_BATCH_SIZE < full_list_length:
-            self._update_flag_batches.append(
-                self._update_flags_full_list[
-                    start_index : start_index + MAX_UPDATE_BATCH_SIZE
-                ]
-            )
-            start_index += MAX_UPDATE_BATCH_SIZE
-        self._update_flag_batches.append(
-            self._update_flags_full_list[start_index:full_list_length]
-        )
-
         # TODO this looks messy.
         self._user_options = {
             ENL_FANSPEED: False,
@@ -437,13 +432,35 @@ class ECHONETConnector:
             if entry.options.get(option) is not None:
                 self._user_options[option] = entry.options.get(option)
 
-        _LOGGER.debug(f"UID for ECHONETLite instance at {self._host}  is {self._uid}.")
+        # Misc options
+        for key, option in MISC_OPTIONS.items():
+            if entry.options.get(key) is not None:
+                self._user_options[key] = entry.options.get(key, option.get("default"))
+
+        # Make batch request flags
+        self._make_batch_request_flags()
+        self._update_option_func.append(self._make_batch_request_flags)
+
+        _LOGGER.debug(f"UID for ECHONETLite instance at {self._host} is {self._uid}.")
         if self._uid is None:
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self, **kwargs):
-        return await self.async_update_data(kwargs=kwargs)
+        try:
+            return await self.async_update_data(kwargs=kwargs)
+        except EchonetMaxOpcError as ex:
+            # Adjust the maximum number of properties for batch requests
+            batch_data_len = ex.args[0]
+            self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
+            entry_options = dict(self._entry.options)
+            entry_options.update({CONF_BATCH_SIZE_MAX: batch_data_len})
+            self.hass.config_entries.async_update_entry(
+                self._entry, options=entry_options
+            )
+            self._make_batch_request_flags()
+
+            return await self.async_update(kwargs=kwargs)
 
     async def async_update_data(self, kwargs):
         update_data = {}
@@ -464,6 +481,28 @@ class ECHONETConnector:
         await self.async_update_data(kwargs={"no_request": True})
         for update_func in self._update_callbacks:
             await update_func(isPush)
+
+    def _make_batch_request_flags(self):
+        # Split list of codes into batches of 10
+        self._update_flag_batches = []
+        start_index = 0
+        full_list_length = len(self._update_flags_full_list)
+
+        # Make batch request flags
+        batch_size_max = self._user_options.get(
+            CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
+        )
+        while start_index + batch_size_max < full_list_length:
+            self._update_flag_batches.append(
+                self._update_flags_full_list[start_index : start_index + batch_size_max]
+            )
+            start_index += batch_size_max
+        self._update_flag_batches.append(
+            self._update_flags_full_list[start_index:full_list_length]
+        )
+        _LOGGER.debug(
+            f"Echonet device {self._host}'s batch request flags list: {self._update_flag_batches}"
+        )
 
     def register_async_update_callbacks(self, update_func):
         self._update_callbacks.append(update_func)

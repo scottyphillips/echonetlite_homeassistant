@@ -485,12 +485,19 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         )
 
         for key, option in MISC_OPTIONS.items():
+            if "min" in option and "max" in option:
+                _type = vol.All(
+                    vol.Coerce(option["type"]),
+                    vol.Range(min=option["min"], max=option["max"]),
+                )
+            else:
+                _type = option["type"]
             data_schema_structure.update(
                 {
                     vol.Required(
-                        CONF_FORCE_POLLING,
+                        key,
                         default=self._config_entry.options.get(key, option["default"]),
-                    ): option["type"]
+                    ): _type
                 }
             )
 
