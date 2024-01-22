@@ -283,8 +283,7 @@ class EchonetSensor(SensorEntity):
             # "sw_version": "",
         }
 
-    @property
-    def native_value(self) -> StateType:
+    def get_attr_native_value(self):
         """Return the state of the sensor."""
         if self._op_code in self._connector._update_data:
             new_val = self._connector._update_data[self._op_code]
@@ -329,7 +328,6 @@ class EchonetSensor(SensorEntity):
                             ] = "mdi:battery-arrow-down"
                         else:
                             self._sensor_attributes[CONF_ICON] = "mdi:battery"
-                        self._push_icon_to_frontent()
 
                         return self._state_value
 
@@ -347,7 +345,6 @@ class EchonetSensor(SensorEntity):
                             self._sensor_attributes[
                                 CONF_ICON
                             ] = "mdi:solar-power-variant-outline"
-                        self._push_icon_to_frontent()
 
                         return self._state_value
                 if (
@@ -457,17 +454,6 @@ class EchonetSensor(SensorEntity):
         except TimeoutError:
             pass
 
-    def _push_icon_to_frontent(self):
-        self._hass.services.async_call(
-            "homeassistant",
-            "set_entity_icon",
-            {
-                "entity_id": self.entity_id,
-                "icon_path": self._sensor_attributes[CONF_ICON],
-            },
-            blocking=True,
-        )
-
     async def async_set_on_timer_time(self, timer_time):
         val = str(timer_time).split(":")
         hh_mm = ":".join([val[0], val[1]])
@@ -512,6 +498,7 @@ class EchonetSensor(SensorEntity):
         ) or self._available != self._server_state["available"]
         if changed:
             self._state_value = new_val
+            self._attr_native_value = self.get_attr_native_value()
             self.async_schedule_update_ha_state()
 
     def update_option_listener(self):
