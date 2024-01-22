@@ -451,6 +451,7 @@ class EchonetSensor(SensorEntity):
         """Retrieve latest state."""
         try:
             await self._connector.async_update()
+            self._attr_native_value = self.get_attr_native_value()
         except TimeoutError:
             pass
 
