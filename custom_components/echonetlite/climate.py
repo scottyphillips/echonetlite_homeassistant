@@ -8,6 +8,7 @@ from pychonet.HomeAirConditioner import (
     ENL_SWING_MODE,
     ENL_HVAC_MODE,
     ENL_HVAC_SET_TEMP,
+    ENL_HVAC_SET_HUMIDITY,
     ENL_HVAC_ROOM_TEMP,
     ENL_HVAC_SILENT_MODE,
 )
@@ -15,10 +16,12 @@ from pychonet.HomeAirConditioner import (
 from pychonet.EchonetInstance import ENL_GETMAP
 from pychonet.lib.eojx import EOJX_CLASS
 
+import voluptuous as vol
+
 from homeassistant.components.climate import (
     ClimateEntity,
 )
-
+from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.util.unit_system import UnitSystem
 from homeassistant.components.climate.const import (
     ClimateEntityFeature,
@@ -58,6 +61,10 @@ DEFAULT_SWING_MODES = [
 ]
 DEFAULT_PRESET_MODES = ["normal", "high-speed", "silent"]
 
+SERVICE_SET_HUMIDIFER_DURING_HEATER = "set_humidifier_during_heater"
+ATTR_STATE = "state"
+ATTR_HUMIDITY = "humidity"
+
 
 async def async_setup_entry(hass, config_entry, async_add_devices):
     """Set up entry."""
@@ -72,6 +79,17 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
                 )
             )
     async_add_devices(entities, True)
+
+    platform = entity_platform.async_get_current_platform()
+
+    platform.async_register_entity_service(
+        SERVICE_SET_HUMIDIFER_DURING_HEATER,
+        {
+            vol.Required(ATTR_STATE): cv.boolean,
+            vol.Required(ATTR_HUMIDITY): cv.byte,
+        },
+        "async_set_humidifier_during_heater",
+    )
 
 
 class EchonetClimate(ClimateEntity):
@@ -196,6 +214,14 @@ class EchonetClimate(ClimateEntity):
     def target_temperature_step(self):
         """Return the supported step of target temperature."""
         return self._target_temperature_step
+
+    @property
+    def target_humidity(self):
+        """Return the temperature we try to reach."""
+        if ENL_HVAC_SET_HUMIDITY in self._connector._update_data:
+            humidity = self._connector._update_data[ENL_HVAC_SET_HUMIDITY]
+            return humidity
+        return None
 
     @property
     def available(self) -> bool:
@@ -376,6 +402,10 @@ class EchonetClimate(ClimateEntity):
                 ATTR_TEMPERATURE
             )
 
+    async def async_set_humidity(self, humidity: int) -> None:
+        await self._connector._instance.setOperationalTemperature(humidity)
+        self._connector._update_data[ENL_HVAC_SET_HUMIDITY] = humidity
+
     async def async_set_hvac_mode(self, hvac_mode):
         # _LOGGER.warning(self._connector._update_data)
         """Set new operation mode (including off)"""
@@ -396,6 +426,10 @@ class EchonetClimate(ClimateEntity):
     async def async_turn_off(self):
         """Turn off."""
         await self._connector._instance.off()
+
+    async def async_set_humidifier_during_heater(self, state, humidity):
+        """Handle boost heating service call."""
+        await self._connector._instance.setHeaterHumidifier(state, humidity)
 
     @property
     def min_temp(self) -> int:

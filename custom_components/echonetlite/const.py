@@ -37,15 +37,23 @@ CONF_BATCH_SIZE_MAX = "batch_size_max"
 CONF_ON_VALUE = "on_val"
 CONF_OFF_VALUE = "off_val"
 CONF_DISABLED_DEFAULT = "disabled_default"
+CONF_MULTIPLIER = "multiplier"
+CONF_MULTIPLIER_OPCODE = "multiplier_opcode"
+CONF_MULTIPLIER_OPTIONAL_OPCODE = "multiplier_optional_opcode"
+CONF_ICON_POSITIVE = "icon_positive"
+CONF_ICON_NEGATIVE = "icon_negative"
+CONF_ICON_ZERO = "icon_zero"
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
 TYPE_DATA_DICT = "type_data_dict"
+TYPE_DATA_ARRAY_WITH_SIZE_OPCODE = "type_data_array_with_size_opcode"
 SERVICE_SET_ON_TIMER_TIME = "set_on_timer_time"
 SERVICE_SET_INT_1B = "set_value_int_1b"
 OPEN = "open"
 CLOSE = "close"
 STOP = "stop"
+DEVICE_CLASS_ECHONETLITE_LIGHT_SCENE = "echonetlite_light_scene"
 SWITCH_POWER = {DATA_STATE_ON: ENL_ON, DATA_STATE_OFF: ENL_OFF}
 SWITCH_BINARY = {DATA_STATE_ON: 0x41, DATA_STATE_OFF: 0x42}
 SWITCH_BINARY_INVERT = {DATA_STATE_ON: 0x42, DATA_STATE_OFF: 0x41}
@@ -190,8 +198,16 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:solar-power-variant-outline",
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_ICON_POSITIVE: "mdi:solar-power-variant",
+                CONF_ICON_NEGATIVE: "mdi:solar-power-variant-outline",
+                CONF_ICON_ZERO: "mdi:solar-power-variant-outline",
             },
             0xE1: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+            },
+            0xE3: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
@@ -217,15 +233,84 @@ ENL_OP_CODES = {
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },
         },
-        0x7D: {
-            0xA4: {
+        0x7C: {
+            0xC2: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },
-            0xA5: {
+            0xC4: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+            0xC5: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+            },
+            0xCC: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+            0xCD: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+            },
+            0xC7: {
+                CONF_ICON: "mdi:gas-burner",
+                CONF_TYPE: SensorDeviceClass.GAS,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_UNIT_OF_MEASUREMENT: "L/h",
+            },
+            0xC8: {
+                CONF_ICON: "mdi:gas-burner",
+                CONF_TYPE: SensorDeviceClass.GAS,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: "L",
+            },
+        },
+        0x7D: {
+            0xA0: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xA1: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xA2: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xA3: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xA4: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xA5: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xA6: {
+                CONF_ICON: "mdi:percent",
+                CONF_TYPE: PERCENTAGE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+            0xA7: {
+                CONF_ICON: "mdi:percent",
+                CONF_TYPE: PERCENTAGE,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },
             0xA8: {
@@ -238,19 +323,76 @@ ENL_OP_CODES = {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
             },
+            0xAA: {
+                CONF_ICON: "mdi:battery",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xAB: {
+                CONF_ICON: "mdi:battery",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xD0: {
+                CONF_ICON: "mdi:battery",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
             0xD3: {
+                CONF_ICON_POSITIVE: "mdi:battery-arrow-up",
+                CONF_ICON_NEGATIVE: "mdi:battery-arrow-down",
+                CONF_ICON_ZERO: "mdi:battery",
+                CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+            0xD6: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+            },
+            0xD8: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+            },
+            0xE0: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xE2: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xE4: {
+                CONF_ICON: "mdi:battery",
+                CONF_TYPE: PERCENTAGE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+            0xE5: {
+                CONF_ICON: "mdi:percent",
+                CONF_TYPE: PERCENTAGE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+            0xE7: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xE8: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL,
+            },
+            0xEB: {
                 CONF_ICON: "mdi:battery",
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },
-            0xE2: {
-                CONF_ICON: "mdi:flash",
+            0xEC: {
+                CONF_ICON: "mdi:battery",
                 CONF_TYPE: SensorDeviceClass.POWER,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-            },
-            0xE4: {
-                CONF_ICON: None,
-                CONF_TYPE: SensorDeviceClass.BATTERY,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },
         },
@@ -259,6 +401,8 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: "kWh",
+                CONF_MULTIPLIER_OPCODE: 0xE2,
             }
         },
         0x81: {
@@ -266,6 +410,7 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:water",
                 CONF_TYPE: UnitOfVolume.CUBIC_METERS,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_MULTIPLIER_OPCODE: 0xE1,
             }
         },
         0x82: {
@@ -273,18 +418,37 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:gas-burner",
                 CONF_TYPE: SensorDeviceClass.GAS,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_MULTIPLIER: 0.001,
             }
         },
         0x87: {
+            0xB3: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: "kWh",
+                TYPE_DATA_ARRAY_WITH_SIZE_OPCODE: 0xB1,
+                CONF_MULTIPLIER_OPCODE: 0xC2,
+            },
+            0xB7: {
+                CONF_ICON: "mdi:flash",
+                CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_DATA_ARRAY_WITH_SIZE_OPCODE: 0xB1,
+            },
             0xC0: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: "kWh",
+                CONF_MULTIPLIER_OPCODE: 0xC2,
             },
             0xC1: {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: "kWh",
+                CONF_MULTIPLIER_OPCODE: 0xC2,
             },
             0xC6: {
                 CONF_ICON: "mdi:flash",
@@ -310,12 +474,16 @@ ENL_OP_CODES = {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
                 CONF_UNIT_OF_MEASUREMENT: "kWh",
+                CONF_MULTIPLIER_OPCODE: 0xE1,
+                CONF_MULTIPLIER_OPTIONAL_OPCODE: 0xD3,
             },
             0xE3: {
                 CONF_ICON: None,
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
                 CONF_UNIT_OF_MEASUREMENT: "kWh",
+                CONF_MULTIPLIER_OPCODE: 0xE1,
+                CONF_MULTIPLIER_OPTIONAL_OPCODE: 0xD3,
             },
             0xE7: {
                 CONF_ICON: None,
@@ -330,6 +498,14 @@ ENL_OP_CODES = {
             },
             0xD3: {CONF_DISABLED_DEFAULT: True},
             0xE1: {CONF_DISABLED_DEFAULT: True},
+        },
+        0xA3: {
+            0xC0: {  # Set scene
+                CONF_ICON: "mdi:palette",
+                CONF_TYPE: DEVICE_CLASS_ECHONETLITE_LIGHT_SCENE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_SERVICE: [SERVICE_SET_INT_1B],
+            },
         },
     },
     "default": {

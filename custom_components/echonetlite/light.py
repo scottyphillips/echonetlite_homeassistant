@@ -4,17 +4,18 @@ from pychonet.GeneralLighting import ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
 
 from pychonet.lib.eojx import EOJX_CLASS
 
-from homeassistant.components.light import LightEntity, ColorMode
+from homeassistant.components.light import LightEntity, ColorMode, LightEntityFeature
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP,
+    COLOR_MODE_BRIGHTNESS,
+    COLOR_MODE_COLOR_TEMP,
 )
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_FORCE_POLLING
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORT_FLAGS = 0
 DEFAULT_BRIGHTNESS_SCALE = 255
 MIN_MIREDS = 153
 MAX_MIREDS = 500
@@ -30,7 +31,12 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         if eojgc == 0x02 and eojcc in (0x90, 0x91):
             # General Lighting (0x90), Mono Functional Lighting (0x91)
             _LOGGER.debug("Configuring ECHONETlite Light entity")
-            entities.append(EchonetLight(config_entry.title, entity["echonetlite"]))
+            entities.append(
+                EchonetLight(
+                    entity["echonetlite"]._name or config_entry.title,
+                    entity["echonetlite"],
+                )
+            )
     _LOGGER.debug(f"Number of light devices to be added: {len(entities)}")
     async_add_devices(entities, True)
 
@@ -46,7 +52,7 @@ class EchonetLight(LightEntity):
         self._uid = (
             self._connector._uidi if self._connector._uidi else self._connector._uid
         )
-        self._support_flags = SUPPORT_FLAGS
+        self._support_flags = LightEntityFeature(0)
         self._supported_color_modes = set()
         self._supports_color = False
         self._supports_rgbw = False
@@ -76,6 +82,7 @@ class EchonetLight(LightEntity):
         self._olddata = {}
         self._should_poll = True
         self._available = True
+        self.update_option_listener()
 
     async def async_update(self):
         """Get the latest state from the Light."""
@@ -117,7 +124,7 @@ class EchonetLight(LightEntity):
     @property
     def should_poll(self):
         """Return the polling state."""
-        return True
+        return self._should_poll
 
     @property
     def name(self):
@@ -253,6 +260,7 @@ class EchonetLight(LightEntity):
 
     async def async_added_to_hass(self):
         """Register callbacks."""
+        self._connector.add_update_option_listener(self.update_option_listener)
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush=False):
@@ -263,8 +271,23 @@ class EchonetLight(LightEntity):
         if changed:
             self._olddata = self._connector._update_data.copy()
             self.async_schedule_update_ha_state()
-            if isPush:
+            if isPush and self._should_poll:
                 try:
                     await self._connector.async_update()
                 except TimeoutError:
                     pass
+
+    def update_option_listener(self):
+        self._should_poll = (
+            self._connector._user_options.get(CONF_FORCE_POLLING, False)
+            or ENL_STATUS not in self._connector._ntfPropertyMap
+            or (
+                COLOR_MODE_BRIGHTNESS in self._supported_color_modes
+                and ENL_BRIGHTNESS not in self._connector._ntfPropertyMap
+            )
+            or (
+                COLOR_MODE_COLOR_TEMP in self._supported_color_modes
+                and ENL_COLOR_TEMP not in self._connector._ntfPropertyMap
+            )
+        )
+        _LOGGER.info(f"{self._name}: _should_poll is {self._should_poll}")

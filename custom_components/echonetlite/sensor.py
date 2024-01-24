@@ -21,6 +21,8 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.typing import StateType
 from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
+from pychonet.GeneralLighting import ENL_BRIGHTNESS, ENL_COLOR_TEMP
+
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.ElectricBlind import ENL_OPENSTATE
@@ -34,7 +36,14 @@ from .const import (
     ENL_STATUS,
     CONF_FORCE_POLLING,
     TYPE_DATA_DICT,
+    TYPE_DATA_ARRAY_WITH_SIZE_OPCODE,
     CONF_DISABLED_DEFAULT,
+    CONF_MULTIPLIER,
+    CONF_MULTIPLIER_OPCODE,
+    CONF_MULTIPLIER_OPTIONAL_OPCODE,
+    CONF_ICON_POSITIVE,
+    CONF_ICON_NEGATIVE,
+    CONF_ICON_ZERO,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -65,7 +74,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             entity["echonetlite"],
                             op_code,
                             ENL_OP_CODES[eojgc][eojcc][op_code],
-                            config.title,
+                            entity["echonetlite"]._name or config.title,
                             hass,
                         )
                     )
@@ -80,7 +89,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             entity["echonetlite"],
                             op_code,
                             ENL_OP_CODES[eojgc][eojcc][op_code],
-                            config.title,
+                            entity["echonetlite"]._name or config.title,
                             hass,
                         )
                     )
@@ -90,6 +99,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     mode_select and ENL_OPENSTATE == op_code
                 ):
                     continue
+                if eojgc == 0x02 and (eojcc == 0x90 or eojcc == 0x91):
+                    # General Lighting, Single Function Lighting: skip already handled values
+                    if op_code == ENL_BRIGHTNESS or op_code == ENL_COLOR_TEMP:
+                        continue
                 if eojgc in ENL_OP_CODES.keys():
                     if eojcc in ENL_OP_CODES[eojgc].keys():
                         if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
@@ -141,19 +154,45 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                                 entity["echonetlite"],
                                                 op_code,
                                                 attr,
-                                                config.title,
+                                                entity["echonetlite"]._name
+                                                or config.title,
                                                 hass,
                                             )
                                         )
+                                    continue
                                 else:
                                     continue
+                            if TYPE_DATA_ARRAY_WITH_SIZE_OPCODE in _keys:
+                                array_size_op_code = ENL_OP_CODES[eojgc][eojcc][
+                                    op_code
+                                ][TYPE_DATA_ARRAY_WITH_SIZE_OPCODE]
+                                array_max_size = await entity[
+                                    "echonetlite"
+                                ]._instance.update(array_size_op_code)
+                                for x in range(0, array_max_size):
+                                    attr = ENL_OP_CODES[eojgc][eojcc][op_code].copy()
+                                    attr["accessor_index"] = x
+                                    attr["accessor_lambda"] = (
+                                        lambda value, index: value["values"][index]
+                                        if index < value["range"]
+                                        else None
+                                    )
+                                    entities.append(
+                                        EchonetSensor(
+                                            entity["echonetlite"],
+                                            op_code,
+                                            attr,
+                                            config.title,
+                                        )
+                                    )
+                                continue
                             else:
                                 entities.append(
                                     EchonetSensor(
                                         entity["echonetlite"],
                                         op_code,
                                         ENL_OP_CODES[eojgc][eojcc][op_code],
-                                        config.title,
+                                        entity["echonetlite"]._name or config.title,
                                         hass,
                                     )
                                 )
@@ -163,7 +202,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         entity["echonetlite"],
                         op_code,
                         ENL_OP_CODES["default"],
-                        config.title,
+                        entity["echonetlite"]._name or config.title,
                     )
                 )
     async_add_entities(entities, True)
@@ -218,6 +257,10 @@ class EchonetSensor(SensorEntity):
                 self._name += f' {str(self._sensor_attributes["accessor_index"] + 1).zfill(len(str(self._sensor_attributes[TYPE_DATA_DICT])))}'
             else:
                 self._name += f' {self._sensor_attributes["dict_key"]}'
+
+        if "accessor_index" in _attr_keys:
+            self._uid += f'-{self._sensor_attributes["accessor_index"]}'
+            self._name += f' {str(self._sensor_attributes["accessor_index"] + 1).zfill(len(str(self._sensor_attributes[TYPE_DATA_ARRAY_WITH_SIZE_OPCODE])))}'
 
         if CONF_UNIT_OF_MEASUREMENT in _attr_keys:
             self._unit_of_measurement = self._sensor_attributes[
@@ -292,108 +335,64 @@ class EchonetSensor(SensorEntity):
                     self._state_value = new_val.get(self._sensor_attributes["dict_key"])
                 else:
                     self._state_value = None
+            elif "accessor_lambda" in self._sensor_attributes:
+                self._state_value = self._sensor_attributes["accessor_lambda"](
+                    new_val, self._sensor_attributes["accessor_index"]
+                )
             else:
                 self._state_value = new_val
 
-            if (
-                self._op_code == 0xC0 or self._op_code == 0xC1
-            ):  # kludge for distribution panel meter.
-                if (
-                    self._eojgc == 0x02
-                    and self._eojcc == 0x87
-                    and 0xC2 in self._connector._update_data
-                ):
-                    if (
-                        self._connector._update_data[0xC2] is not None
-                        and self._state_value is not None
-                    ):
-                        return (
-                            self._state_value
-                            * self._connector._update_data[0xC2]
-                            * 1000
-                        )  # value in Wh
-            if (
-                self._op_code == 0xD3
-            ):  # for Measured instantaneous charging/discharging electric energy
-                if (
-                    self._eojgc == 0x02 and self._eojcc == 0x7D
-                ):  # for home battery storage
-                    if self._state_value is not None:  # electric energy
-                        # Change icon
-                        if self._state_value > 0:
-                            self._sensor_attributes[CONF_ICON] = "mdi:battery-arrow-up"
-                        elif self._state_value < 0:
-                            self._sensor_attributes[
-                                CONF_ICON
-                            ] = "mdi:battery-arrow-down"
-                        else:
-                            self._sensor_attributes[CONF_ICON] = "mdi:battery"
-
-                        return self._state_value
-
-            if (
-                self._op_code == 0xE0
-            ):  # kludge for electric energy meter and water volume meters
-                if self._eojgc == 0x02 and self._eojcc == 0x79:  # for solar power
-                    if self._state_value is not None:  # electric energy
-                        # Change icon
-                        if self._state_value > 0:
-                            self._sensor_attributes[
-                                CONF_ICON
-                            ] = "mdi:solar-power-variant"
-                        else:
-                            self._sensor_attributes[
-                                CONF_ICON
-                            ] = "mdi:solar-power-variant-outline"
-
-                        return self._state_value
-                if (
-                    self._eojgc == 0x02
-                    and self._eojcc == 0x80
-                    and 0xE2 in self._connector._update_data
-                ):
-                    if (
-                        self._connector._update_data[0xE2] is not None
-                        and self._state_value is not None
-                    ):  # electric energy
-                        return (
-                            self._state_value
-                            * self._connector._update_data[0xE2]
-                            * 1000
-                        )  # value in Wh
-
-                if (
-                    self._eojgc == 0x02
-                    and self._eojcc == 0x81
-                    and 0xE1 in self._connector._update_data
-                ):  # water flow
-                    if (
-                        self._connector._update_data[0xE1] is not None
-                        and self._state_value is not None
-                    ):
-                        return self._state_value * self._connector._update_data[0xE1]
-
-                if self._eojgc == 0x02 and self._eojcc == 0x82:  # GAS
-                    if self._state_value is not None:
-                        return self._state_value * 0.001
-
-            if self._op_code in [
-                0xE0,
-                0xE3,
-            ]:  # Measured cumulative amounts normal or revers
-                if self._eojgc == 0x02 and self._eojcc == 0x88:
-                    if self._connector._update_data.get(0xE1):
-                        coef = self._connector._update_data.get(0xD3) or 1
-                        return (
-                            self._state_value
-                            * coef
-                            * self._connector._update_data[0xE1]
-                        )  # value in kWh
-                    else:
-                        return None
-
             if self._state_value is None:
                 return None
+
+            # interactive icon
+            if CONF_ICON_POSITIVE in self._sensor_attributes:
+                if self._state_value is None and self._state_value > 0:
+                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
+                        CONF_ICON_POSITIVE
+                    ]
+                elif self._state_value is None and self._state_value < 0:
+                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
+                        CONF_ICON_NEGATIVE
+                    ]
+                else:
+                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
+                        CONF_ICON_ZERO
+                    ]
+                self._push_icon_to_frontent()
+
+            # apply coefficients
+            if (
+                CONF_MULTIPLIER in self._sensor_attributes
+                or CONF_MULTIPLIER_OPCODE in self._sensor_attributes
+                or CONF_MULTIPLIER_OPTIONAL_OPCODE in self._sensor_attributes
+            ):
+                new_val = self._state_value
+                if CONF_MULTIPLIER in self._sensor_attributes:
+                    new_val = new_val * self._sensor_attributes[CONF_MULTIPLIER]
+                if CONF_MULTIPLIER_OPCODE in self._sensor_attributes:
+                    multiplier_opcode = self._sensor_attributes[CONF_MULTIPLIER_OPCODE]
+                    if (
+                        multiplier_opcode in self._connector._update_data
+                        and self._connector._update_data[multiplier_opcode] is not None
+                    ):
+                        new_val = (
+                            new_val * self._connector._update_data[multiplier_opcode]
+                        )
+                    else:
+                        return STATE_UNAVAILABLE
+                if CONF_MULTIPLIER_OPTIONAL_OPCODE in self._sensor_attributes:
+                    multiplier_opcode = self._sensor_attributes[
+                        CONF_MULTIPLIER_OPTIONAL_OPCODE
+                    ]
+                    if (
+                        multiplier_opcode in self._connector._update_data
+                        and self._connector._update_data[multiplier_opcode] is not None
+                    ):
+                        new_val = (
+                            new_val * self._connector._update_data[multiplier_opcode]
+                        )
+                return new_val
             elif self._sensor_attributes[CONF_TYPE] in [
                 SensorDeviceClass.TEMPERATURE,
                 SensorDeviceClass.HUMIDITY,
@@ -494,6 +493,10 @@ class EchonetSensor(SensorEntity):
                 new_val = new_val.get(self._sensor_attributes["dict_key"])
             else:
                 new_val = None
+        if "accessor_lambda" in self._sensor_attributes:
+            new_val = self._sensor_attributes["accessor_lambda"](
+                new_val, self._sensor_attributes["accessor_index"]
+            )
         changed = (
             new_val is not None and self._state_value != new_val
         ) or self._available != self._server_state["available"]

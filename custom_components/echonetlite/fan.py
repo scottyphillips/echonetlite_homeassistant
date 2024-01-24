@@ -15,8 +15,6 @@ ENL_FANSPEED_PERCENT = 0xF0
 ENL_FAN_DIRECTION = 0xF1
 ENL_FAN_OSCILLATION = 0xF2
 
-SUPPORT_FLAGS = 0
-
 DEFAULT_FAN_MODES = [
     "auto",
     "minimum",
@@ -54,7 +52,7 @@ class EchonetFan(FanEntity):
         )
         self._precision = 1.0
         self._target_temperature_step = 1
-        self._support_flags = SUPPORT_FLAGS
+        self._support_flags = FanEntityFeature(0)
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
@@ -69,6 +67,7 @@ class EchonetFan(FanEntity):
         self._olddata = {}
         self._should_poll = True
         self._available = True
+        self.update_option_listener()
 
     async def async_update(self):
         try:
@@ -113,7 +112,7 @@ class EchonetFan(FanEntity):
     @property
     def should_poll(self):
         """Return the polling state."""
-        return True
+        return self._should_poll
 
     @property
     def name(self):
@@ -213,6 +212,7 @@ class EchonetFan(FanEntity):
     async def async_added_to_hass(self):
         """Register callbacks."""
         self._connector.register_async_update_callbacks(self.async_update_callback)
+        self._connector.add_update_option_listener(self.update_option_listener)
 
     async def async_update_callback(self, isPush=False):
         changed = (
@@ -227,3 +227,26 @@ class EchonetFan(FanEntity):
                     await self._connector.async_update()
                 except TimeoutError:
                     pass
+
+    def update_option_listener(self):
+        self._should_poll = (
+            self._connector._user_options.get(CONF_FORCE_POLLING, False)
+            or ENL_STATUS not in self._connector._ntfPropertyMap
+            or (
+                FanEntityFeature.PRESET_MODE in self._support_flags
+                and ENL_FANSPEED not in self._connector._ntfPropertyMap
+            )
+            or (
+                FanEntityFeature.SET_SPEED in self._support_flags
+                and ENL_FANSPEED_PERCENT not in self._connector._ntfPropertyMap
+            )
+            or (
+                FanEntityFeature.DIRECTION in self._support_flags
+                and ENL_FAN_DIRECTION not in self._connector._ntfPropertyMap
+            )
+            or (
+                FanEntityFeature.OSCILLATE in self._support_flags
+                and ENL_FAN_OSCILLATION not in self._connector._ntfPropertyMap
+            )
+        )
+        _LOGGER.info(f"{self._name}: _should_poll is {self._should_poll}")

@@ -43,7 +43,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                     config,
                                     op_code,
                                     ENL_OP_CODES[eojgc][eojcc][op_code],
-                                    config.title,
+                                    entity["echonetlite"]._name or config.title,
                                 )
                             )
                             if op_code == ENL_STATUS:
@@ -52,7 +52,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         if (eojgc == 0x01 and eojcc in (0x30, 0x35)) or (
             eojgc == 0x02 and eojcc in (0x90, 0x91)
         ):
-            # Home air conditioner, Air cleaner, General Lighting, Mono Functional Lighting
+            # Home air conditioner, Air cleaner, General Lighting, Single Function Lighting
             continue
         if not set_enl_status and ENL_STATUS in entity["instance"]["setmap"]:
             entities.append(
@@ -65,7 +65,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         CONF_ICON: "mdi:power-settings",
                         CONF_SERVICE_DATA: SWITCH_POWER,
                     },
-                    config.title,
+                    entity["echonetlite"]._name or config.title,
                 )
             )
     async_add_entities(entities, True)
