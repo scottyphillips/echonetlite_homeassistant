@@ -28,7 +28,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             config,
                             op_code,
                             HVAC_SELECT_OP_CODES[op_code],
-                            config.title,
+                            entity["echonetlite"]._name or config.title,
                         )
                     )
         elif (
@@ -43,7 +43,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             config,
                             op_code,
                             FAN_SELECT_OP_CODES[op_code],
-                            config.title,
+                            entity["echonetlite"]._name or config.title,
                         )
                     )
         elif entity["instance"]["eojgc"] == 0x02 and entity["instance"]["eojcc"] in (
@@ -71,7 +71,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             config,
                             op_code,
                             COVER_SELECT_OP_CODES[op_code],
-                            config.title,
+                            entity["echonetlite"]._name or config.title,
                         )
                     )
     async_add_entities(entities, True)

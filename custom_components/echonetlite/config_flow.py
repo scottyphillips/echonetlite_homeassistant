@@ -20,10 +20,12 @@ from pychonet.lib.const import (
     ENL_GETMAP,
     ENL_UID,
     ENL_MANUFACTURER,
+    GET,
 )
 
 # from aioudp import UDPServer
 from pychonet.lib.udpserver import UDPServer
+from pychonet.lib.epc_functions import _null_padded_optional_string
 
 # from pychonet import Factory
 from pychonet import ECHONETAPIClient
@@ -61,12 +63,11 @@ _detected_hosts = {}
 _init_server = None
 
 
-async def validate_input(
-    hass: HomeAssistant, user_input: dict[str, Any]
+async def enumerate_instances(
+    hass: HomeAssistant, host: str, newhost: bool = False
 ) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
-    _LOGGER.debug(f"IP address is {user_input['host']}")
-    host = user_input["host"]
+    _LOGGER.debug(f"IP address is {host}")
     server = None
     finished_instances = {}
     if DOMAIN in hass.data:  # maybe set up by config entry?
@@ -92,6 +93,9 @@ async def validate_input(
         server._logger = _LOGGER.debug
         server._message_timeout = 300
 
+    # make sure multicast is registered with the local IP used to reach this host
+    server._server.register_multicast_from_host(host)
+
     instance_list = []
     _LOGGER.debug("Beginning ECHONET node discovery")
     await server.discover(host)
@@ -109,7 +113,7 @@ async def validate_input(
     uid = state["uid"]
 
     # check ip addr changed
-    if user_input.get("newhost"):
+    if newhost:
         config_entry = None
         old_host = None
         entries = hass.config_entries.async_entries(DOMAIN)
@@ -138,7 +142,7 @@ async def validate_input(
             if server._state.get(old_host):
                 server._state[host] = server._state.pop(old_host)
             hass.config_entries.async_update_entry(
-                config_entry, data={"instances": instances}
+                config_entry, data={"host": host, "instances": instances}
             )
 
             # Wait max 30 secs for entry loaded
@@ -151,6 +155,7 @@ async def validate_input(
             raise ErrorIpChanged(host)
 
     manufacturer = state["manufacturer"]
+    host_product_code = state.get("product_code")
     if not isinstance(manufacturer, str):
         # If unable to resolve the manufacturer,
         # the raw identification number will be passed as int.
@@ -181,9 +186,28 @@ async def validate_input(
                 getmap = state["instances"][eojgc][eojcc][instance][ENL_GETMAP]
                 setmap = state["instances"][eojgc][eojcc][instance][ENL_SETMAP]
 
+                uidi = f"{uid}-{eojgc}-{eojcc}-{instance}"
+                name = None
+                if host_product_code == "WTY2001" and eojcc == 0x91:
+                    await server.echonetMessage(
+                        host,
+                        eojgc,
+                        eojcc,
+                        instance,
+                        GET,
+                        [{"EPC": 0xFD}, {"EPC": 0xFE}],
+                    )
+                    uidi = _null_padded_optional_string(
+                        state["instances"][eojgc][eojcc][instance][0xFE]
+                    )
+                    name = _null_padded_optional_string(
+                        state["instances"][eojgc][eojcc][instance][0xFD]
+                    )
+
                 instance_list.append(
                     {
                         "host": host,
+                        "name": name,
                         "eojgc": eojgc,
                         "eojcc": eojcc,
                         "eojci": instance,
@@ -191,8 +215,9 @@ async def validate_input(
                         "getmap": getmap,
                         "setmap": setmap,
                         "uid": uid,  # Deprecated, for backwards compatibility
-                        "uidi": f"{uid}-{eojgc}-{eojcc}-{instance}",
+                        "uidi": uidi,
                         "manufacturer": manufacturer,
+                        "host_product_code": host_product_code,
                     }
                 )
 
@@ -280,7 +305,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
             return self.async_show_form(step_id=step, data_schema=scm, errors=errors)
         try:
-            self.instance_list = await validate_input(self.hass, user_input)
+            self.instance_list = await enumerate_instances(
+                self.hass, user_input["host"]
+            )
             _LOGGER.debug("Node detected")
         except ErrorConnect as e:
             errors["base"] = f"{e}"
@@ -303,7 +330,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _detected_hosts.pop(self.host)
         return self.async_create_entry(
             title=self.title,
-            data={"instances": self.instance_list},
+            data={"host": self.host, "instances": self.instance_list},
             options={"other_mode": "as_off"},
         )
 
@@ -318,9 +345,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         _LOGGER.debug(f"received newip discovery: {host}")
         if host not in _detected_hosts.keys():
             try:
-                instance_list = await validate_input(
-                    hass, {"host": host, "newhost": True}
-                )
+                instance_list = await enumerate_instances(hass, host, newhost=True)
                 _LOGGER.debug(f"ECHONET Node detected in {host}")
             except ErrorConnect as e:
                 _LOGGER.debug(f"ECHONET Node Error Connect ({e})")

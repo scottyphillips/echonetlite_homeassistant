@@ -21,6 +21,7 @@ from .const import (
     CONF_BATCH_SIZE_MAX,
     MISC_OPTIONS,
 )
+from .config_flow import enumerate_instances, ErrorConnect
 from pychonet.lib.udpserver import UDPServer
 
 from pychonet import ECHONETAPIClient
@@ -45,6 +46,8 @@ from pychonet.HomeAirConditioner import (
     ENL_HVAC_ROOM_TEMP,
     ENL_HVAC_SILENT_MODE,
     ENL_HVAC_OUT_TEMP,
+    ENL_HVAC_HUMIDIFIER_STATE,
+    ENL_HVAC_HUMIDIFIER_VALUE,
 )
 
 from pychonet.DistributionPanelMeter import (
@@ -55,6 +58,8 @@ from pychonet.DistributionPanelMeter import (
     ENL_DPM_INSTANT_ENG,
     ENL_DPM_INSTANT_CUR,
     ENL_DPM_INSTANT_VOL,
+    ENL_DPM_CHANNEL_SIMPLEX_CUMULATIVE_ENG,
+    ENL_DPM_CHANNEL_SIMPLEX_INSTANT_ENG,
 )
 
 from pychonet.LowVoltageSmartElectricEnergyMeter import (
@@ -68,6 +73,8 @@ from pychonet.LowVoltageSmartElectricEnergyMeter import (
 )
 
 from pychonet.GeneralLighting import ENL_BRIGHTNESS, ENL_COLOR_TEMP
+
+from pychonet.LightingSystem import ENL_SCENE, ENL_SCENE_MAX
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [
@@ -123,6 +130,47 @@ _0288_API_CONNECTOR_DEFAULT_FLAGS = [
     ENL_LVSEEM_ENG_UNIT,
 ]
 
+SINGLE_FUNCTION_LIGHT_API_CONNECTOR_DEFAULT_FLAGS = [
+    ENL_STATUS,
+    ENL_BRIGHTNESS,
+]
+
+LIGHTING_SYSTEM_API_CONNECTOR_DEFAULT_FLAGS = [
+    ENL_STATUS,
+    ENL_SCENE,
+    ENL_SCENE_MAX,
+]
+
+DISTRIBUTION_PANEL_METER_API_CONNECTOR_DEFAULT_FLAGS = [
+    ENL_STATUS,
+    ENL_DPM_ENG_NOR,
+    ENL_DPM_ENG_REV,
+    ENL_DPM_ENG_UNIT,
+    ENL_DPM_DAY_GET_HISTORY,
+    ENL_DPM_INSTANT_ENG,
+    ENL_DPM_INSTANT_CUR,
+    ENL_DPM_INSTANT_VOL,
+    ENL_DPM_CHANNEL_SIMPLEX_CUMULATIVE_ENG,
+    ENL_DPM_CHANNEL_SIMPLEX_INSTANT_ENG,
+]
+
+STORAGE_BATTERY_API_CONNECTOR_DEFAULT_FLAGS = [
+    ENL_STATUS,
+    0xA0,
+    0xA1,
+    0xA8,
+    0xA9,
+    0xCF,
+    0xD0,
+    0xD3,
+    0xD6,
+    0xD8,
+    0xE2,
+    0xE4,
+    0xE5,
+    0xE6,
+]
+
 
 def polling_update_debug_log(values, eojgc, eojcc):
     debug_log = f"\nECHONETlite polling update data:\n"
@@ -176,6 +224,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         server._message_timeout = 300
         server._discover_callback = discover_callback
         hass.data[DOMAIN].update({"api": server})
+
+    if not entry.pref_disable_new_entities:
+        host = (
+            entry.data["host"]
+            if "host" in entry.data
+            else entry.data["instances"][0]["host"]
+        )
+
+        # make sure multicast is registered with the local IP used to reach this host
+        server._server.register_multicast_from_host(host)
+
+        # TODO: avoid running it again if we just ran the config flow
+        try:
+            instances = await enumerate_instances(hass, host)
+        except ErrorConnect as ex:
+            raise ConfigEntryNotReady(
+                f"Connection error while connecting to {host}: {ex}"
+            ) from ex
+
+        # instances = await config_entries.HANDLERS[DOMAIN].async_discover_newhost(hass, host)
+
+        hass.config_entries.async_update_entry(
+            entry, title=entry.title, data={"host": host, "instances": instances}
+        )
 
     for instance in entry.data["instances"]:
         # auto update to new style
@@ -347,10 +419,14 @@ class ECHONETConnector:
         self._getPropertyMap = instance["getmap"]
         self._setPropertyMap = instance["setmap"]
         self._manufacturer = None
+        self._host_product_code = None
         if "manufacturer" in instance:
             self._manufacturer = instance["manufacturer"]
+        if "host_product_code" in instance:
+            self._host_product_code = instance["host_product_code"]
         self._uid = instance.get("uid")
         self._uidi = instance.get("uidi")
+        self._name = instance.get("name")
         self._api.register_async_update_callbacks(
             self._host,
             self._eojgc,
@@ -373,16 +449,35 @@ class ECHONETConnector:
                 f"Starting ECHONETLite GeneralLighting instance at {self._host}"
             )
             flags = LIGHT_API_CONNECTOR_DEFAULT_FLAGS
+        elif self._eojgc == 0x02 and self._eojcc == 0x91:
+            _LOGGER.debug(
+                f"Starting ECHONETLite SingleFunctionLighting instance at {self._host}"
+            )
+            flags = SINGLE_FUNCTION_LIGHT_API_CONNECTOR_DEFAULT_FLAGS
+        elif self._eojgc == 0x02 and self._eojcc == 0xA3:
+            _LOGGER.debug(
+                f"Starting ECHONETLite LightingSystem instance at {self._host}"
+            )
+            flags = LIGHTING_SYSTEM_API_CONNECTOR_DEFAULT_FLAGS
         elif self._eojgc == 0x02 and self._eojcc == 0x87:
             _LOGGER.debug(
                 f"Starting ECHONETLite DistributionPanelMeter instance at {self._host}"
             )
             flags = _0287_API_CONNECTOR_DEFAULT_FLAGS
+            _LOGGER.debug(
+                f"Starting ECHONETLite DistributionPanelMeter instance at {self._host}"
+            )
+            flags = DISTRIBUTION_PANEL_METER_API_CONNECTOR_DEFAULT_FLAGS
         elif self._eojgc == 0x02 and self._eojcc == 0x88:
             _LOGGER.debug(
                 f"Starting ECHONETLite LowVoltageSmartElectricEnergyMeter instance at {self._host}"
             )
             flags = _0288_API_CONNECTOR_DEFAULT_FLAGS
+        elif self._eojgc == 0x02 and self._eojcc == 0x7D:
+            _LOGGER.debug(
+                f"Starting ECHONETLite StorageBattery instance at {self._host}"
+            )
+            flags = STORAGE_BATTERY_API_CONNECTOR_DEFAULT_FLAGS
         else:
             _LOGGER.debug(
                 f"Starting ECHONETLite Generic instance for {self._eojgc}-{self._eojcc}-{self._eojci} at {self._host}"
