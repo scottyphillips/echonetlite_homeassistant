@@ -359,7 +359,6 @@ class EchonetSensor(SensorEntity):
                     self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
                         CONF_ICON_ZERO
                     ]
-                self._push_icon_to_frontent()
 
             # apply coefficients
             if (
