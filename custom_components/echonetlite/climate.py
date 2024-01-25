@@ -393,13 +393,9 @@ class EchonetClimate(ClimateEntity):
             await self._connector._instance.setOperationalTemperature(
                 kwargs.get(ATTR_TEMPERATURE)
             )
-            self._connector._update_data[ENL_HVAC_SET_TEMP] = kwargs.get(
-                ATTR_TEMPERATURE
-            )
 
     async def async_set_humidity(self, humidity: int) -> None:
         await self._connector._instance.setOperationalTemperature(humidity)
-        self._connector._update_data[ENL_HVAC_SET_HUMIDITY] = humidity
 
     async def async_set_hvac_mode(self, hvac_mode):
         # _LOGGER.warning(self._connector._update_data)
