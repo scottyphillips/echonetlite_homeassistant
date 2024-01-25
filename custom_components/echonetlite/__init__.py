@@ -84,6 +84,8 @@ PLATFORMS = [
     Platform.LIGHT,
     Platform.FAN,
     Platform.SWITCH,
+    Platform.TIME,
+    Platform.NUMBER,
 ]
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=1)

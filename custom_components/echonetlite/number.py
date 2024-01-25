@@ -1,12 +1,17 @@
 import logging
-from homeassistant.components.select import SelectEntity
+from homeassistant.components.number import NumberEntity
 from .const import (
     DOMAIN,
     CONF_FORCE_POLLING,
     ENL_OP_CODES,
     CONF_ICON,
-    CONF_ICONS,
-    TYPE_SELECT,
+    CONF_NAME,
+    CONF_MINIMUM,
+    CONF_MAXIMUM,
+    CONF_AS_ZERO,
+    CONF_MAX_OPC,
+    TYPE_TIME,
+    TYPE_NUMBER,
 )
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
@@ -24,9 +29,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             if eojgc in ENL_OP_CODES.keys():
                 if eojcc in ENL_OP_CODES[eojgc].keys():
                     if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
-                        if TYPE_SELECT in ENL_OP_CODES[eojgc][eojcc][op_code].keys():
+                        if TYPE_NUMBER in ENL_OP_CODES[eojgc][eojcc][op_code].keys():
                             entities.append(
-                                EchonetSelect(
+                                EchonetNumber(
                                     hass,
                                     entity["echonetlite"],
                                     config,
@@ -39,43 +44,36 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     async_add_entities(entities, True)
 
 
-class EchonetSelect(SelectEntity):
+class EchonetNumber(NumberEntity):
     _attr_translation_key = DOMAIN
 
     def __init__(self, hass, connector, config, code, options, name=None):
-        """Initialize the select."""
+        """Initialize the time."""
         self._connector = connector
         self._config = config
         self._code = code
-        self._optimistic = False
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
-        self._sub_state = None
-        self._options = options[TYPE_SELECT]
-        self._icons = options.get(CONF_ICONS, {})
         self._attr_icon = options.get(CONF_ICON, None)
-        self._icon_default = self._attr_icon
-        self._attr_options = list(self._options.keys())
-        if self._code in list(self._connector._user_options.keys()):
-            if self._connector._user_options[code] is not False:
-                self._attr_options = self._connector._user_options[code]
-        self._attr_current_option = self._connector._update_data.get(self._code)
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
-        self._uid = (
+        self._attr_unique_id = (
             f"{self._connector._uidi}-{self._code}"
             if self._connector._uidi
             else f"{self._connector._uid}-{self._code}"
         )
-        self._device_name = name
-        self._should_poll = True
-        self._available = True
-        self.update_option_listener()
 
-    @property
-    def unique_id(self):
-        """Return a unique ID."""
-        return self._uid
+        self._options = options[TYPE_NUMBER]
+        self._as_zero = options[TYPE_NUMBER].get(CONF_AS_ZERO, 0)
+
+        self._device_name = name
+        self._attr_should_poll = True
+        self._attr_available = True
+        self._attr_native_value = self.get_value()
+        self._attr_native_max_value = self.get_max_value()
+        self._attr_native_min_value = options[TYPE_NUMBER].get(CONF_MINIMUM, 0)
+
+        self.update_option_listener()
 
     @property
     def device_info(self):
@@ -97,18 +95,29 @@ class EchonetSelect(SelectEntity):
             # "sw_version": "",
         }
 
-    @property
-    def available(self) -> bool:
-        """Return true if the device is available."""
-        self._available = (
-            self._server_state["available"]
-            if "available" in self._server_state
-            else True
-        )
-        return self._available
+    def get_value(self):
+        value = self._connector._update_data.get(self._code)
+        if value != None:
+            return float(self._connector._update_data.get(self._code) - self._as_zero)
+        else:
+            return None
 
-    async def async_select_option(self, option: str):
-        await self._connector._instance.setMessage(self._code, self._options[option])
+    def get_max_value(self):
+        if self._options.get(CONF_MAX_OPC):
+            return self._connector._update_data.get(CONF_MAX_OPC)
+        else:
+            return self._options.get(CONF_MAXIMUM)
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Update the current value."""
+        if await self._connector._instance.setMessage(self._code, int(value)):
+            # self._connector._update_data[epc] = value
+            # self.async_write_ha_state()
+            pass
+        else:
+            raise InvalidStateError(
+                "The state setting is not supported or is an invalid value."
+            )
 
     async def async_update(self):
         """Retrieve latest state."""
@@ -117,40 +126,27 @@ class EchonetSelect(SelectEntity):
         except TimeoutError:
             pass
 
-    def update_attr(self):
-        self._attr_options = list(self._options.keys())
-        if self._attr_current_option not in self._attr_options:
-            # maybe data value is raw(int)
-            keys = [
-                k for k, v in self._options.items() if v == self._attr_current_option
-            ]
-            if keys:
-                self._attr_current_option = keys[0]
-        self._attr_icon = self._icons.get(self._attr_current_option, self._icon_default)
-        if self._code in list(self._connector._user_options.keys()):
-            if self._connector._user_options[self._code] is not False:
-                self._attr_options = self._connector._user_options[self._code]
-
     async def async_added_to_hass(self):
         """Register callbacks."""
         self._connector.add_update_option_listener(self.update_option_listener)
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush=False):
-        new_val = self._connector._update_data.get(self._code)
+        new_val = self.get_value()
         changed = (
-            new_val is not None and self._attr_current_option != new_val
-        ) or self._available != self._server_state["available"]
+            self._attr_native_value != new_val
+            or self._attr_available != self._server_state["available"]
+        )
         if changed:
-            self._attr_current_option = new_val
-            self.update_attr()
+            self._attr_native_value = new_val
+            self._attr_available = self._server_state["available"]
             self.async_schedule_update_ha_state()
 
     def update_option_listener(self):
-        self._should_poll = (
+        self._attr_should_poll = (
             self._connector._user_options.get(CONF_FORCE_POLLING, False)
             or self._code not in self._connector._ntfPropertyMap
         )
         _LOGGER.info(
-            f"{self._device_name}({self._code}): _should_poll is {self._should_poll}"
+            f"{self._device_name}({self._code}): _should_poll is {self._attr_should_poll}"
         )

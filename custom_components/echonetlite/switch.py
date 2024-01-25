@@ -7,11 +7,13 @@ from .const import (
     ENL_OP_CODES,
     CONF_ON_VALUE,
     CONF_OFF_VALUE,
+    CONF_NAME,
     DATA_STATE_ON,
     DATA_STATE_OFF,
     SWITCH_POWER,
     CONF_ENSURE_ON,
     TYPE_SWITCH,
+    TYPE_NUMBER,
     ENL_STATUS,
     ENL_ON,
     ENL_OFF,
@@ -31,7 +33,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         eojcc = entity["instance"]["eojcc"]
         set_enl_status = False
         # configure switch entities by looking up full ENL_OP_CODE dict
-        for op_code in list(entity["echonetlite"]._update_flags_full_list):
+        for op_code in entity["instance"]["setmap"]:
             if eojgc in ENL_OP_CODES.keys():
                 if eojcc in ENL_OP_CODES[eojgc].keys():
                     if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
@@ -48,6 +50,24 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             )
                             if op_code == ENL_STATUS:
                                 set_enl_status = True
+                        if (
+                            switch_conf := ENL_OP_CODES[eojgc][eojcc][op_code]
+                            .get(TYPE_NUMBER, {})
+                            .get(TYPE_SWITCH)
+                        ):
+                            switch_conf.update(
+                                ENL_OP_CODES[eojgc][eojcc][op_code].copy()
+                            )
+                            entities.append(
+                                EchonetSwitch(
+                                    hass,
+                                    entity["echonetlite"],
+                                    config,
+                                    op_code,
+                                    switch_conf,
+                                    entity["echonetlite"]._name or config.title,
+                                )
+                            )
         # Auto configure of the power switch
         if (eojgc == 0x01 and eojcc in (0x30, 0x35)) or (
             eojgc == 0x02 and eojcc in (0x90, 0x91)
@@ -84,6 +104,7 @@ class EchonetSwitch(SwitchEntity):
             self._options[CONF_SERVICE_DATA][DATA_STATE_ON],
             hex(self._options[CONF_SERVICE_DATA][DATA_STATE_ON])[2:],
         ]
+        self._from_number = True if options.get(TYPE_NUMBER) else False
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
         self._attr_icon = options[CONF_ICON]
         self._uid = (
@@ -91,6 +112,9 @@ class EchonetSwitch(SwitchEntity):
             if self._connector._uidi
             else f"{self._connector._uid}-{self._connector._eojgc}-{self._connector._eojcc}-{self._connector._eojci}-{self._code}"
         )
+        if self._from_number:
+            self._uid += "-switch"
+            self._attr_name += " " + options.get(CONF_NAME, "Switch")
         self._device_name = name
         self._should_poll = True
         self._server_state = self._connector._api._state[

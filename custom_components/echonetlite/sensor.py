@@ -31,6 +31,9 @@ from .const import (
     ENL_OP_CODES,
     CONF_STATE_CLASS,
     TYPE_SWITCH,
+    TYPE_SELECT,
+    TYPE_TIME,
+    TYPE_NUMBER,
     SERVICE_SET_ON_TIMER_TIME,
     SERVICE_SET_INT_1B,
     ENL_STATUS,
@@ -69,6 +72,15 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             )
             for op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity["instance"]["getmap"]:
+                    _keys = ENL_OP_CODES[eojgc][eojcc][op_code].keys()
+                    if (
+                        TYPE_SWITCH in _keys
+                        or TYPE_SELECT in _keys
+                        or TYPE_TIME in _keys
+                        or TYPE_NUMBER in _keys
+                    ):
+                        if op_code in entity["instance"]["setmap"]:
+                            continue
                     entities.append(
                         EchonetSensor(
                             entity["echonetlite"],
@@ -84,6 +96,15 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             )
             for op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity["instance"]["getmap"]:
+                    _keys = ENL_OP_CODES[eojgc][eojcc][op_code].keys()
+                    if (
+                        TYPE_SWITCH in _keys
+                        or TYPE_SELECT in _keys
+                        or TYPE_TIME in _keys
+                        or TYPE_NUMBER in _keys
+                    ):
+                        if op_code in entity["instance"]["setmap"]:
+                            continue
                     entities.append(
                         EchonetSensor(
                             entity["echonetlite"],
@@ -107,6 +128,15 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     if eojcc in ENL_OP_CODES[eojgc].keys():
                         if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                             _keys = ENL_OP_CODES[eojgc][eojcc][op_code].keys()
+                            if (
+                                TYPE_SWITCH in _keys
+                                or TYPE_SELECT in _keys
+                                or TYPE_TIME in _keys
+                                or TYPE_NUMBER in _keys
+                            ):
+                                if op_code in entity["instance"]["setmap"]:
+                                    continue  # dont configure as sensor, it will be configured as switch instead.
+
                             if (
                                 CONF_SERVICE in _keys
                                 and op_code in entity["instance"]["setmap"]
@@ -135,9 +165,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                             },
                                             "async_" + service_name,
                                         )
-
-                            if TYPE_SWITCH in _keys:
-                                continue  # dont configure as sensor, it will be configured as switch instead.
 
                             if TYPE_DATA_DICT in _keys:
                                 type_data = ENL_OP_CODES[eojgc][eojcc][op_code][

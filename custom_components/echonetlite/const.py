@@ -5,6 +5,9 @@ from homeassistant.const import (
     CONF_SERVICE,
     CONF_SERVICE_DATA,
     CONF_UNIT_OF_MEASUREMENT,
+    CONF_NAME,
+    CONF_MINIMUM,
+    CONF_MAXIMUM,
     PERCENTAGE,
     UnitOfVolume,
 )
@@ -43,9 +46,16 @@ CONF_MULTIPLIER_OPTIONAL_OPCODE = "multiplier_optional_opcode"
 CONF_ICON_POSITIVE = "icon_positive"
 CONF_ICON_NEGATIVE = "icon_negative"
 CONF_ICON_ZERO = "icon_zero"
+CONF_ICONS = "icons"
+CONF_AS_ZERO = "as_zero"
+CONF_MAX_OPC = "max_opc"
+
 DATA_STATE_ON = "On"
 DATA_STATE_OFF = "Off"
 TYPE_SWITCH = "switch"
+TYPE_SELECT = "select"
+TYPE_TIME = "time"
+TYPE_NUMBER = "number"
 TYPE_DATA_DICT = "type_data_dict"
 TYPE_DATA_ARRAY_WITH_SIZE_OPCODE = "type_data_array_with_size_opcode"
 SERVICE_SET_ON_TIMER_TIME = "set_on_timer_time"
@@ -113,6 +123,43 @@ ENL_OP_CODES = {
                 CONF_TYPE: SensorDeviceClass.TEMPERATURE,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },
+            0xA0: {
+                CONF_ICON: "mdi:fan",
+                TYPE_SELECT: FAN_SPEED,
+            },
+            0xA1: {
+                CONF_ICON: "mdi:shuffle-variant",
+                TYPE_SELECT: AUTO_DIRECTION,
+            },
+            0xA3: {
+                CONF_ICON: "mdi:arrow-oscillating",
+                TYPE_SELECT: SWING_MODE,
+            },
+            0xA5: {
+                CONF_ICON: "mdi:tailwind",
+                TYPE_SELECT: AIRFLOW_HORIZ,
+            },
+            0xA4: {
+                CONF_ICON: "mdi:tailwind",
+                TYPE_SELECT: AIRFLOW_VERT,
+            },
+            # 0xB3: {
+            #     CONF_ICON: "mdi:thermometer",
+            #     CONF_TYPE: None,
+            #     CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            #     CONF_UNIT_OF_MEASUREMENT: "",
+            #     TYPE_NUMBER: {
+            #         CONF_TYPE: None,  #  NumberDeviceClass.x
+            #         CONF_AS_ZERO: 0x0,  #  Value as zero
+            #         CONF_MINIMUM: 0x0,
+            #         CONF_MAXIMUM: 0x32,
+            #         CONF_MAX_OPC: None,  #  OPC of max value
+            #         TYPE_SWITCH: {  #  Additional switch
+            #             CONF_NAME: "Auto",
+            #             CONF_SERVICE_DATA: {DATA_STATE_ON: 0x16, DATA_STATE_OFF: 0x15},
+            #         },
+            #     },
+            # },
         },
         0x35: {
             0x84: {
@@ -125,9 +172,90 @@ ENL_OP_CODES = {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
             },
+            0xA0: {
+                CONF_ICON: "mdi:fan",
+                TYPE_SELECT: FAN_SPEED,
+            },
         },
     },
     0x02: {
+        0x60: {  # Electrically operated blind/shade
+            0xE0: {
+                CONF_ICON: "mdi:roller-shade",
+                CONF_ICONS: {
+                    OPEN: "mdi:roller-shade",
+                    CLOSE: "mdi:roller-shade-closed",
+                    STOP: "mdi:roller-shade",
+                },
+                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
+            }
+        },
+        0x61: {  # Electrically operated shutter
+            0xE0: {
+                CONF_ICON: "mdi:window-shutter-open",
+                CONF_ICONS: {
+                    OPEN: "mdi:window-shutter-open",
+                    CLOSE: "mdi:window-shutter",
+                    STOP: "mdi:window-shutter-open",
+                },
+                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
+            }
+        },
+        0x62: {  # Electrically operated curtain
+            0xE0: {
+                CONF_ICON: "mdi:curtains",
+                CONF_ICONS: {
+                    OPEN: "mdi:curtains",
+                    CLOSE: "mdi:curtains-closed",
+                    STOP: "mdi:curtains",
+                },
+                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
+            }
+        },
+        0x63: {  # Electrically operated rain sliding door/shutter
+            0xE0: {
+                CONF_ICON: "mdi:door-sliding-open",
+                CONF_ICONS: {
+                    OPEN: "mdi:door-sliding-open",
+                    CLOSE: "mdi:door-sliding",
+                    STOP: "mdi:door-sliding-open",
+                },
+                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
+            }
+        },
+        0x64: {  # Electrically operated gate
+            0xE0: {
+                CONF_ICON: "mdi:boom-gate-up-outline",
+                CONF_ICONS: {
+                    OPEN: "mdi:boom-gate-up-outline",
+                    CLOSE: "mdi:boom-gate-outline",
+                    STOP: "mdi:boom-gate-up-outline",
+                },
+                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
+            }
+        },
+        0x65: {  # Electrically operated window
+            0xE0: {
+                CONF_ICON: "mdi:window-open-variant",
+                CONF_ICONS: {
+                    OPEN: "mdi:window-open-variant",
+                    CLOSE: "mdi:window-closed-variant",
+                    STOP: "mdi:window-open-variant",
+                },
+                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
+            }
+        },
+        0x66: {  # Automatically operated entrance door/sliding door
+            0xE0: {
+                CONF_ICON: "mdi:door-sliding-open",
+                CONF_ICONS: {
+                    OPEN: "mdi:door-sliding-open",
+                    CLOSE: "mdi:door-sliding",
+                    STOP: "mdi:door-sliding-open",
+                },
+                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
+            }
+        },
         0x6F: {  # Electric lock
             0xE0: {
                 CONF_ICON: "mdi:lock",
@@ -175,8 +303,7 @@ ENL_OP_CODES = {
             },
             0x91: {  # Sensor with service
                 CONF_ICON: "mdi:timer-outline",
-                CONF_TYPE: None,
-                CONF_SERVICE: [SERVICE_SET_ON_TIMER_TIME],
+                TYPE_TIME: True,
             },
             0xD1: {  # Sensor
                 CONF_ICON: "mdi:thermometer",
@@ -231,6 +358,26 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:flash",
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+        },
+        0x7B: {
+            0xE1: {
+                CONF_ICON: "mdi:thermometer",
+                CONF_TYPE: None,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_UNIT_OF_MEASUREMENT: "",
+                TYPE_NUMBER: {
+                    CONF_TYPE: None,  #  NumberDeviceClass.x
+                    CONF_AS_ZERO: 0x30,  #  Value as zero
+                    CONF_MINIMUM: 0x31,
+                    CONF_MAXIMUM: 0x3F,
+                    CONF_MAX_OPC: 0xD1,  #  OPC of max value
+                    TYPE_SWITCH: {  #  Additional switch
+                        CONF_NAME: "Auto",
+                        CONF_ON_VALUE: 0x41,
+                        CONF_OFF_VALUE: 0x31,
+                    },
+                },
             },
         },
         0x7C: {
