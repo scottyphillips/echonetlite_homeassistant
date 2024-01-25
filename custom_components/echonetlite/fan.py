@@ -160,7 +160,6 @@ class EchonetFan(FanEntity):
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed percentage of the fan."""
         await self._connector._instance.setFanSpeedPercent(percentage)
-        self._connector._update_data[ENL_FANSPEED_PERCENT] = percentage
 
     @property
     def percentage(self):
@@ -182,7 +181,6 @@ class EchonetFan(FanEntity):
 
     async def async_set_direction(self, direction: str) -> None:
         await self._connector._instance.setFanDirection(direction)
-        self._connector._update_data[ENL_FAN_DIRECTION] = direction
 
     @property
     def oscillating(self):
@@ -207,7 +205,6 @@ class EchonetFan(FanEntity):
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new fan mode."""
         await self._connector._instance.setFanSpeed(preset_mode)
-        self._connector._update_data[ENL_FANSPEED] = preset_mode
 
     async def async_added_to_hass(self):
         """Register callbacks."""

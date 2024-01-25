@@ -323,7 +323,6 @@ class EchonetClimate(ClimateEntity):
         """Set new fan mode."""
         _LOGGER.debug(f"Updated fan mode is: {fan_mode}")
         await self._connector._instance.setFanSpeed(fan_mode)
-        self._connector._update_data[ENL_FANSPEED] = fan_mode
 
     @property
     def swing_modes(self):
@@ -353,7 +352,6 @@ class EchonetClimate(ClimateEntity):
     async def async_set_preset_mode(self, preset_mode):
         """Set new preset mode - This is normal/high-speed/silent"""
         await self._connector._instance.setSilentMode(preset_mode)
-        self._connector._update_data[ENL_HVAC_SILENT_MODE] = preset_mode
 
     @property
     def swing_mode(self):
@@ -375,17 +373,14 @@ class EchonetClimate(ClimateEntity):
             self._connector._user_options.get(ENL_AUTO_DIRECTION)
             and swing_mode in self._connector._user_options[ENL_AUTO_DIRECTION]
         ):
-            if await self._connector._instance.setAutoDirection(swing_mode):
-                self._connector._update_data[ENL_AUTO_DIRECTION] = swing_mode
+            await self._connector._instance.setAutoDirection(swing_mode)
         elif (
             self._connector._user_options.get(ENL_SWING_MODE)
             and swing_mode in self._connector._user_options[ENL_SWING_MODE]
         ):
-            if await self._connector._instance.setSwingMode(swing_mode):
-                self._connector._update_data[ENL_AUTO_DIRECTION] = swing_mode
+            await self._connector._instance.setSwingMode(swing_mode)
         else:
-            if await self._connector._instance.setAirflowVert(swing_mode):
-                self._connector._update_data[ENL_AIR_VERT] = swing_mode
+            await self._connector._instance.setAirflowVert(swing_mode)
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
@@ -413,11 +408,6 @@ class EchonetClimate(ClimateEntity):
             await self._connector._instance.setMode("auto")
         else:
             await self._connector._instance.setMode(hvac_mode)
-        self._connector._update_data[ENL_HVAC_MODE] = hvac_mode
-        if hvac_mode == "off":
-            self._connector._update_data[ENL_STATUS] = "Off"
-        else:
-            self._connector._update_data[ENL_STATUS] = "On"
 
     async def async_turn_on(self):
         """Turn on."""

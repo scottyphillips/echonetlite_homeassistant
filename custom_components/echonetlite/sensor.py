@@ -458,8 +458,7 @@ class EchonetSensor(SensorEntity):
         hh_mm = ":".join([val[0], val[1]])
         mes = {"EPC": 0x91, "PDC": 0x02, "EDT": int(val[0]) * 256 + int(val[1])}
         if await self._connector._instance.setMessages([mes]):
-            self._connector._update_data[0x91] = hh_mm
-            self.async_write_ha_state()
+            pass
         else:
             raise InvalidStateError(
                 "The state setting is not supported or is an invalid value."
@@ -469,8 +468,7 @@ class EchonetSensor(SensorEntity):
         if epc:
             value = int(value)
             if await self._connector._instance.setMessage(epc, value):
-                self._connector._update_data[epc] = value
-                self.async_write_ha_state()
+                pass
             else:
                 raise InvalidStateError(
                     "The state setting is not supported or is an invalid value."
