@@ -14,7 +14,6 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORT_FLAGS = 0
 DEFAULT_BRIGHTNESS_SCALE = 255
 MIN_MIREDS = 153
 MAX_MIREDS = 500
@@ -46,7 +45,7 @@ class EchonetLight(LightEntity):
         self._uid = (
             self._connector._uidi if self._connector._uidi else self._connector._uid
         )
-        self._support_flags = SUPPORT_FLAGS
+        self._support_flags = LightEntityFeature(0)
         self._supported_color_modes = set()
         self._supports_color = False
         self._supports_rgbw = False
@@ -142,7 +141,6 @@ class EchonetLight(LightEntity):
     async def async_turn_on(self, **kwargs):
         """Turn on."""
         await self._connector._instance.on()
-        self._connector._update_data[ENL_STATUS] = "On"
 
         if (
             ATTR_BRIGHTNESS in kwargs
@@ -157,7 +155,6 @@ class EchonetLight(LightEntity):
 
             # send the message to the lamp
             await self._connector._instance.setBrightness(device_brightness)
-            self._connector._update_data[ENL_BRIGHTNESS] = hex(device_brightness)
             self._attr_brightness = kwargs[ATTR_BRIGHTNESS]
 
         if (
@@ -178,13 +175,11 @@ class EchonetLight(LightEntity):
 
             _LOGGER.debug(f"New color temp of light: {color_temp} - {color_temp_int}")
             await self._connector._instance.setColorTemperature(color_temp_int)
-            self._connector._update_data[ENL_COLOR_TEMP] = color_temp
             self._attr_color_temp = kwargs[ATTR_COLOR_TEMP]
 
     async def async_turn_off(self):
         """Turn off."""
         await self._connector._instance.off()
-        self._connector._update_data[ENL_STATUS] = "Off"
 
     @property
     def brightness(self):

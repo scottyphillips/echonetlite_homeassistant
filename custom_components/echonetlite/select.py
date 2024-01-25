@@ -144,8 +144,6 @@ class EchonetSelect(SelectEntity):
 
     async def async_select_option(self, option: str):
         await self._connector._instance.setMessage(self._code, self._options[option])
-        self._connector._update_data[self._code] = option
-        self._attr_current_option = option
 
     async def async_update(self):
         """Retrieve latest state."""
