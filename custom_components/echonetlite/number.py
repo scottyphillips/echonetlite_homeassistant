@@ -6,12 +6,16 @@ from .const import (
     ENL_OP_CODES,
     CONF_ICON,
     CONF_NAME,
+    CONF_TYPE,
     CONF_MINIMUM,
     CONF_MAXIMUM,
     CONF_AS_ZERO,
     CONF_MAX_OPC,
+    CONF_UNIT_OF_MEASUREMENT,
     TYPE_TIME,
     TYPE_NUMBER,
+    NumberDeviceClass,
+    UnitOfTemperature,
 )
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
@@ -48,7 +52,7 @@ class EchonetNumber(NumberEntity):
     _attr_translation_key = DOMAIN
 
     def __init__(self, hass, connector, config, code, options, name=None):
-        """Initialize the time."""
+        """Initialize the number."""
         self._connector = connector
         self._config = config
         self._code = code
@@ -64,14 +68,19 @@ class EchonetNumber(NumberEntity):
         )
 
         self._options = options[TYPE_NUMBER]
-        self._as_zero = options[TYPE_NUMBER].get(CONF_AS_ZERO, 0)
+        self._as_zero = int(options[TYPE_NUMBER].get(CONF_AS_ZERO, 0))
+        self._conf_max = int(options[TYPE_NUMBER][CONF_MAXIMUM])
 
         self._device_name = name
+        self._attr_device_class = self._options.get(CONF_TYPE, None)
         self._attr_should_poll = True
         self._attr_available = True
         self._attr_native_value = self.get_value()
         self._attr_native_max_value = self.get_max_value()
-        self._attr_native_min_value = options[TYPE_NUMBER].get(CONF_MINIMUM, 0)
+        self._attr_native_min_value = self._options.get(CONF_MINIMUM, 0) - self._as_zero
+        self._attr_native_unit_of_measurement = options.get(
+            CONF_UNIT_OF_MEASUREMENT, None
+        )
 
         self.update_option_listener()
 
@@ -98,20 +107,28 @@ class EchonetNumber(NumberEntity):
     def get_value(self):
         value = self._connector._update_data.get(self._code)
         if value != None:
-            return float(self._connector._update_data.get(self._code) - self._as_zero)
+            return int(self._connector._update_data.get(self._code)) - self._as_zero
         else:
             return None
 
     def get_max_value(self):
+        max_value = self.get_max_opc_value()
+        if max_value == None:
+            max_value = self._conf_max
+        return max_value - self._as_zero
+
+    def get_max_opc_value(self):
+        max_opc_value = None
         if self._options.get(CONF_MAX_OPC):
-            return self._connector._update_data.get(CONF_MAX_OPC)
-        else:
-            return self._options.get(CONF_MAXIMUM)
+            max_opc_value = self._connector._update_data.get(CONF_MAX_OPC)
+            if max_opc_value != None:
+                max_opc_value = int(max_opc_value)
+        return max_opc_value
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
         if await self._connector._instance.setMessage(
-            self._code, int(value) + self._as_zero
+            self._code, int(value + self._as_zero)
         ):
             # self._connector._update_data[epc] = value
             # self.async_write_ha_state()
@@ -138,9 +155,11 @@ class EchonetNumber(NumberEntity):
         changed = (
             self._attr_native_value != new_val
             or self._attr_available != self._server_state["available"]
+            or self._attr_native_max_value != self.get_max_value()
         )
         if changed:
             self._attr_native_value = new_val
+            self._attr_native_max_value = self.get_max_value()
             self._attr_available = self._server_state["available"]
             self.async_schedule_update_ha_state()
 

@@ -10,11 +10,15 @@ from homeassistant.const import (
     CONF_MAXIMUM,
     PERCENTAGE,
     UnitOfVolume,
+    UnitOfTemperature,
 )
 from homeassistant.components.sensor import (
     ATTR_STATE_CLASS,
     SensorStateClass,
     SensorDeviceClass,
+)
+from homeassistant.components.number.const import (
+    NumberDeviceClass,
 )
 from pychonet.HomeAirConditioner import (
     ENL_HVAC_MODE,
@@ -106,7 +110,12 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:water-percent",
                 CONF_TYPE: SensorDeviceClass.HUMIDITY,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                CONF_SERVICE: [SERVICE_SET_INT_1B],
+                CONF_UNIT_OF_MEASUREMENT: PERCENTAGE,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.HUMIDITY,
+                    CONF_MINIMUM: 30,
+                    CONF_MAXIMUM: 90,
+                },
             },
             0xBA: {
                 CONF_ICON: "mdi:water-percent",
@@ -143,23 +152,23 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:tailwind",
                 TYPE_SELECT: AIRFLOW_VERT,
             },
-            # 0xB3: {
-            #     CONF_ICON: "mdi:thermometer",
-            #     CONF_TYPE: None,
-            #     CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-            #     CONF_UNIT_OF_MEASUREMENT: "",
-            #     TYPE_NUMBER: {
-            #         CONF_TYPE: None,  #  NumberDeviceClass.x
-            #         CONF_AS_ZERO: 0x0,  #  Value as zero
-            #         CONF_MINIMUM: 0x0,
-            #         CONF_MAXIMUM: 0x32,
-            #         CONF_MAX_OPC: None,  #  OPC of max value
-            #         TYPE_SWITCH: {  #  Additional switch
-            #             CONF_NAME: "Auto",
-            #             CONF_SERVICE_DATA: {DATA_STATE_ON: 0x16, DATA_STATE_OFF: 0x15},
-            #         },
-            #     },
-            # },
+            0xB3: {  # for develop test
+                CONF_ICON: "mdi:thermometer",
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
+                TYPE_NUMBER: {  # Make Number input entity if settable value
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,  # NumberDeviceClass.x
+                    CONF_AS_ZERO: 0x1,  # Value as zero
+                    CONF_MINIMUM: 0x0,  # Minimum value
+                    CONF_MAXIMUM: 0x32,  # Maximum value
+                    CONF_MAX_OPC: None,  # OPC of max value
+                    TYPE_SWITCH: {  #  Additional switch
+                        CONF_NAME: "Auto",  # Additionale name
+                        CONF_SERVICE_DATA: {DATA_STATE_ON: 23, DATA_STATE_OFF: 22},
+                    },
+                },
+            },
         },
         0x35: {
             0x84: {
@@ -289,6 +298,32 @@ ENL_OP_CODES = {
                 CONF_ENSURE_ON: ENL_STATUS,
                 TYPE_SWITCH: True,
             },
+            0x91: {  # Sensor with service
+                CONF_ICON: "mdi:timer-outline",
+                TYPE_TIME: True,
+            },
+            0xD1: {  # Sensor
+                CONF_ICON: "mdi:thermometer",
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: 30,
+                    CONF_MAXIMUM: 70,
+                },
+            },
+            0xE1: {
+                CONF_ICON: "mdi:thermometer",
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: 30,
+                    CONF_MAXIMUM: 70,
+                },
+            },
             0xE3: {
                 CONF_ICON: "mdi:bathtub-outline",
                 CONF_SERVICE_DATA: SWITCH_BINARY,
@@ -300,22 +335,6 @@ ENL_OP_CODES = {
                 CONF_SERVICE_DATA: SWITCH_BINARY,
                 CONF_ENSURE_ON: ENL_STATUS,
                 TYPE_SWITCH: True,
-            },
-            0x91: {  # Sensor with service
-                CONF_ICON: "mdi:timer-outline",
-                TYPE_TIME: True,
-            },
-            0xD1: {  # Sensor
-                CONF_ICON: "mdi:thermometer",
-                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                CONF_SERVICE: [SERVICE_SET_INT_1B],
-            },
-            0xE1: {
-                CONF_ICON: "mdi:thermometer",
-                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                CONF_SERVICE: [SERVICE_SET_INT_1B],
             },
             0xE7: {CONF_UNIT_OF_MEASUREMENT: "L"},
             0xEE: {CONF_UNIT_OF_MEASUREMENT: "L"},
@@ -361,21 +380,54 @@ ENL_OP_CODES = {
             },
         },
         0x7B: {
+            0x90: {
+                CONF_ICON: "mdi:timer",
+                CONF_SERVICE_DATA: SWITCH_BINARY,
+                CONF_ENSURE_ON: ENL_STATUS,
+                TYPE_SWITCH: True,
+            },
+            0x91: {
+                CONF_ICON: "mdi:timer-outline",
+                TYPE_TIME: True,
+            },
+            0x94: {
+                CONF_ICON: "mdi:timer",
+                CONF_SERVICE_DATA: SWITCH_BINARY,
+                CONF_ENSURE_ON: ENL_STATUS,
+                TYPE_SWITCH: True,
+            },
+            0x95: {
+                CONF_ICON: "mdi:timer-outline",
+                TYPE_TIME: True,
+            },
+            0xE0: {
+                CONF_ICON: "mdi:thermometer",
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: 16,
+                    CONF_MAXIMUM: 40,
+                    TYPE_SWITCH: {
+                        CONF_NAME: "Auto",
+                        CONF_SERVICE_DATA: {DATA_STATE_ON: 0x41, DATA_STATE_OFF: 16},
+                    },
+                },
+            },
             0xE1: {
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: None,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
                 CONF_UNIT_OF_MEASUREMENT: "",
                 TYPE_NUMBER: {
-                    CONF_TYPE: None,  #  NumberDeviceClass.x
-                    CONF_AS_ZERO: 0x30,  #  Value as zero
+                    CONF_AS_ZERO: 0x30,
                     CONF_MINIMUM: 0x31,
                     CONF_MAXIMUM: 0x3F,
-                    CONF_MAX_OPC: 0xD1,  #  OPC of max value
-                    TYPE_SWITCH: {  #  Additional switch
+                    CONF_MAX_OPC: 0xD1,
+                    TYPE_SWITCH: {
                         CONF_NAME: "Auto",
-                        CONF_ON_VALUE: 0x41,
-                        CONF_OFF_VALUE: 0x31,
+                        CONF_SERVICE_DATA: {DATA_STATE_ON: 0x41, DATA_STATE_OFF: 0x31},
                     },
                 },
             },
@@ -651,7 +703,10 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:palette",
                 CONF_TYPE: DEVICE_CLASS_ECHONETLITE_LIGHT_SCENE,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                CONF_SERVICE: [SERVICE_SET_INT_1B],
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0xFD,
+                    CONF_MAX_OPC: 0xC1,
+                },
             },
         },
     },
