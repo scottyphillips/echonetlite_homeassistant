@@ -42,7 +42,6 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
 
 class EchonetLight(LightEntity):
-
     """Representation of a ECHONET light device."""
 
     def __init__(self, name, connector):
@@ -117,7 +116,7 @@ class EchonetLight(LightEntity):
             "manufacturer": self._connector._manufacturer,
             "model": EOJX_CLASS[self._connector._instance._eojgc][
                 self._connector._instance._eojcc
-            ]
+            ],
             # "sw_version": "",
         }
 

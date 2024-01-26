@@ -100,7 +100,7 @@ class EchonetNumber(NumberEntity):
             "manufacturer": self._connector._manufacturer,
             "model": EOJX_CLASS[self._connector._instance._eojgc][
                 self._connector._instance._eojcc
-            ]
+            ],
             # "sw_version": "",
         }
 

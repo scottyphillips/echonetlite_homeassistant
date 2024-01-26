@@ -1,4 +1,5 @@
 """Constants for the echonetlite integration."""
+
 from homeassistant.const import (
     CONF_ICON,
     CONF_TYPE,

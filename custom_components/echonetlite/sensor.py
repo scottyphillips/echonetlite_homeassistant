@@ -1,4 +1,5 @@
 """Support for ECHONETLite sensors."""
+
 import logging
 import voluptuous as vol
 
@@ -199,8 +200,8 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                 for x in range(0, array_max_size):
                                     attr = ENL_OP_CODES[eojgc][eojcc][op_code].copy()
                                     attr["accessor_index"] = x
-                                    attr["accessor_lambda"] = (
-                                        lambda value, index: value["values"][index]
+                                    attr["accessor_lambda"] = lambda value, index: (
+                                        value["values"][index]
                                         if index < value["range"]
                                         else None
                                     )
@@ -349,7 +350,7 @@ class EchonetSensor(SensorEntity):
             },
             "name": self._device_name,
             "manufacturer": self._connector._manufacturer,
-            "model": EOJX_CLASS[self._eojgc][self._eojcc]
+            "model": EOJX_CLASS[self._eojgc][self._eojcc],
             # "sw_version": "",
         }
 
