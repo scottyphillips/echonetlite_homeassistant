@@ -110,7 +110,9 @@ class EchonetNumber(NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
-        if await self._connector._instance.setMessage(self._code, int(value)):
+        if await self._connector._instance.setMessage(
+            self._code, int(value) + self._as_zero
+        ):
             # self._connector._update_data[epc] = value
             # self.async_write_ha_state()
             pass
