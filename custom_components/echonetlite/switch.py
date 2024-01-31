@@ -32,51 +32,46 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
         set_enl_status = False
+        _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
         # configure switch entities by looking up full ENL_OP_CODE dict
         for op_code in entity["instance"]["setmap"]:
-            if eojgc in ENL_OP_CODES.keys():
-                if eojcc in ENL_OP_CODES[eojgc].keys():
-                    if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
-                        epc_function_data = entity[
-                            "echonetlite"
-                        ]._instance.EPC_FUNCTIONS.get(op_code, None)
-                        if TYPE_SWITCH in ENL_OP_CODES[eojgc][eojcc][
-                            op_code
-                        ].keys() or (
-                            type(epc_function_data) == list
-                            and type(epc_function_data[1]) == dict
-                            and len(epc_function_data[1]) == 2
-                        ):
-                            entities.append(
-                                EchonetSwitch(
-                                    hass,
-                                    entity["echonetlite"],
-                                    config,
-                                    op_code,
-                                    ENL_OP_CODES[eojgc][eojcc][op_code],
-                                    entity["echonetlite"]._name or config.title,
-                                )
-                            )
-                            if op_code == ENL_STATUS:
-                                set_enl_status = True
-                        if (
-                            switch_conf := ENL_OP_CODES[eojgc][eojcc][op_code]
-                            .get(TYPE_NUMBER, {})
-                            .get(TYPE_SWITCH)
-                        ):
-                            switch_conf.update(
-                                ENL_OP_CODES[eojgc][eojcc][op_code].copy()
-                            )
-                            entities.append(
-                                EchonetSwitch(
-                                    hass,
-                                    entity["echonetlite"],
-                                    config,
-                                    op_code,
-                                    switch_conf,
-                                    entity["echonetlite"]._name or config.title,
-                                )
-                            )
+            epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
+                op_code, None
+            )
+            _by_epc_func = (
+                type(epc_function_data) == list
+                and type(epc_function_data[1]) == dict
+                and len(epc_function_data[1]) == 2
+            )
+            if _by_epc_func or TYPE_SWITCH in _enl_op_codes.get(op_code, {}).keys():
+                entities.append(
+                    EchonetSwitch(
+                        hass,
+                        entity["echonetlite"],
+                        config,
+                        op_code,
+                        ENL_OP_CODES[eojgc][eojcc][op_code],
+                        entity["echonetlite"]._name or config.title,
+                    )
+                )
+                if op_code == ENL_STATUS:
+                    set_enl_status = True
+            if (
+                switch_conf := _enl_op_codes.get(op_code, {})
+                .get(TYPE_NUMBER, {})
+                .get(TYPE_SWITCH)
+            ):
+                switch_conf.update(_enl_op_codes[op_code].copy())
+                entities.append(
+                    EchonetSwitch(
+                        hass,
+                        entity["echonetlite"],
+                        config,
+                        op_code,
+                        switch_conf,
+                        entity["echonetlite"]._name or config.title,
+                    )
+                )
         # Auto configure of the power switch
         if (eojgc == 0x01 and eojcc in (0x30, 0x35)) or (
             eojgc == 0x02 and eojcc in (0x90, 0x91)

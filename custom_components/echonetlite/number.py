@@ -29,22 +29,20 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     for entity in hass.data[DOMAIN][config.entry_id]:
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
+        _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
         # configure select entities by looking up full ENL_OP_CODE dict
         for op_code in entity["instance"]["setmap"]:
-            if eojgc in ENL_OP_CODES.keys():
-                if eojcc in ENL_OP_CODES[eojgc].keys():
-                    if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
-                        if TYPE_NUMBER in ENL_OP_CODES[eojgc][eojcc][op_code].keys():
-                            entities.append(
-                                EchonetNumber(
-                                    hass,
-                                    entity["echonetlite"],
-                                    config,
-                                    op_code,
-                                    ENL_OP_CODES[eojgc][eojcc][op_code],
-                                    entity["echonetlite"]._name or config.title,
-                                )
-                            )
+            if TYPE_NUMBER in _enl_op_codes.get(op_code, {}).keys():
+                entities.append(
+                    EchonetNumber(
+                        hass,
+                        entity["echonetlite"],
+                        config,
+                        op_code,
+                        ENL_OP_CODES[eojgc][eojcc][op_code],
+                        entity["echonetlite"]._name or config.title,
+                    )
+                )
 
     async_add_entities(entities, True)
 
@@ -71,7 +69,7 @@ class EchonetNumber(NumberEntity):
         self._options = options[TYPE_NUMBER]
         self._as_zero = int(options[TYPE_NUMBER].get(CONF_AS_ZERO, 0))
         self._conf_max = int(options[TYPE_NUMBER][CONF_MAXIMUM])
-        self._byte_length = int(options[TYPE_NUMBER].get(CONF_BYTE_LENGTH, 0))
+        self._byte_length = int(options[TYPE_NUMBER].get(CONF_BYTE_LENGTH, 1))
 
         self._device_name = name
         self._attr_device_class = self._options.get(CONF_TYPE, None)

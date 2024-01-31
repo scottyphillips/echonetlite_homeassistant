@@ -119,7 +119,7 @@ ENL_OP_CODES = {
             #         CONF_MINIMUM: 0x0,  # Minimum value
             #         CONF_MAXIMUM: 0x32,  # Maximum value
             #         CONF_MAX_OPC: None,  # OPC of max value
-            #         CONF_BYTE_LENGTH: 0x0  # Data byte length
+            #         CONF_BYTE_LENGTH: 0x1,  # Data byte length
             #         TYPE_SWITCH: {  #  Additional switch
             #             CONF_NAME: "Auto",  # Additionale name
             #             CONF_SERVICE_DATA: {DATA_STATE_ON: 23, DATA_STATE_OFF: 22},

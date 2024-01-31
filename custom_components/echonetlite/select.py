@@ -20,31 +20,28 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     for entity in hass.data[DOMAIN][config.entry_id]:
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
+        _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
         # configure select entities by looking up full ENL_OP_CODE dict
         for op_code in entity["instance"]["setmap"]:
-            if eojgc in ENL_OP_CODES.keys():
-                if eojcc in ENL_OP_CODES[eojgc].keys():
-                    if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
-                        epc_function_data = entity[
-                            "echonetlite"
-                        ]._instance.EPC_FUNCTIONS.get(op_code, None)
-                        if TYPE_SELECT in ENL_OP_CODES[eojgc][eojcc][
-                            op_code
-                        ].keys() or (
-                            type(epc_function_data) == list
-                            and type(epc_function_data[1]) == dict
-                            and len(epc_function_data[1]) > 2
-                        ):
-                            entities.append(
-                                EchonetSelect(
-                                    hass,
-                                    entity["echonetlite"],
-                                    config,
-                                    op_code,
-                                    ENL_OP_CODES[eojgc][eojcc][op_code],
-                                    entity["echonetlite"]._name or config.title,
-                                )
-                            )
+            epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
+                op_code, None
+            )
+            _by_epc_func = (
+                type(epc_function_data) == list
+                and type(epc_function_data[1]) == dict
+                and len(epc_function_data[1]) > 2
+            )
+            if _by_epc_func or TYPE_SELECT in _enl_op_codes.get(op_code, {}).keys():
+                entities.append(
+                    EchonetSelect(
+                        hass,
+                        entity["echonetlite"],
+                        config,
+                        op_code,
+                        _enl_op_codes.get(op_code, {}),
+                        entity["echonetlite"]._name or config.title,
+                    )
+                )
 
     async_add_entities(entities, True)
 
