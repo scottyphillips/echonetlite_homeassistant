@@ -26,7 +26,8 @@ from pychonet.GeneralLighting import ENL_BRIGHTNESS, ENL_COLOR_TEMP
 
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
-from pychonet.ElectricBlind import ENL_OPENSTATE
+
+# from pychonet.ElectricBlind import ENL_OPENSTATE
 from .const import (
     DOMAIN,
     ENL_OP_CODES,
@@ -64,7 +65,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
         power_switch = ENL_STATUS in entity["instance"]["setmap"]
-        mode_select = ENL_OPENSTATE in entity["instance"]["setmap"]
+        # mode_select = ENL_OPENSTATE in entity["instance"]["setmap"]
 
         # Home Air Conditioner we dont bother exposing all sensors
         if eojgc == 1 and eojcc == 48:
@@ -74,11 +75,19 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             for op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity["instance"]["getmap"]:
                     _keys = ENL_OP_CODES[eojgc][eojcc][op_code].keys()
+                    epc_function_data = entity[
+                        "echonetlite"
+                    ]._instance.EPC_FUNCTIONS.get(op_code, None)
                     if (
                         TYPE_SWITCH in _keys
                         or TYPE_SELECT in _keys
                         or TYPE_TIME in _keys
                         or TYPE_NUMBER in _keys
+                        or (
+                            type(epc_function_data) == list
+                            and type(epc_function_data[1]) == dict
+                            and len(epc_function_data[1]) > 1
+                        )
                     ):
                         if op_code in entity["instance"]["setmap"]:
                             continue
@@ -98,11 +107,19 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             for op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                 if op_code in entity["instance"]["getmap"]:
                     _keys = ENL_OP_CODES[eojgc][eojcc][op_code].keys()
+                    epc_function_data = entity[
+                        "echonetlite"
+                    ]._instance.EPC_FUNCTIONS.get(op_code, None)
                     if (
                         TYPE_SWITCH in _keys
                         or TYPE_SELECT in _keys
                         or TYPE_TIME in _keys
                         or TYPE_NUMBER in _keys
+                        or (
+                            type(epc_function_data) == list
+                            and type(epc_function_data[1]) == dict
+                            and len(epc_function_data[1]) > 1
+                        )
                     ):
                         if op_code in entity["instance"]["setmap"]:
                             continue
@@ -117,9 +134,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     )
         else:  # For all other devices, sensors will be configured but customise if applicable.
             for op_code in list(entity["echonetlite"]._update_flags_full_list):
-                if (power_switch and ENL_STATUS == op_code) or (
-                    mode_select and ENL_OPENSTATE == op_code
-                ):
+                # if (power_switch and ENL_STATUS == op_code) or (
+                #     mode_select and ENL_OPENSTATE == op_code
+                # ):
+                if power_switch and ENL_STATUS == op_code:
                     continue
                 if eojgc == 0x02 and (eojcc == 0x90 or eojcc == 0x91):
                     # General Lighting, Single Function Lighting: skip already handled values
@@ -129,11 +147,19 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     if eojcc in ENL_OP_CODES[eojgc].keys():
                         if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
                             _keys = ENL_OP_CODES[eojgc][eojcc][op_code].keys()
+                            epc_function_data = entity[
+                                "echonetlite"
+                            ]._instance.EPC_FUNCTIONS.get(op_code, None)
                             if (
                                 TYPE_SWITCH in _keys
                                 or TYPE_SELECT in _keys
                                 or TYPE_TIME in _keys
                                 or TYPE_NUMBER in _keys
+                                or (
+                                    type(epc_function_data) == list
+                                    and type(epc_function_data[1]) == dict
+                                    and len(epc_function_data[1]) > 1
+                                )
                             ):
                                 if op_code in entity["instance"]["setmap"]:
                                     continue  # dont configure as sensor, it will be configured as switch instead.
@@ -407,7 +433,7 @@ class EchonetSensor(SensorEntity):
                             new_val * self._connector._update_data[multiplier_opcode]
                         )
                     else:
-                        return STATE_UNAVAILABLE
+                        return None
                 if CONF_MULTIPLIER_OPTIONAL_OPCODE in self._sensor_attributes:
                     multiplier_opcode = self._sensor_attributes[
                         CONF_MULTIPLIER_OPTIONAL_OPCODE

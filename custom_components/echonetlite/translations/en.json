@@ -62,6 +62,17 @@
         }
     },
     "entity": {
+        "sensor": {
+            "echonetlite": {
+                "state": {
+                    "stopped": "Stopped",
+                    "supplying hot water": "Supplying Hot Water",
+                    "keeping bath temperature": "Keeping Bath Temperature",
+                    "heating": "Heating",
+                    "not heating": "Not Heating"
+                }
+            }
+        },
         "select": {
             "echonetlite": {
                 "state": {

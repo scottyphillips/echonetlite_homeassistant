@@ -37,7 +37,16 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             if eojgc in ENL_OP_CODES.keys():
                 if eojcc in ENL_OP_CODES[eojgc].keys():
                     if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
-                        if TYPE_SWITCH in ENL_OP_CODES[eojgc][eojcc][op_code].keys():
+                        epc_function_data = entity[
+                            "echonetlite"
+                        ]._instance.EPC_FUNCTIONS.get(op_code, None)
+                        if TYPE_SWITCH in ENL_OP_CODES[eojgc][eojcc][
+                            op_code
+                        ].keys() or (
+                            type(epc_function_data) == list
+                            and type(epc_function_data[1]) == dict
+                            and len(epc_function_data[1]) == 2
+                        ):
                             entities.append(
                                 EchonetSwitch(
                                     hass,
@@ -98,7 +107,21 @@ class EchonetSwitch(SwitchEntity):
         self._config = config
         self._code = code
         self._options = options
-        self._on_value = options.get(CONF_ON_VALUE, DATA_STATE_ON)
+        epc_function_data = connector._instance.EPC_FUNCTIONS.get(code, None)
+        if type(epc_function_data) == list:
+            data_keys = list(epc_function_data[1].keys())
+            data_items = list(epc_function_data[1].values())
+            self._options.update(
+                {
+                    CONF_SERVICE_DATA: {
+                        DATA_STATE_ON: data_keys[0],
+                        DATA_STATE_OFF: data_keys[1],
+                    },
+                    CONF_ON_VALUE: data_items[0],
+                    CONF_OFF_VALUE: data_items[1],
+                }
+            )
+        self._on_value = self._options.get(CONF_ON_VALUE, DATA_STATE_ON)
         self._on_vals = [
             self._on_value,
             self._options[CONF_SERVICE_DATA][DATA_STATE_ON],

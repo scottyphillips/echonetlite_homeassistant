@@ -11,6 +11,7 @@ from .const import (
     CONF_MAXIMUM,
     CONF_AS_ZERO,
     CONF_MAX_OPC,
+    CONF_BYTE_LENGTH,
     CONF_UNIT_OF_MEASUREMENT,
     TYPE_TIME,
     TYPE_NUMBER,
@@ -70,6 +71,7 @@ class EchonetNumber(NumberEntity):
         self._options = options[TYPE_NUMBER]
         self._as_zero = int(options[TYPE_NUMBER].get(CONF_AS_ZERO, 0))
         self._conf_max = int(options[TYPE_NUMBER][CONF_MAXIMUM])
+        self._byte_length = int(options[TYPE_NUMBER].get(CONF_BYTE_LENGTH, 0))
 
         self._device_name = name
         self._attr_device_class = self._options.get(CONF_TYPE, None)
@@ -128,7 +130,7 @@ class EchonetNumber(NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
         if await self._connector._instance.setMessage(
-            self._code, int(value + self._as_zero)
+            self._code, int(value + self._as_zero), self._byte_length
         ):
             # self._connector._update_data[epc] = value
             # self.async_write_ha_state()

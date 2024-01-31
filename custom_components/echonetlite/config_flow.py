@@ -190,6 +190,7 @@ async def enumerate_instances(
                 uidi = f"{uid}-{eojgc}-{eojcc}-{instance}"
                 name = None
                 if host_product_code == "WTY2001" and eojcc == 0x91:
+                    # Panasonic WTY2001 Advanced Series Link Plus Wireless Adapter
                     await server.echonetMessage(
                         host,
                         eojgc,
@@ -198,9 +199,11 @@ async def enumerate_instances(
                         GET,
                         [{"EPC": 0xFD}, {"EPC": 0xFE}],
                     )
-                    uidi = _null_padded_optional_string(
-                        state["instances"][eojgc][eojcc][instance][0xFE]
-                    )
+                    # When updating the previous environment, the entity ID will change if the uidi changes, so this should be postponed.
+                    # Reconsider if the instance number changes dynamically.
+                    # uidi = _null_padded_optional_string(
+                    #     state["instances"][eojgc][eojcc][instance][0xFE]
+                    # )
                     name = _null_padded_optional_string(
                         state["instances"][eojgc][eojcc][instance][0xFD]
                     )
@@ -290,6 +293,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if len(_detected_hosts):
                 host = list(_detected_hosts.keys()).pop(0)
                 title = _detected_hosts[host][0]["manufacturer"]
+                if _detected_hosts[host][0]["host_product_code"]:
+                    title += " " + _detected_hosts[host][0]["host_product_code"]
             else:
                 if user_input is None:
                     host = title = WORD_OF_AUTO_DISCOVERY

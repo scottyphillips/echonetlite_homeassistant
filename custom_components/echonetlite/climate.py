@@ -1,6 +1,7 @@
 import logging
 
 from pychonet.HomeAirConditioner import (
+    AIRFLOW_VERT,
     ENL_STATUS,
     ENL_FANSPEED,
     ENL_AIR_VERT,
@@ -11,6 +12,9 @@ from pychonet.HomeAirConditioner import (
     ENL_HVAC_SET_HUMIDITY,
     ENL_HVAC_ROOM_TEMP,
     ENL_HVAC_SILENT_MODE,
+    FAN_SPEED,
+    MODES,
+    SILENT_MODE,
 )
 
 from pychonet.EchonetInstance import ENL_GETMAP
@@ -33,33 +37,20 @@ from homeassistant.const import (
     ATTR_TEMPERATURE,
     PRECISION_WHOLE,
 )
-from .const import DOMAIN, SILENT_MODE_OPTIONS, OPTION_HA_UI_SWING
+from .const import DATA_STATE_ON, DOMAIN, SILENT_MODE_OPTIONS, OPTION_HA_UI_SWING
 
 _LOGGER = logging.getLogger(__name__)
 
 SUPPORT_FLAGS = 0
 
-DEFAULT_FAN_MODES = [
-    "auto",
-    "minimum",
-    "low",
-    "medium-low",
-    "medium",
-    "medium-high",
-    "high",
-    "very-high",
-    "max",
-]
+DEFAULT_FAN_MODES = list(
+    FAN_SPEED.keys()
+)  # ["auto","minimum","low","medium-low","medium","medium-high","high","very-high","max"]
 DEFAULT_HVAC_MODES = ["heat", "cool", "dry", "fan_only", "heat_cool", "off"]
-DEFAULT_SWING_MODES = [
-    "auto-vert",
-    "upper",
-    "upper-central",
-    "central",
-    "lower-central",
-    "lower",
-]
-DEFAULT_PRESET_MODES = ["normal", "high-speed", "silent"]
+DEFAULT_SWING_MODES = ["auto-vert"] + list(
+    AIRFLOW_VERT.keys()
+)  # ["auto-vert","upper","upper-central","central","lower-central","lower"]
+DEFAULT_PRESET_MODES = list(SILENT_MODE.keys())  # ["normal", "high-speed", "silent"]
 
 SERVICE_SET_HUMIDIFER_DURING_HEATER = "set_humidifier_during_heater"
 ATTR_STATE = "state"
@@ -117,6 +108,14 @@ class EchonetClimate(ClimateEntity):
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
+        self._opc_data = {
+            ENL_AUTO_DIRECTION: list(
+                self._connector._instance.EPC_FUNCTIONS[ENL_AUTO_DIRECTION][1].values()
+            ),
+            ENL_SWING_MODE: list(
+                self._connector._instance.EPC_FUNCTIONS[ENL_SWING_MODE][1].values()
+            ),
+        }
         if ENL_FANSPEED in list(self._connector._setPropertyMap):
             self._support_flags = self._support_flags | ClimateEntityFeature.FAN_MODE
         if ENL_AIR_VERT in list(self._connector._setPropertyMap):
@@ -237,7 +236,7 @@ class EchonetClimate(ClimateEntity):
     def hvac_mode(self):
         """Return current operation ie. heat, cool, idle."""
         mode = self._connector._update_data[ENL_HVAC_MODE]
-        if self._connector._update_data[ENL_STATUS] == "On":
+        if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON:
             if mode == "auto":
                 mode = HVACMode.HEAT_COOL
             elif mode == "other":
@@ -254,7 +253,7 @@ class EchonetClimate(ClimateEntity):
     @property
     def hvac_action(self):
         """Return current operation ie. heat, cool, idle."""
-        if self._connector._update_data[ENL_STATUS] == "On":
+        if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON:
             if self._connector._update_data[ENL_HVAC_MODE] == HVACMode.HEAT:
                 return HVACAction.HEATING
             elif self._connector._update_data[ENL_HVAC_MODE] == HVACMode.COOL:
@@ -300,7 +299,9 @@ class EchonetClimate(ClimateEntity):
     @property
     def is_on(self):
         """Return true if the device is on."""
-        return True if self._connector._update_data[ENL_STATUS] == "On" else False
+        return (
+            True if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON else False
+        )
 
     @property
     def fan_mode(self):
@@ -369,15 +370,9 @@ class EchonetClimate(ClimateEntity):
 
     async def async_set_swing_mode(self, swing_mode):
         """Set new swing mode."""
-        if (
-            self._connector._user_options.get(ENL_AUTO_DIRECTION)
-            and swing_mode in self._connector._user_options[ENL_AUTO_DIRECTION]
-        ):
+        if swing_mode in self._opc_data[ENL_AUTO_DIRECTION]:
             await self._connector._instance.setAutoDirection(swing_mode)
-        elif (
-            self._connector._user_options.get(ENL_SWING_MODE)
-            and swing_mode in self._connector._user_options[ENL_SWING_MODE]
-        ):
+        elif swing_mode in self._opc_data[ENL_SWING_MODE]:
             await self._connector._instance.setSwingMode(swing_mode)
         else:
             await self._connector._instance.setAirflowVert(swing_mode)

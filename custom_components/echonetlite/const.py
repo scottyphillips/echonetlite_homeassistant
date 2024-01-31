@@ -54,9 +54,10 @@ CONF_ICON_ZERO = "icon_zero"
 CONF_ICONS = "icons"
 CONF_AS_ZERO = "as_zero"
 CONF_MAX_OPC = "max_opc"
+CONF_BYTE_LENGTH = "byte_len"
 
-DATA_STATE_ON = "On"
-DATA_STATE_OFF = "Off"
+DATA_STATE_ON = "on"
+DATA_STATE_OFF = "off"
 TYPE_SWITCH = "switch"
 TYPE_SELECT = "select"
 TYPE_TIME = "time"
@@ -118,6 +119,7 @@ ENL_OP_CODES = {
             #         CONF_MINIMUM: 0x0,  # Minimum value
             #         CONF_MAXIMUM: 0x32,  # Maximum value
             #         CONF_MAX_OPC: None,  # OPC of max value
+            #         CONF_BYTE_LENGTH: 0x0  # Data byte length
             #         TYPE_SWITCH: {  #  Additional switch
             #             CONF_NAME: "Auto",  # Additionale name
             #             CONF_SERVICE_DATA: {DATA_STATE_ON: 23, DATA_STATE_OFF: 22},
@@ -152,23 +154,18 @@ ENL_OP_CODES = {
             },
             0xA0: {
                 CONF_ICON: "mdi:fan",
-                TYPE_SELECT: FAN_SPEED,
             },
             0xA1: {
                 CONF_ICON: "mdi:shuffle-variant",
-                TYPE_SELECT: AUTO_DIRECTION,
             },
             0xA3: {
                 CONF_ICON: "mdi:arrow-oscillating",
-                TYPE_SELECT: SWING_MODE,
             },
             0xA5: {
                 CONF_ICON: "mdi:tailwind",
-                TYPE_SELECT: AIRFLOW_HORIZ,
             },
             0xA4: {
                 CONF_ICON: "mdi:tailwind",
-                TYPE_SELECT: AIRFLOW_VERT,
             },
         },
         0x35: {
@@ -197,7 +194,6 @@ ENL_OP_CODES = {
                     CLOSE: "mdi:roller-shade-closed",
                     STOP: "mdi:roller-shade",
                 },
-                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
             }
         },
         0x61: {  # Electrically operated shutter
@@ -208,7 +204,6 @@ ENL_OP_CODES = {
                     CLOSE: "mdi:window-shutter",
                     STOP: "mdi:window-shutter-open",
                 },
-                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
             }
         },
         0x62: {  # Electrically operated curtain
@@ -219,7 +214,6 @@ ENL_OP_CODES = {
                     CLOSE: "mdi:curtains-closed",
                     STOP: "mdi:curtains",
                 },
-                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
             }
         },
         0x63: {  # Electrically operated rain sliding door/shutter
@@ -230,7 +224,6 @@ ENL_OP_CODES = {
                     CLOSE: "mdi:door-sliding",
                     STOP: "mdi:door-sliding-open",
                 },
-                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
             }
         },
         0x64: {  # Electrically operated gate
@@ -241,7 +234,6 @@ ENL_OP_CODES = {
                     CLOSE: "mdi:boom-gate-outline",
                     STOP: "mdi:boom-gate-up-outline",
                 },
-                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
             }
         },
         0x65: {  # Electrically operated window
@@ -252,7 +244,6 @@ ENL_OP_CODES = {
                     CLOSE: "mdi:window-closed-variant",
                     STOP: "mdi:window-open-variant",
                 },
-                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
             }
         },
         0x66: {  # Automatically operated entrance door/sliding door
@@ -263,45 +254,28 @@ ENL_OP_CODES = {
                     CLOSE: "mdi:door-sliding",
                     STOP: "mdi:door-sliding-open",
                 },
-                TYPE_SELECT: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43},
             }
         },
         0x6F: {  # Electric lock
             0xE0: {
                 CONF_ICON: "mdi:lock",
-                CONF_SERVICE_DATA: SWITCH_BINARY_INVERT,
                 CONF_ENSURE_ON: ENL_STATUS,
-                CONF_ON_VALUE: "unlock",
-                CONF_OFF_VALUE: "lock",
-                TYPE_SWITCH: True,
             },
             0xE1: {
                 CONF_ICON: "mdi:lock",
-                CONF_SERVICE_DATA: SWITCH_BINARY_INVERT,
                 CONF_ENSURE_ON: ENL_STATUS,
-                CONF_ON_VALUE: "unlock",
-                CONF_OFF_VALUE: "lock",
-                TYPE_SWITCH: True,
             },
             0xE6: {
                 CONF_ICON: None,
-                CONF_SERVICE_DATA: SWITCH_BINARY,
                 CONF_ENSURE_ON: ENL_STATUS,
-                CONF_ON_VALUE: "on",
-                CONF_OFF_VALUE: "off",
-                TYPE_SWITCH: True,
             },
         },
         0x72: {  # Hot water generator
             0x90: {
                 CONF_ICON: "mdi:timer",
-                CONF_SERVICE_DATA: SWITCH_BINARY,
-                CONF_ENSURE_ON: ENL_STATUS,
-                TYPE_SWITCH: True,
             },
             0x91: {  # Sensor with service
                 CONF_ICON: "mdi:timer-outline",
-                TYPE_TIME: True,
             },
             0xD1: {  # Sensor
                 CONF_ICON: "mdi:thermometer",
@@ -327,15 +301,9 @@ ENL_OP_CODES = {
             },
             0xE3: {
                 CONF_ICON: "mdi:bathtub-outline",
-                CONF_SERVICE_DATA: SWITCH_BINARY,
-                CONF_ENSURE_ON: ENL_STATUS,
-                TYPE_SWITCH: True,
             },
             0xE4: {
                 CONF_ICON: "mdi:heat-wave",
-                CONF_SERVICE_DATA: SWITCH_BINARY,
-                CONF_ENSURE_ON: ENL_STATUS,
-                TYPE_SWITCH: True,
             },
             0xE7: {CONF_UNIT_OF_MEASUREMENT: "L"},
             0xEE: {CONF_UNIT_OF_MEASUREMENT: "L"},
@@ -381,26 +349,6 @@ ENL_OP_CODES = {
             },
         },
         0x7B: {
-            0x90: {
-                CONF_ICON: "mdi:timer",
-                CONF_SERVICE_DATA: SWITCH_BINARY,
-                CONF_ENSURE_ON: ENL_STATUS,
-                TYPE_SWITCH: True,
-            },
-            0x91: {
-                CONF_ICON: "mdi:timer-outline",
-                TYPE_TIME: True,
-            },
-            0x94: {
-                CONF_ICON: "mdi:timer",
-                CONF_SERVICE_DATA: SWITCH_BINARY,
-                CONF_ENSURE_ON: ENL_STATUS,
-                TYPE_SWITCH: True,
-            },
-            0x95: {
-                CONF_ICON: "mdi:timer-outline",
-                TYPE_TIME: True,
-            },
             0xE0: {
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: SensorDeviceClass.TEMPERATURE,
@@ -431,6 +379,30 @@ ENL_OP_CODES = {
                         CONF_SERVICE_DATA: {DATA_STATE_ON: 0x41, DATA_STATE_OFF: 0x31},
                     },
                 },
+            },
+            0xE2: {
+                CONF_ICON: "mdi:thermometer",
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
+            },
+            0xE3: {
+                CONF_ICON: "mdi:thermometer",
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
+            },
+            0x90: {
+                CONF_ICON: "mdi:timer",
+            },
+            0x91: {
+                CONF_ICON: "mdi:timer-outline",
+            },
+            0x94: {
+                CONF_ICON: "mdi:timer",
+            },
+            0x95: {
+                CONF_ICON: "mdi:timer-outline",
             },
         },
         0x7C: {
@@ -696,6 +668,14 @@ ENL_OP_CODES = {
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
                 TYPE_DATA_DICT: ["r_phase_amperes", "t_phase_amperes"],
             },
+            # 0xEA: {
+            #     CONF_ICON: None,
+            #     TYPE_DATA_DICT: ["time", "culmative_value"],
+            # },
+            # 0xEB: {
+            #     CONF_ICON: None,
+            #     TYPE_DATA_DICT: ["time", "culmative_value"],
+            # },
             0xD3: {CONF_DISABLED_DEFAULT: True},
             0xE1: {CONF_DISABLED_DEFAULT: True},
         },

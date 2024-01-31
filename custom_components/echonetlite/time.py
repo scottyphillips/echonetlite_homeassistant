@@ -1,7 +1,8 @@
 import logging
 import datetime
 from datetime import time
-from homeassistant.components.time import TimeEntity
+from homeassistant.components.time import TimeEntity, ENTITY_ID_FORMAT
+from homeassistant.util import slugify
 from .const import (
     DOMAIN,
     CONF_FORCE_POLLING,
@@ -11,6 +12,7 @@ from .const import (
 )
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
+from pychonet.lib.epc_functions import _hh_mm
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +27,20 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             if eojgc in ENL_OP_CODES.keys():
                 if eojcc in ENL_OP_CODES[eojgc].keys():
                     if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
-                        if TYPE_TIME in ENL_OP_CODES[eojgc][eojcc][op_code].keys():
+                        epc_function_data = entity[
+                            "echonetlite"
+                        ]._instance.EPC_FUNCTIONS.get(op_code, None)
+                        if (
+                            TYPE_TIME in ENL_OP_CODES[eojgc][eojcc][op_code].keys()
+                            or (
+                                callable(epc_function_data)
+                                and epc_function_data == _hh_mm
+                            )
+                            or (
+                                type(epc_function_data) == list
+                                and epc_function_data[0] == _hh_mm
+                            )
+                        ):
                             entities.append(
                                 EchonetTime(
                                     hass,
@@ -43,7 +58,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetTime(TimeEntity):
     _attr_translation_key = DOMAIN
 
-    def __init__(self, hass, connector, config, code, options, name=None):
+    def __init__(self, hass, connector, config, code, options, device_name=None):
         """Initialize the time."""
         self._connector = connector
         self._config = config
@@ -58,7 +73,8 @@ class EchonetTime(TimeEntity):
             if self._connector._uidi
             else f"{self._connector._uid}-{self._code}"
         )
-        self._device_name = name
+
+        self._device_name = device_name
         self._attr_should_poll = True
         self._attr_available = True
         self._attr_native_value = self.get_time()

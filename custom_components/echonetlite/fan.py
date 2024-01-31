@@ -6,7 +6,7 @@ from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.const import (
     PRECISION_WHOLE,
 )
-from .const import DOMAIN
+from .const import DATA_STATE_ON, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -132,7 +132,7 @@ class EchonetFan(FanEntity):
     @property
     def is_on(self):
         """Return true if the device is on."""
-        return True if self._connector._update_data[0x80] == "On" else False
+        return True if self._connector._update_data[0x80] == DATA_STATE_ON else False
 
     async def async_turn_on(
         self,

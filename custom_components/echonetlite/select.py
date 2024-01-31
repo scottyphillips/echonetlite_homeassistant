@@ -10,6 +10,7 @@ from .const import (
 )
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
+from pychonet.lib.epc_functions import _swap_dict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +25,16 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             if eojgc in ENL_OP_CODES.keys():
                 if eojcc in ENL_OP_CODES[eojgc].keys():
                     if op_code in ENL_OP_CODES[eojgc][eojcc].keys():
-                        if TYPE_SELECT in ENL_OP_CODES[eojgc][eojcc][op_code].keys():
+                        epc_function_data = entity[
+                            "echonetlite"
+                        ]._instance.EPC_FUNCTIONS.get(op_code, None)
+                        if TYPE_SELECT in ENL_OP_CODES[eojgc][eojcc][
+                            op_code
+                        ].keys() or (
+                            type(epc_function_data) == list
+                            and type(epc_function_data[1]) == dict
+                            and len(epc_function_data[1]) > 2
+                        ):
                             entities.append(
                                 EchonetSelect(
                                     hass,
@@ -52,7 +62,12 @@ class EchonetSelect(SelectEntity):
             self._connector._instance._host
         ]
         self._sub_state = None
-        self._options = options[TYPE_SELECT]
+        if type(options.get(TYPE_SELECT)) == dict:
+            self._options = options[TYPE_SELECT]
+        else:
+            # Read from _instance.EPC FUNCTIONS definition
+            # Swap key, value of _instance.EPC_FUNCTIONS[opc][1]
+            self._options = _swap_dict(connector._instance.EPC_FUNCTIONS[code][1])
         self._icons = options.get(CONF_ICONS, {})
         self._attr_icon = options.get(CONF_ICON, None)
         self._icon_default = self._attr_icon
@@ -70,6 +85,7 @@ class EchonetSelect(SelectEntity):
         self._device_name = name
         self._should_poll = True
         self._available = True
+        self._attr_force_update = False
         self.update_option_listener()
 
     @property
@@ -108,7 +124,14 @@ class EchonetSelect(SelectEntity):
         return self._available
 
     async def async_select_option(self, option: str):
-        await self._connector._instance.setMessage(self._code, self._options[option])
+        self._attr_current_option = option
+        self.async_schedule_update_ha_state()
+        if not await self._connector._instance.setMessage(
+            self._code, self._options[option]
+        ):
+            # Restore previous state
+            self._attr_current_option = self._connector._update_data.get(self._code)
+            self.async_schedule_update_ha_state()
 
     async def async_update(self):
         """Retrieve latest state."""
