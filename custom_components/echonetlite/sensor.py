@@ -57,13 +57,13 @@ _LOGGER = logging.getLogger(__name__)
 
 #
 def is_regist_as_sensor(epc_function_data):
-    if type(epc_function_data) == list:
-        if type(epc_function_data[1]) == dict and len(epc_function_data[1]) > 1:
-            return True  # Switch or Select
-        if callable(epc_function_data[0]) and epc_function_data[0] == _hh_mm:
-            return True  # Time
-    else:
-        if callable(epc_function_data) and epc_function_data == _hh_mm:
+    if epc_function_data:
+        if type(epc_function_data) == list:
+            if type(epc_function_data[1]) == dict and len(epc_function_data[1]) > 1:
+                return True  # Switch or Select
+            if callable(epc_function_data[0]) and epc_function_data[0] == _hh_mm:
+                return True  # Time
+        elif callable(epc_function_data) and epc_function_data == _hh_mm:
             return True  # Time
     return False
 
