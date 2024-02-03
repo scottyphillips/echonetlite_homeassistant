@@ -3,6 +3,7 @@ import datetime
 from datetime import time
 from homeassistant.const import CONF_ICON
 from homeassistant.components.time import TimeEntity
+from homeassistant.exceptions import InvalidStateError
 from .const import (
     DOMAIN,
     CONF_FORCE_POLLING,
