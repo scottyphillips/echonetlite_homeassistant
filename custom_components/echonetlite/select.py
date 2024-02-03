@@ -1,14 +1,16 @@
 import logging
+from homeassistant.const import CONF_ICON
 from homeassistant.components.select import SelectEntity
 from .const import (
-    HVAC_SELECT_OP_CODES,
     DOMAIN,
-    FAN_SELECT_OP_CODES,
-    COVER_SELECT_OP_CODES,
     CONF_FORCE_POLLING,
+    ENL_OP_CODES,
+    CONF_ICONS,
+    TYPE_SELECT,
 )
 from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
+from pychonet.lib.epc_functions import _swap_dict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -16,64 +18,31 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        if (
-            entity["instance"]["eojgc"] == 1 and entity["instance"]["eojcc"] == 48
-        ):  # Home Air Conditioner
-            for op_code in entity["instance"]["setmap"]:
-                if op_code in HVAC_SELECT_OP_CODES:
-                    entities.append(
-                        EchonetSelect(
-                            hass,
-                            entity["echonetlite"],
-                            config,
-                            op_code,
-                            HVAC_SELECT_OP_CODES[op_code],
-                            entity["echonetlite"]._name or config.title,
-                        )
+        eojgc = entity["instance"]["eojgc"]
+        eojcc = entity["instance"]["eojcc"]
+        _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
+        # configure select entities by looking up full ENL_OP_CODE dict
+        for op_code in entity["instance"]["setmap"]:
+            epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
+                op_code, None
+            )
+            _by_epc_func = (
+                type(epc_function_data) == list
+                and type(epc_function_data[1]) == dict
+                and len(epc_function_data[1]) > 2
+            )
+            if _by_epc_func or TYPE_SELECT in _enl_op_codes.get(op_code, {}).keys():
+                entities.append(
+                    EchonetSelect(
+                        hass,
+                        entity["echonetlite"],
+                        config,
+                        op_code,
+                        _enl_op_codes.get(op_code, {}),
+                        entity["echonetlite"]._name or config.title,
                     )
-        elif (
-            entity["instance"]["eojgc"] == 1 and entity["instance"]["eojcc"] == 53
-        ):  # Home Air Cleaner
-            for op_code in entity["instance"]["setmap"]:
-                if op_code in FAN_SELECT_OP_CODES:
-                    entities.append(
-                        EchonetSelect(
-                            hass,
-                            entity["echonetlite"],
-                            config,
-                            op_code,
-                            FAN_SELECT_OP_CODES[op_code],
-                            entity["echonetlite"]._name or config.title,
-                        )
-                    )
-        elif entity["instance"]["eojgc"] == 0x02 and entity["instance"]["eojcc"] in (
-            0x60,
-            0x61,
-            0x62,
-            0x63,
-            0x64,
-            0x65,
-            0x66,
-        ):
-            # 0x60: "Electrically operated blind/shade"
-            # 0x61: "Electrically operated shutter"
-            # 0x62: "Electrically operated curtain"
-            # 0x63: "Electrically operated rain sliding door/shutter"
-            # 0x64: "Electrically operated gate"
-            # 0x65: "Electrically operated window"
-            # 0x66: "Automatically operated entrance door/sliding door"
-            for op_code in entity["instance"]["setmap"]:
-                if op_code in COVER_SELECT_OP_CODES:
-                    entities.append(
-                        EchonetSelect(
-                            hass,
-                            entity["echonetlite"],
-                            config,
-                            op_code,
-                            COVER_SELECT_OP_CODES[op_code],
-                            entity["echonetlite"]._name or config.title,
-                        )
-                    )
+                )
+
     async_add_entities(entities, True)
 
 
@@ -90,7 +59,15 @@ class EchonetSelect(SelectEntity):
             self._connector._instance._host
         ]
         self._sub_state = None
-        self._options = options
+        if type(options.get(TYPE_SELECT)) == dict:
+            self._options = options[TYPE_SELECT]
+        else:
+            # Read from _instance.EPC FUNCTIONS definition
+            # Swap key, value of _instance.EPC_FUNCTIONS[opc][1]
+            self._options = _swap_dict(connector._instance.EPC_FUNCTIONS[code][1])
+        self._icons = options.get(CONF_ICONS, {})
+        self._attr_icon = options.get(CONF_ICON, None)
+        self._icon_default = self._attr_icon
         self._attr_options = list(self._options.keys())
         if self._code in list(self._connector._user_options.keys()):
             if self._connector._user_options[code] is not False:
@@ -105,6 +82,7 @@ class EchonetSelect(SelectEntity):
         self._device_name = name
         self._should_poll = True
         self._available = True
+        self._attr_force_update = False
         self.update_option_listener()
 
     @property
@@ -128,7 +106,7 @@ class EchonetSelect(SelectEntity):
             "manufacturer": self._connector._manufacturer,
             "model": EOJX_CLASS[self._connector._instance._eojgc][
                 self._connector._instance._eojcc
-            ]
+            ],
             # "sw_version": "",
         }
 
@@ -143,7 +121,14 @@ class EchonetSelect(SelectEntity):
         return self._available
 
     async def async_select_option(self, option: str):
-        await self._connector._instance.setMessage(self._code, self._options[option])
+        self._attr_current_option = option
+        self.async_schedule_update_ha_state()
+        if not await self._connector._instance.setMessage(
+            self._code, self._options[option]
+        ):
+            # Restore previous state
+            self._attr_current_option = self._connector._update_data.get(self._code)
+            self.async_schedule_update_ha_state()
 
     async def async_update(self):
         """Retrieve latest state."""
@@ -161,6 +146,7 @@ class EchonetSelect(SelectEntity):
             ]
             if keys:
                 self._attr_current_option = keys[0]
+        self._attr_icon = self._icons.get(self._attr_current_option, self._icon_default)
         if self._code in list(self._connector._user_options.keys()):
             if self._connector._user_options[self._code] is not False:
                 self._attr_options = self._connector._user_options[self._code]

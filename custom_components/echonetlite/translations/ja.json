@@ -65,13 +65,11 @@
         "sensor": {
             "echonetlite": {
                 "state": {
-                    "Off": "オフ",
-                    "On": "オン",
                     "Stopped": "停止",
                     "Supplying Hot Water": "湯はり中",
                     "Keeping Bath Temperature": "保温中",
-                    "Heating": "加温中",
-                    "Not Heating": "停止"
+                    "heating": "加温中",
+                    "not heating": "停止"
                 }
             }
         },

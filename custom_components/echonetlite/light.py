@@ -12,7 +12,7 @@ from homeassistant.components.light import (
     COLOR_MODE_COLOR_TEMP,
 )
 
-from .const import DOMAIN, CONF_FORCE_POLLING
+from .const import DATA_STATE_ON, DOMAIN, CONF_FORCE_POLLING
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +42,6 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
 
 class EchonetLight(LightEntity):
-
     """Representation of a ECHONET light device."""
 
     def __init__(self, name, connector):
@@ -117,7 +116,7 @@ class EchonetLight(LightEntity):
             "manufacturer": self._connector._manufacturer,
             "model": EOJX_CLASS[self._connector._instance._eojgc][
                 self._connector._instance._eojcc
-            ]
+            ],
             # "sw_version": "",
         }
 
@@ -144,7 +143,9 @@ class EchonetLight(LightEntity):
     @property
     def is_on(self):
         """Return true if the device is on."""
-        return True if self._connector._update_data[ENL_STATUS] == "On" else False
+        return (
+            True if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON else False
+        )
 
     async def async_turn_on(self, **kwargs):
         """Turn on."""
