@@ -103,23 +103,23 @@ ENL_OP_CODES = {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
             },
-            0xB3: {  # for develop test
-                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                TYPE_NUMBER: {  # Make Number input entity if settable value
-                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,  # NumberDeviceClass.x
-                    CONF_AS_ZERO: 0x1,  # Value as zero
-                    CONF_MINIMUM: 0x0,  # Minimum value
-                    CONF_MAXIMUM: 0x32,  # Maximum value
-                    CONF_MAX_OPC: None,  # OPC of max value
-                    CONF_BYTE_LENGTH: 0x1,  # Data byte length
-                    TYPE_SWITCH: {  #  Additional switch
-                        CONF_NAME: "Auto",  # Additionale name
-                        CONF_ICON: "mdi:thermometer",
-                        CONF_SERVICE_DATA: {DATA_STATE_ON: 23, DATA_STATE_OFF: 22},
-                    },
-                },
-            },
+            # 0xB3: {  # for develop test
+            #     CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+            #     CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            #     TYPE_NUMBER: {  # Make Number input entity if settable value
+            #         CONF_TYPE: NumberDeviceClass.TEMPERATURE,  # NumberDeviceClass.x
+            #         CONF_AS_ZERO: 0x1,  # Value as zero
+            #         CONF_MINIMUM: 0x0,  # Minimum value
+            #         CONF_MAXIMUM: 0x32,  # Maximum value
+            #         CONF_MAX_OPC: None,  # OPC of max value
+            #         CONF_BYTE_LENGTH: 0x1,  # Data byte length
+            #         TYPE_SWITCH: {  #  Additional switch
+            #             CONF_NAME: "Auto",  # Additionale name
+            #             CONF_ICON: "mdi:thermometer",
+            #             CONF_SERVICE_DATA: {DATA_STATE_ON: 23, DATA_STATE_OFF: 22},
+            #         },
+            #     },
+            # },
             0xB4: {  # Humidity setting in dry mode
                 CONF_TYPE: SensorDeviceClass.HUMIDITY,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
