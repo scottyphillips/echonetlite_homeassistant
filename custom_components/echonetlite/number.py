@@ -1,25 +1,25 @@
 import logging
+from homeassistant.const import (
+    CONF_ICON,
+    CONF_TYPE,
+    CONF_MINIMUM,
+    CONF_MAXIMUM,
+    CONF_UNIT_OF_MEASUREMENT,
+)
+from homeassistant.exceptions import InvalidStateError
 from homeassistant.components.number import NumberEntity
+from pychonet.lib.epc import EPC_CODE
+from pychonet.lib.eojx import EOJX_CLASS
+from . import get_unit_by_devise_class
 from .const import (
     DOMAIN,
     CONF_FORCE_POLLING,
     ENL_OP_CODES,
-    CONF_ICON,
-    CONF_NAME,
-    CONF_TYPE,
-    CONF_MINIMUM,
-    CONF_MAXIMUM,
     CONF_AS_ZERO,
     CONF_MAX_OPC,
     CONF_BYTE_LENGTH,
-    CONF_UNIT_OF_MEASUREMENT,
-    TYPE_TIME,
     TYPE_NUMBER,
-    NumberDeviceClass,
-    UnitOfTemperature,
 )
-from pychonet.lib.epc import EPC_CODE
-from pychonet.lib.eojx import EOJX_CLASS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         entity["echonetlite"],
                         config,
                         op_code,
-                        ENL_OP_CODES[eojgc][eojcc][op_code],
+                        _enl_op_codes[op_code],
                         entity["echonetlite"]._name or config.title,
                     )
                 )
@@ -72,15 +72,21 @@ class EchonetNumber(NumberEntity):
         self._byte_length = int(options[TYPE_NUMBER].get(CONF_BYTE_LENGTH, 1))
 
         self._device_name = name
-        self._attr_device_class = self._options.get(CONF_TYPE, None)
+        self._attr_device_class = self._options.get(
+            CONF_TYPE, options.get(CONF_TYPE, None)
+        )
         self._attr_should_poll = True
         self._attr_available = True
         self._attr_native_value = self.get_value()
         self._attr_native_max_value = self.get_max_value()
         self._attr_native_min_value = self._options.get(CONF_MINIMUM, 0) - self._as_zero
-        self._attr_native_unit_of_measurement = options.get(
-            CONF_UNIT_OF_MEASUREMENT, None
+        self._attr_native_unit_of_measurement = self._options.get(
+            CONF_UNIT_OF_MEASUREMENT, options.get(CONF_UNIT_OF_MEASUREMENT, None)
         )
+        if not self._attr_native_unit_of_measurement:
+            self._attr_native_unit_of_measurement = get_unit_by_devise_class(
+                self._attr_device_class
+            )
 
         self.update_option_listener()
 

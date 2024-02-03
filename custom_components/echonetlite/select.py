@@ -1,10 +1,10 @@
 import logging
+from homeassistant.const import CONF_ICON
 from homeassistant.components.select import SelectEntity
 from .const import (
     DOMAIN,
     CONF_FORCE_POLLING,
     ENL_OP_CODES,
-    CONF_ICON,
     CONF_ICONS,
     TYPE_SELECT,
 )

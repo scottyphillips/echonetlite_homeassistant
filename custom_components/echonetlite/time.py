@@ -1,13 +1,12 @@
 import logging
 import datetime
 from datetime import time
-from homeassistant.components.time import TimeEntity, ENTITY_ID_FORMAT
-from homeassistant.util import slugify
+from homeassistant.const import CONF_ICON
+from homeassistant.components.time import TimeEntity
 from .const import (
     DOMAIN,
     CONF_FORCE_POLLING,
     ENL_OP_CODES,
-    CONF_ICON,
     TYPE_TIME,
 )
 from pychonet.lib.epc import EPC_CODE

@@ -12,13 +12,23 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
-from homeassistant.const import Platform
+from homeassistant.const import (
+    Platform,
+    PERCENTAGE,
+    UnitOfPower,
+    UnitOfTemperature,
+    UnitOfEnergy,
+    UnitOfVolume,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
+)
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.number import NumberDeviceClass
 from .const import (
     DOMAIN,
     USER_OPTIONS,
     TEMP_OPTIONS,
-    CONF_FORCE_POLLING,
     CONF_BATCH_SIZE_MAX,
     MISC_OPTIONS,
 )
@@ -47,8 +57,6 @@ from pychonet.HomeAirConditioner import (
     ENL_HVAC_ROOM_TEMP,
     ENL_HVAC_SILENT_MODE,
     ENL_HVAC_OUT_TEMP,
-    ENL_HVAC_HUMIDIFIER_STATE,
-    ENL_HVAC_HUMIDIFIER_VALUE,
 )
 
 from pychonet.DistributionPanelMeter import (
@@ -65,7 +73,6 @@ from pychonet.DistributionPanelMeter import (
 
 from pychonet.LowVoltageSmartElectricEnergyMeter import (
     ENL_LVSEEM_COEF,
-    ENL_LVSEEM_DIGITS,
     ENL_LVSEEM_ENG_UNIT,
     ENL_LVSEEM_ENG_NOR,
     ENL_LVSEEM_ENG_REV,
@@ -188,6 +195,52 @@ def polling_update_debug_log(values, eojgc, eojcc):
                 debug_log + f" - {EPC_SUPER[value]} ({value:#x}): {values[value]}\n"
             )
     return debug_log
+
+
+def get_unit_by_devise_class(device_class: str) -> str | None:
+    if (
+        device_class == SensorDeviceClass.TEMPERATURE
+        or device_class == NumberDeviceClass.TEMPERATURE
+    ):
+        unit = UnitOfTemperature.CELSIUS
+    elif (
+        device_class == SensorDeviceClass.ENERGY
+        or device_class == NumberDeviceClass.ENERGY
+    ):
+        unit = UnitOfEnergy.WATT_HOUR
+    elif (
+        device_class == SensorDeviceClass.POWER
+        or device_class == NumberDeviceClass.POWER
+    ):
+        unit = UnitOfPower.WATT
+    elif (
+        device_class == SensorDeviceClass.CURRENT
+        or device_class == NumberDeviceClass.CURRENT
+    ):
+        unit = UnitOfElectricCurrent.AMPERE
+    elif (
+        device_class == SensorDeviceClass.VOLTAGE
+        or device_class == NumberDeviceClass.VOLTAGE
+    ):
+        unit = UnitOfElectricPotential.VOLT
+    elif (
+        device_class == SensorDeviceClass.HUMIDITY
+        or device_class == SensorDeviceClass.BATTERY
+        or device_class == NumberDeviceClass.HUMIDITY
+        or device_class == NumberDeviceClass.BATTERY
+    ):
+        unit = PERCENTAGE
+    elif device_class == SensorDeviceClass.GAS or device_class == NumberDeviceClass.GAS:
+        unit = UnitOfVolume.CUBIC_METERS
+    elif (
+        device_class == SensorDeviceClass.WATER
+        or device_class == NumberDeviceClass.WATER
+    ):
+        unit = UnitOfVolume.CUBIC_METERS
+    else:
+        unit = None
+
+    return unit
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -409,7 +462,6 @@ class ECHONETConnector:
     def __init__(self, instance, hass, entry):
         self.hass = hass
         self._host = instance["host"]
-        self._instance = None
         self._eojgc = instance["eojgc"]
         self._eojcc = instance["eojcc"]
         self._eojci = instance["eojci"]

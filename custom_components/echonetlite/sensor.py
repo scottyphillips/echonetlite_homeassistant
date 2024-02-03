@@ -8,18 +8,10 @@ from homeassistant.const import (
     CONF_SERVICE,
     CONF_TYPE,
     CONF_UNIT_OF_MEASUREMENT,
-    PERCENTAGE,
-    UnitOfPower,
-    UnitOfTemperature,
-    UnitOfEnergy,
-    UnitOfVolume,
-    UnitOfElectricCurrent,
-    UnitOfElectricPotential,
 )
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.helpers.typing import StateType
 from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
 from pychonet.GeneralLighting import ENL_BRIGHTNESS, ENL_COLOR_TEMP
@@ -28,7 +20,7 @@ from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import _hh_mm
 
-# from pychonet.ElectricBlind import ENL_OPENSTATE
+from . import get_unit_by_devise_class
 from .const import (
     DOMAIN,
     ENL_OP_CODES,
@@ -307,30 +299,13 @@ class EchonetSensor(SensorEntity):
             self._uid += f'-{self._sensor_attributes["accessor_index"]}'
             self._name += f' {str(self._sensor_attributes["accessor_index"] + 1).zfill(len(str(self._sensor_attributes[TYPE_DATA_ARRAY_WITH_SIZE_OPCODE])))}'
 
-        if CONF_UNIT_OF_MEASUREMENT in _attr_keys:
-            self._unit_of_measurement = self._sensor_attributes[
-                CONF_UNIT_OF_MEASUREMENT
-            ]
-        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.TEMPERATURE:
-            self._unit_of_measurement = UnitOfTemperature.CELSIUS
-        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.ENERGY:
-            self._unit_of_measurement = UnitOfEnergy.WATT_HOUR
-        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.POWER:
-            self._unit_of_measurement = UnitOfPower.WATT
-        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.CURRENT:
-            self._unit_of_measurement = UnitOfElectricCurrent.AMPERE
-        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.VOLTAGE:
-            self._unit_of_measurement = UnitOfElectricPotential.VOLT
-        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.HUMIDITY:
-            self._unit_of_measurement = PERCENTAGE
-        elif self._sensor_attributes[CONF_TYPE] == PERCENTAGE:
-            self._unit_of_measurement = PERCENTAGE
-        elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.GAS:
-            self._unit_of_measurement = UnitOfVolume.CUBIC_METERS
-        elif self._sensor_attributes[CONF_TYPE] == UnitOfVolume.CUBIC_METERS:
-            self._unit_of_measurement = UnitOfVolume.CUBIC_METERS
-        else:
-            self._unit_of_measurement = None
+        self._unit_of_measurement = self._sensor_attributes.get(
+            CONF_UNIT_OF_MEASUREMENT
+        )
+        if not self._unit_of_measurement:
+            self._unit_of_measurement = get_unit_by_devise_class(
+                self._sensor_attributes[CONF_TYPE]
+            )
 
         self.update_option_listener()
 

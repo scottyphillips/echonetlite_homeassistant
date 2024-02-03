@@ -13,7 +13,6 @@ from pychonet.HomeAirConditioner import (
     ENL_HVAC_ROOM_TEMP,
     ENL_HVAC_SILENT_MODE,
     FAN_SPEED,
-    MODES,
     SILENT_MODE,
 )
 
@@ -36,8 +35,9 @@ from homeassistant.components.climate.const import (
 from homeassistant.const import (
     ATTR_TEMPERATURE,
     PRECISION_WHOLE,
+    UnitOfTemperature,
 )
-from .const import DATA_STATE_ON, DOMAIN, SILENT_MODE_OPTIONS, OPTION_HA_UI_SWING
+from .const import DATA_STATE_ON, DOMAIN, OPTION_HA_UI_SWING
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,11 +64,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         if (
             entity["instance"]["eojgc"] == 0x01 and entity["instance"]["eojcc"] == 0x30
         ):  # Home Air Conditioner
-            entities.append(
-                EchonetClimate(
-                    config_entry.title, entity["echonetlite"], hass.config.units
-                )
-            )
+            entities.append(EchonetClimate(config_entry.title, entity["echonetlite"]))
     async_add_devices(entities, True)
 
     platform = entity_platform.async_get_current_platform()
@@ -89,7 +85,12 @@ class EchonetClimate(ClimateEntity):
     _attr_translation_key = DOMAIN
 
     def __init__(
-        self, name, connector, units: UnitSystem, fan_modes=None, swing_vert=None
+        self,
+        name,
+        connector,
+        units: UnitSystem | None = None,
+        fan_modes=None,
+        swing_vert=None,
     ):
         """Initialize the climate device."""
         self._name = name
@@ -98,7 +99,10 @@ class EchonetClimate(ClimateEntity):
         self._uid = (
             self._connector._uidi if self._connector._uidi else self._connector._uid
         )
-        self._unit_of_measurement = units.temperature_unit
+        # The temperature unit of echonet lite is defined as Celsius.
+        # Set temperature_unit setting to Celsius,
+        # HA's automatic temperature unit conversion function works correctly.
+        self._unit_of_measurement = UnitOfTemperature.CELSIUS
         self._precision = 1.0
         self._target_temperature_step = 1
         self._support_flags = SUPPORT_FLAGS
