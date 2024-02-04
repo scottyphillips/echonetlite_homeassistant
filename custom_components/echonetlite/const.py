@@ -183,7 +183,6 @@ ENL_OP_CODES = {
             },
             0xA0: {
                 CONF_ICON: "mdi:fan",
-                TYPE_SELECT: FAN_SPEED,
             },
         },
     },
