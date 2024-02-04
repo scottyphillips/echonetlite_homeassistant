@@ -243,6 +243,78 @@ ENL_OP_CODES = {
                 },
             }
         },
+        0x6B: {  # Electric water heater
+            # 0xB0: , # "Automatic water heating setting",
+            # 0xB1: , # "Automatic water temperature control setting",
+            # 0xB2: , # "Water heater status",
+            0xB3: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: 30,
+                    CONF_MAXIMUM: 70,
+                },
+            },  # "Water heating temperature setting",
+            # 0xB4: , # "Manual water heating stop days setting",
+            # 0xB5: , # "Relative time setting value for manual water heating OFF",
+            # 0xB6: , # Tank operation mode setting",
+            # 0xC0: , # Daytime reheating permission setting",
+            # 0xC1: , # Measured temperature of water in water heater",
+            # 0xC2: , # Alarm status",
+            # 0xC3: , # Hot water supply status",
+            # 0xC4: , # Relative time setting for keeping bath temperature",
+            0xD1: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: 30,
+                    CONF_MAXIMUM: 70,
+                },
+            },  # Temperature of supplied water setting",
+            0xD3: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: 30,
+                    CONF_MAXIMUM: 70,
+                },
+            },  # Bath water temperature setting",
+            0xE0: {
+                CONF_UNIT_OF_MEASUREMENT: PERCENTAGE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_MINIMUM: 0,
+                    CONF_MAXIMUM: 100,
+                },
+            },  # Bath water volume setting",
+            # 0xE1: , # Measured amount of water remaining in tank",
+            # 0xE2: , # Tank capacity",
+            # 0xE3: , # Automatic bath water heating mode setting",
+            # 0xE9: , # Bathroom priority setting",
+            # 0xEA: , # Bath operation status monitor",
+            # 0xE4: , # Manual bath reheating operation setting",
+            # 0xE5: , # Manual bath hot water addition function setting",
+            # 0xE6: , # Manual slight bath water temperature lowering function setting",
+            # 0xE7: , # Bath water volume setting 1",
+            # 0xE8: , # Bath water volume setting 2",
+            # 0xEE: , # Bath water volume setting 3",
+            # 0xD4: , # Bath water volume setting 4",
+            0x90: {
+                CONF_ICON: "mdi:timer",
+            },  # ON timer reservation setting",
+            0x91: {
+                CONF_ICON: "mdi:timer-outline",
+            },  # ON timer setting",
+            # 0xD6: , # Volume setting",
+            # 0xD7: , # Mute setting",
+            # 0xD8: , # Remaining hot water volume",
+            # 0xDB: , # Rated power consumption of H/P unit in wintertime",
+            # 0xDC: , # Rated power consumption of H/P unit in in-between seasons",
+            # 0xDD: , # Rated power consumption of H/P unit in summertime",
+        },
         0x6F: {  # Electric lock
             0xE0: {
                 CONF_ICON: "mdi:lock",
