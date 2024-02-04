@@ -1,6 +1,5 @@
 import logging
 
-from pychonet.EchonetInstance import ENL_GETMAP
 from pychonet.lib.eojx import EOJX_CLASS
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.const import (

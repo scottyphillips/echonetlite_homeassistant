@@ -19,8 +19,6 @@ from pychonet.lib.const import (
     ENL_STATMAP,
     ENL_SETMAP,
     ENL_GETMAP,
-    ENL_UID,
-    ENL_MANUFACTURER,
     GET,
 )
 
@@ -41,7 +39,6 @@ from .const import (
     DOMAIN,
     USER_OPTIONS,
     TEMP_OPTIONS,
-    CONF_FORCE_POLLING,
     MISC_OPTIONS,
     ENL_HVAC_MODE,
     CONF_OTHER_MODE,
@@ -70,7 +67,6 @@ async def enumerate_instances(
     """Validate the user input allows us to connect."""
     _LOGGER.debug(f"IP address is {host}")
     server = None
-    finished_instances = {}
     if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug("API listener has already been setup previously..")
         server = hass.data[DOMAIN]["api"]
