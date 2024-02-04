@@ -98,6 +98,7 @@ PLATFORMS = [
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=1)
 MAX_UPDATE_BATCH_SIZE = 10
+MIN_UPDATE_BATCH_SIZE = 3
 
 HVAC_API_CONNECTOR_DEFAULT_FLAGS = [
     ENL_STATUS,
@@ -601,7 +602,16 @@ class ECHONETConnector:
             return await self.async_update_data(kwargs=kwargs)
         except EchonetMaxOpcError as ex:
             # Adjust the maximum number of properties for batch requests
-            batch_data_len = ex.args[0]
+            batch_data_len = max(
+                ex.args[0],
+                MIN_UPDATE_BATCH_SIZE,
+                self._user_options[CONF_BATCH_SIZE_MAX] - 1,
+            )
+            if batch_data_len <= self._user_options[CONF_BATCH_SIZE_MAX]:
+                _LOGGER.error(
+                    f"The integration has adjusted the number of batch requests to {self._host} to {self._user_options[CONF_BATCH_SIZE_MAX]}, but no response is received. Please check and try restarting the device etc."
+                )
+                return None
             self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
             entry_options = dict(self._entry.options)
             entry_options.update({CONF_BATCH_SIZE_MAX: batch_data_len})
