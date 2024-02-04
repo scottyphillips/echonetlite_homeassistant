@@ -9,6 +9,9 @@ from homeassistant.const import (
     CONF_MINIMUM,
     CONF_MAXIMUM,
     PERCENTAGE,
+    UnitOfEnergy,
+    UnitOfVolume,
+    UnitOfVolumeFlowRate,
 )
 from homeassistant.components.sensor import (
     ATTR_STATE_CLASS,
@@ -158,6 +161,18 @@ ENL_OP_CODES = {
             },
         },
         0x35: {  # Air cleaner
+            0xA0: {
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_AS_ZERO: 0x30,
+                    CONF_MINIMUM: 0x31,
+                    CONF_MAXIMUM: 0x38,
+                    TYPE_SWITCH: {
+                        CONF_NAME: "Auto",
+                        CONF_SERVICE_DATA: {DATA_STATE_ON: 0x41, DATA_STATE_OFF: 0x31},
+                    },
+                },
+            },
             0x84: {
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
@@ -360,10 +375,26 @@ ENL_OP_CODES = {
             0xE4: {
                 CONF_ICON: "mdi:heat-wave",
             },
-            0xE7: {CONF_UNIT_OF_MEASUREMENT: "L"},
-            0xEE: {CONF_UNIT_OF_MEASUREMENT: "L"},
+            0xE7: {CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS},
+            0xEE: {CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS},
         },
         0x79: {  # Home solar power generation
+            0xA0: {
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_UNIT_OF_MEASUREMENT: PERCENTAGE,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0x64,
+                },
+            },
+            0xA1: {
+                CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.POWER,
+                    CONF_MAXIMUM: 0xFFFD,
+                    CONF_BYTE_LENGTH: 0x02,
+                },
+            },
             0xE0: {
                 CONF_ICON: "mdi:solar-power-variant-outline",
                 CONF_TYPE: SensorDeviceClass.POWER,
@@ -384,18 +415,45 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:percent",
                 CONF_UNIT_OF_MEASUREMENT: PERCENTAGE,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0x64,
+                },
             },
             0xE6: {
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.POWER,
+                    CONF_MAXIMUM: 0xFFFD,
+                    CONF_BYTE_LENGTH: 0x02,
+                },
+            },
+            0xE7: {
+                CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.POWER,
+                    CONF_MAXIMUM: 0xFFFD,
+                    CONF_BYTE_LENGTH: 0x02,
+                },
             },
             0xE8: {
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.POWER,
+                    CONF_MAXIMUM: 0xFFFD,
+                    CONF_BYTE_LENGTH: 0x02,
+                },
             },
             0xE9: {
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.POWER,
+                    CONF_MAXIMUM: 0xFFFD,
+                    CONF_BYTE_LENGTH: 0x02,
+                },
             },
         },
         0x7B: {  # Floor heater
@@ -416,7 +474,6 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: None,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                CONF_UNIT_OF_MEASUREMENT: "",
                 TYPE_NUMBER: {
                     CONF_AS_ZERO: 0x30,
                     CONF_MINIMUM: 0x31,
@@ -473,12 +530,12 @@ ENL_OP_CODES = {
             0xC7: {
                 CONF_TYPE: SensorDeviceClass.GAS,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                CONF_UNIT_OF_MEASUREMENT: "L/h",
+                CONF_UNIT_OF_MEASUREMENT: UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
             },
             0xC8: {
                 CONF_TYPE: SensorDeviceClass.GAS,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
-                CONF_UNIT_OF_MEASUREMENT: "L",
+                CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
             },
         },
         0x7D: {  # Storage battery
@@ -509,10 +566,18 @@ ENL_OP_CODES = {
             0xA6: {
                 CONF_TYPE: SensorDeviceClass.BATTERY,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.BATTERY,
+                    CONF_MAXIMUM: 0x64,
+                },
             },
             0xA7: {
                 CONF_TYPE: SensorDeviceClass.BATTERY,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.BATTERY,
+                    CONF_MAXIMUM: 0x64,
+                },
             },
             0xA8: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
@@ -526,11 +591,21 @@ ENL_OP_CODES = {
                 CONF_ICON: "mdi:battery",
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.ENERGY,
+                    CONF_MAXIMUM: 0x3B9AC9FF,
+                    CONF_BYTE_LENGTH: 0x04,
+                },
             },
             0xAB: {
                 CONF_ICON: "mdi:battery",
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.ENERGY,
+                    CONF_MAXIMUM: 0x3B9AC9FF,
+                    CONF_BYTE_LENGTH: 0x04,
+                },
             },
             0xD0: {
                 CONF_ICON: "mdi:battery",
@@ -571,27 +646,47 @@ ENL_OP_CODES = {
             0xE7: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.ENERGY,
+                    CONF_MAXIMUM: 0x3B9AC9FF,
+                    CONF_BYTE_LENGTH: 0x04,
+                },
             },
             0xE8: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.ENERGY,
+                    CONF_MAXIMUM: 0x3B9AC9FF,
+                    CONF_BYTE_LENGTH: 0x04,
+                },
             },
             0xEB: {
                 CONF_ICON: "mdi:battery",
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.POWER,
+                    CONF_MAXIMUM: 0x3B9AC9FF,
+                    CONF_BYTE_LENGTH: 0x04,
+                },
             },
             0xEC: {
                 CONF_ICON: "mdi:battery",
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.POWER,
+                    CONF_MAXIMUM: 0x3B9AC9FF,
+                    CONF_BYTE_LENGTH: 0x04,
+                },
             },
         },
         0x80: {  # Electric energy meter
             0xE0: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
-                CONF_UNIT_OF_MEASUREMENT: "kWh",
+                CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
                 CONF_MULTIPLIER_OPCODE: 0xE2,
             },
             0xE2: {
@@ -624,7 +719,7 @@ ENL_OP_CODES = {
             0xB3: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
-                CONF_UNIT_OF_MEASUREMENT: "kWh",
+                CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
                 TYPE_DATA_ARRAY_WITH_SIZE_OPCODE: 0xB1,
                 CONF_MULTIPLIER_OPCODE: 0xC2,
             },
@@ -636,13 +731,13 @@ ENL_OP_CODES = {
             0xC0: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
-                CONF_UNIT_OF_MEASUREMENT: "kWh",
+                CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
                 CONF_MULTIPLIER_OPCODE: 0xC2,
             },
             0xC1: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
-                CONF_UNIT_OF_MEASUREMENT: "kWh",
+                CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
                 CONF_MULTIPLIER_OPCODE: 0xC2,
             },
             0xC6: {
@@ -669,7 +764,7 @@ ENL_OP_CODES = {
             0xE0: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
-                CONF_UNIT_OF_MEASUREMENT: "kWh",
+                CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
                 CONF_MULTIPLIER_OPCODE: 0xE1,
                 CONF_MULTIPLIER_OPTIONAL_OPCODE: 0xD3,
             },
@@ -679,7 +774,7 @@ ENL_OP_CODES = {
             0xE3: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
-                CONF_UNIT_OF_MEASUREMENT: "kWh",
+                CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
                 CONF_MULTIPLIER_OPCODE: 0xE1,
                 CONF_MULTIPLIER_OPTIONAL_OPCODE: 0xD3,
             },
