@@ -48,7 +48,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 #
-def is_regist_as_sensor(epc_function_data):
+def regist_as_inputs(epc_function_data):
     if epc_function_data:
         if type(epc_function_data) == list:
             if type(epc_function_data[1]) == dict and len(epc_function_data[1]) > 1:
@@ -84,15 +84,14 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                 )
                 if op_code in entity["instance"]["getmap"]:
                     _keys = _enl_op_codes.get(op_code, {}).keys()
-                    if (
+                    if op_code in entity["instance"]["setmap"] and (
                         TYPE_SWITCH in _keys
                         or TYPE_SELECT in _keys
                         or TYPE_TIME in _keys
                         or TYPE_NUMBER in _keys
-                        or is_regist_as_sensor(epc_function_data)
+                        or regist_as_inputs(epc_function_data)
                     ):
-                        if op_code in entity["instance"]["setmap"]:
-                            continue
+                        continue
                     entities.append(
                         EchonetSensor(
                             entity["echonetlite"],
@@ -112,15 +111,14 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     epc_function_data = entity[
                         "echonetlite"
                     ]._instance.EPC_FUNCTIONS.get(op_code, None)
-                    if (
+                    if op_code in entity["instance"]["setmap"] and (
                         TYPE_SWITCH in _keys
                         or TYPE_SELECT in _keys
                         or TYPE_TIME in _keys
                         or TYPE_NUMBER in _keys
-                        or is_regist_as_sensor(epc_function_data)
+                        or regist_as_inputs(epc_function_data)
                     ):
-                        if op_code in entity["instance"]["setmap"]:
-                            continue
+                        continue
                     entities.append(
                         EchonetSensor(
                             entity["echonetlite"],
@@ -146,15 +144,14 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     epc_function_data = entity[
                         "echonetlite"
                     ]._instance.EPC_FUNCTIONS.get(op_code, None)
-                    if (
+                    if op_code in entity["instance"]["setmap"] and (
                         TYPE_SWITCH in _keys
                         or TYPE_SELECT in _keys
                         or TYPE_TIME in _keys
                         or TYPE_NUMBER in _keys
-                        or is_regist_as_sensor(epc_function_data)
+                        or regist_as_inputs(epc_function_data)
                     ):
-                        if op_code in entity["instance"]["setmap"]:
-                            continue  # dont configure as sensor, it will be configured as switch instead.
+                        continue  # dont configure as sensor, it will be configured as switch instead.
 
                     if (
                         CONF_SERVICE in _keys
@@ -285,8 +282,8 @@ class EchonetSensor(SensorEntity):
             self._name = f"{name} {EPC_CODE[self._eojgc][self._eojcc][self._op_code]}"
         elif self._op_code in EPC_SUPER.keys():
             self._name = f"{name} {EPC_SUPER[self._op_code]}"
-        else:
-            self._name = f"{name} self._sensor_attributes[CONF_TYPE]"
+        elif self._sensor_attributes[CONF_TYPE]:
+            self._name = f"{name} {self._sensor_attributes[CONF_TYPE]}"
 
         if "dict_key" in _attr_keys:
             self._uid += f'-{self._sensor_attributes["dict_key"]}'
