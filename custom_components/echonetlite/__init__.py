@@ -186,14 +186,15 @@ STORAGE_BATTERY_API_CONNECTOR_DEFAULT_FLAGS = [
 def polling_update_debug_log(values, eojgc, eojcc):
     debug_log = f"\nECHONETlite polling update data:\n"
     for value in list(values.keys()):
-        if value in EPC_CODE[eojgc][eojcc]:
-            debug_log = (
-                debug_log
-                + f" - {EPC_CODE[eojgc][eojcc][value]} ({value:#x}): {values[value]}\n"
-            )
         if value in EPC_SUPER:
             debug_log = (
-                debug_log + f" - {EPC_SUPER[value]} ({value:#x}): {values[value]}\n"
+                debug_log
+                + f" - {EPC_SUPER[value]} {value:#x}({value}): {values[value]}\n"
+            )
+        elif value in EPC_CODE[eojgc][eojcc]:
+            debug_log = (
+                debug_log
+                + f" - {EPC_CODE[eojgc][eojcc][value]} {value:#x}({value}): {values[value]}\n"
             )
     return debug_log
 
