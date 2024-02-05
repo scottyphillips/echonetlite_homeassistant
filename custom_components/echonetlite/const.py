@@ -123,6 +123,9 @@ ENL_OP_CODES = {
             #         },
             #     },
             # },
+            0xB2: {  # Normal/highspeed/silent operation setting
+                CONF_ICON: "mdi:tailwind",
+            },
             0xB4: {  # Humidity setting in dry mode
                 CONF_TYPE: SensorDeviceClass.HUMIDITY,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
