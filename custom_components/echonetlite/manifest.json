@@ -12,6 +12,6 @@
     "@scottyphillips",
     "@nao-pon"
   ],
-  "version":  "3.7.9",
+  "version":  "3.8.0-beta2",
   "iot_class": "local_polling"
 }
