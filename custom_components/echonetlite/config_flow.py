@@ -195,11 +195,11 @@ async def enumerate_instances(
                         GET,
                         [{"EPC": 0xFD}, {"EPC": 0xFE}],
                     )
-                    # When updating the previous environment, the entity ID will change if the uidi changes, so this should be postponed.
-                    # Reconsider if the instance number changes dynamically.
-                    # uidi = _null_padded_optional_string(
-                    #     state["instances"][eojgc][eojcc][instance][0xFE]
-                    # )
+                    # Use Use HW ID because the instance number is uncertain
+                    # https://github.com/scottyphillips/echonetlite_homeassistant/issues/117#issuecomment-1929151918
+                    uidi = _null_padded_optional_string(
+                        state["instances"][eojgc][eojcc][instance][0xFE]
+                    )
                     name = _null_padded_optional_string(
                         state["instances"][eojgc][eojcc][instance][0xFD]
                     )
