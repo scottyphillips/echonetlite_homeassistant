@@ -74,21 +74,19 @@ class EchonetSelect(SelectEntity):
                 self._attr_options = self._connector._user_options[code]
         self._attr_current_option = self._connector._update_data.get(self._code)
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
-        self._uid = (
+        self._attr_unique_id = (
             f"{self._connector._uidi}-{self._code}"
             if self._connector._uidi
             else f"{self._connector._uid}-{self._code}"
         )
         self._device_name = name
-        self._should_poll = True
-        self._available = True
+        self._attr_should_poll = True
+        self._attr_available = True
         self._attr_force_update = False
-        self.update_option_listener()
 
-    @property
-    def unique_id(self):
-        """Return a unique ID."""
-        return self._uid
+        self._real_should_poll = True
+
+        self.update_option_listener()
 
     @property
     def device_info(self):
@@ -109,16 +107,6 @@ class EchonetSelect(SelectEntity):
             ],
             # "sw_version": "",
         }
-
-    @property
-    def available(self) -> bool:
-        """Return true if the device is available."""
-        self._available = (
-            self._server_state["available"]
-            if "available" in self._server_state
-            else True
-        )
-        return self._available
 
     async def async_select_option(self, option: str):
         self._attr_current_option = option
@@ -160,17 +148,26 @@ class EchonetSelect(SelectEntity):
         new_val = self._connector._update_data.get(self._code)
         changed = (
             new_val is not None and self._attr_current_option != new_val
-        ) or self._available != self._server_state["available"]
+        ) or self._attr_available != self._server_state["available"]
         if changed:
+            _force = bool(not self._attr_available and self._server_state["available"])
             self._attr_current_option = new_val
+            self._attr_available = self._server_state["available"]
+            self._attr_should_poll = (
+                self._real_should_poll if self._attr_available else False
+            )
             self.update_attr()
-            self.async_schedule_update_ha_state()
+            self.async_schedule_update_ha_state(_force)
 
     def update_option_listener(self):
-        self._should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False)
-            or self._code not in self._connector._ntfPropertyMap
+        _should_poll = self._code not in self._connector._ntfPropertyMap
+        self._real_should_poll = (
+            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
         )
-        _LOGGER.info(
-            f"{self._device_name}({self._code}): _should_poll is {self._should_poll}"
+        self._attr_should_poll = (
+            self._real_should_poll if self._attr_available else False
+        )
+        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
+        _LOGGER.debug(
+            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
         )

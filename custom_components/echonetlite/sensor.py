@@ -255,75 +255,63 @@ class EchonetSensor(SensorEntity):
         self._eojgc = self._connector._eojgc
         self._eojcc = self._connector._eojcc
         self._eojci = self._connector._eojci
-        self._uid = (
+        self._attr_unique_id = (
             f"{self._connector._uidi}-{self._op_code}"
             if self._connector._uidi
             else f"{self._connector._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}"
         )
         self._device_name = name
-        self._should_poll = True
         self._state_value = None
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
         self._hass = hass
-        self._available = True
 
         _attr_keys = self._sensor_attributes.keys()
-        if CONF_ICON not in _attr_keys:
-            self._sensor_attributes[CONF_ICON] = None
-        if CONF_TYPE not in _attr_keys:
-            self._sensor_attributes[CONF_TYPE] = None
-        if CONF_STATE_CLASS not in _attr_keys:
-            self._sensor_attributes[CONF_STATE_CLASS] = None
+
+        self._attr_icon = self._sensor_attributes.get(CONF_ICON)
+        self._attr_device_class = self._sensor_attributes.get(CONF_TYPE)
+        self._attr_state_class = self._sensor_attributes.get(CONF_STATE_CLASS)
 
         # Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
+        self._attr_name = f"{name}"
         if self._op_code in EPC_CODE[self._eojgc][self._eojcc].keys():
-            self._name = f"{name} {EPC_CODE[self._eojgc][self._eojcc][self._op_code]}"
+            self._attr_name = (
+                f"{name} {EPC_CODE[self._eojgc][self._eojcc][self._op_code]}"
+            )
         elif self._op_code in EPC_SUPER.keys():
-            self._name = f"{name} {EPC_SUPER[self._op_code]}"
-        elif self._sensor_attributes[CONF_TYPE]:
-            self._name = f"{name} {self._sensor_attributes[CONF_TYPE]}"
+            self._attr_name = f"{name} {EPC_SUPER[self._op_code]}"
+        elif self._attr_device_class:
+            self._attr_name = f"{name} {self._attr_device_class}"
 
         if "dict_key" in _attr_keys:
-            self._uid += f'-{self._sensor_attributes["dict_key"]}'
+            self._attr_unique_id += f'-{self._sensor_attributes["dict_key"]}'
             if isinstance(self._sensor_attributes[TYPE_DATA_DICT], int):
-                self._name += f' {str(self._sensor_attributes["accessor_index"] + 1).zfill(len(str(self._sensor_attributes[TYPE_DATA_DICT])))}'
+                self._attr_name += f' {str(self._sensor_attributes["accessor_index"] + 1).zfill(len(str(self._sensor_attributes[TYPE_DATA_DICT])))}'
             else:
-                self._name += f' {self._sensor_attributes["dict_key"]}'
+                self._attr_name += f' {self._sensor_attributes["dict_key"]}'
 
         if "accessor_index" in _attr_keys:
-            self._uid += f'-{self._sensor_attributes["accessor_index"]}'
-            self._name += f' {str(self._sensor_attributes["accessor_index"] + 1).zfill(len(str(self._sensor_attributes[TYPE_DATA_ARRAY_WITH_SIZE_OPCODE])))}'
+            self._attr_unique_id += f'-{self._sensor_attributes["accessor_index"]}'
+            self._attr_name += f' {str(self._sensor_attributes["accessor_index"] + 1).zfill(len(str(self._sensor_attributes[TYPE_DATA_ARRAY_WITH_SIZE_OPCODE])))}'
 
-        self._unit_of_measurement = self._sensor_attributes.get(
+        self._attr_native_unit_of_measurement = self._sensor_attributes.get(
             CONF_UNIT_OF_MEASUREMENT
         )
-        if not self._unit_of_measurement:
-            self._unit_of_measurement = get_unit_by_devise_class(
-                self._sensor_attributes[CONF_TYPE]
+        if not self._attr_native_unit_of_measurement:
+            self._attr_native_unit_of_measurement = get_unit_by_devise_class(
+                self._attr_device_class
             )
+        self._attr_entity_registry_enabled_default = not bool(
+            self._sensor_attributes.get(CONF_DISABLED_DEFAULT)
+        )
+
+        self._attr_should_poll = True
+        self._attr_available = True
+
+        self._real_should_poll = True
 
         self.update_option_listener()
-
-    @property
-    def icon(self):
-        """Icon to use in the frontend, if any."""
-        return self._sensor_attributes[CONF_ICON]
-
-    @property
-    def should_poll(self):
-        return self._should_poll
-
-    @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self._name
-
-    @property
-    def unique_id(self):
-        """Return a unique ID."""
-        return self._uid
 
     @property
     def device_info(self):
@@ -409,7 +397,7 @@ class EchonetSensor(SensorEntity):
                             new_val * self._connector._update_data[multiplier_opcode]
                         )
                 return new_val
-            elif self._sensor_attributes[CONF_TYPE] in [
+            elif self._attr_device_class in [
                 SensorDeviceClass.TEMPERATURE,
                 SensorDeviceClass.HUMIDITY,
             ]:
@@ -417,7 +405,7 @@ class EchonetSensor(SensorEntity):
                     return None
                 else:
                     return self._state_value
-            elif self._sensor_attributes[CONF_TYPE] == SensorDeviceClass.POWER:
+            elif self._attr_device_class == SensorDeviceClass.POWER:
                 # Underflow (less than 1 W)
                 if self._state_value == 65534:
                     return 1
@@ -431,36 +419,6 @@ class EchonetSensor(SensorEntity):
                 else:
                     return None
         return None
-
-    @property
-    def native_unit_of_measurement(self):
-        """Return the native unit of measurement."""
-        return self._unit_of_measurement
-
-    @property
-    def device_class(self):
-        """Return the device class."""
-        return self._sensor_attributes[CONF_TYPE]
-
-    @property
-    def state_class(self):
-        """Return the state class type."""
-        return self._sensor_attributes[CONF_STATE_CLASS]
-
-    @property
-    def entity_registry_enabled_default(self):
-        """Return if the entity should be enabled when first added to the entity registry."""
-        return not bool(self._sensor_attributes.get(CONF_DISABLED_DEFAULT))
-
-    @property
-    def available(self) -> bool:
-        """Return true if the device is available."""
-        self._available = (
-            self._server_state["available"]
-            if "available" in self._server_state
-            else True
-        )
-        return self._available
 
     async def async_update(self):
         """Retrieve latest state."""
@@ -513,17 +471,26 @@ class EchonetSensor(SensorEntity):
             )
         changed = (
             new_val is not None and self._state_value != new_val
-        ) or self._available != self._server_state["available"]
+        ) or self._attr_available != self._server_state["available"]
         if changed:
+            _force = bool(not self._attr_available and self._server_state["available"])
             self._state_value = new_val
             self._attr_native_value = self.get_attr_native_value()
-            self.async_schedule_update_ha_state()
+            self._attr_available = self._server_state["available"]
+            self._attr_should_poll = (
+                self._real_should_poll if self._attr_available else False
+            )
+            self.async_schedule_update_ha_state(_force)
 
     def update_option_listener(self):
-        self._should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False)
-            or self._op_code not in self._connector._ntfPropertyMap
+        _should_poll = self._op_code not in self._connector._ntfPropertyMap
+        self._real_should_poll = (
+            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
         )
-        _LOGGER.info(
-            f"{self._name}({self._op_code}): _should_poll is {self._should_poll}"
+        self._attr_should_poll = (
+            self._real_should_poll if self._attr_available else False
+        )
+        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
+        _LOGGER.debug(
+            f"{self._attr_name}({self._op_code}): _should_poll is {_should_poll}"
         )

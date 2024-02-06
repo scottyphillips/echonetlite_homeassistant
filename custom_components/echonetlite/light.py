@@ -46,29 +46,26 @@ class EchonetLight(LightEntity):
 
     def __init__(self, name, connector):
         """Initialize the climate device."""
-        self._name = name
+        self._attr_name = name
         self._connector = connector  # new line
-        self._uid = (
+        self._attr_unique_id = (
             self._connector._uidi if self._connector._uidi else self._connector._uid
         )
-        self._support_flags = LightEntityFeature(0)
-        self._supported_color_modes = set()
-        self._supports_color = False
-        self._supports_rgbw = False
-        self._supports_color_temp = False
+        self._attr_supported_features = LightEntityFeature(0)
+        self._attr_supported_color_modes = set()
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
-        self._hs_color: tuple[float, float] | None = None
-        self._rgbw_color: tuple[int, int, int, int] | None = None
-        self._color_mode: str | None = None
-        self._color_temp: int | None = None
-        self._min_mireds = MIN_MIREDS
-        self._max_mireds = MAX_MIREDS
+        self._attr_min_mireds = MIN_MIREDS
+        self._attr_max_mireds = MAX_MIREDS
+        self._attr_supported_color_modes.add(ColorMode.ONOFF)
+        self._attr_color_mode = ColorMode.ONOFF
         if ENL_BRIGHTNESS in list(self._connector._setPropertyMap):
-            self._supported_color_modes.add(ColorMode.BRIGHTNESS)
+            self._attr_supported_color_modes.add(ColorMode.BRIGHTNESS)
+            self._attr_color_mode = ColorMode.BRIGHTNESS
         if ENL_COLOR_TEMP in list(self._connector._setPropertyMap):
-            self._supported_color_modes.add(ColorMode.COLOR_TEMP)
+            self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
+            self._attr_color_mode = ColorMode.COLOR_TEMP
 
         self._echonet_mireds = [
             "daylight_color",
@@ -79,8 +76,14 @@ class EchonetLight(LightEntity):
         ]  # coolest to warmest
         self._echonet_mireds_int = [68, 67, 66, 64, 65]  # coolest to warmest
         self._olddata = {}
-        self._should_poll = True
-        self._available = True
+        self._attr_is_on = (
+            True if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON else False
+        )
+        self._attr_should_poll = True
+        self._attr_available = True
+
+        self._real_should_poll = True
+
         self.update_option_listener()
 
     async def async_update(self):
@@ -89,16 +92,6 @@ class EchonetLight(LightEntity):
             await self._connector.async_update()
         except TimeoutError:
             pass
-
-    @property
-    def supported_features(self):
-        """Return the list of supported features."""
-        return self._support_flags
-
-    @property
-    def unique_id(self):
-        """Return a unique ID."""
-        return self._uid
 
     @property
     def device_info(self):
@@ -112,7 +105,7 @@ class EchonetLight(LightEntity):
                     self._connector._instance._eojci,
                 )
             },
-            "name": self._name,
+            "name": self._attr_name,
             "manufacturer": self._connector._manufacturer,
             "model": EOJX_CLASS[self._connector._instance._eojgc][
                 self._connector._instance._eojcc
@@ -120,40 +113,14 @@ class EchonetLight(LightEntity):
             # "sw_version": "",
         }
 
-    @property
-    def should_poll(self):
-        """Return the polling state."""
-        return self._should_poll
-
-    @property
-    def name(self):
-        """Return the name of the light device."""
-        return self._name
-
-    @property
-    def available(self) -> bool:
-        """Return true if the device is available."""
-        self._available = (
-            self._server_state["available"]
-            if "available" in self._server_state
-            else True
-        )
-        return self._available
-
-    @property
-    def is_on(self):
-        """Return true if the device is on."""
-        return (
-            True if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON else False
-        )
-
     async def async_turn_on(self, **kwargs):
         """Turn on."""
         await self._connector._instance.on()
 
         if (
             ATTR_BRIGHTNESS in kwargs
-            and ColorMode.BRIGHTNESS in self._supported_color_modes
+            and self._attr_supported_color_modes
+            and ColorMode.BRIGHTNESS in self._attr_supported_color_modes
         ):
             normalized_brightness = (
                 float(kwargs[ATTR_BRIGHTNESS]) / DEFAULT_BRIGHTNESS_SCALE
@@ -168,12 +135,13 @@ class EchonetLight(LightEntity):
 
         if (
             ATTR_COLOR_TEMP in kwargs
-            and ColorMode.COLOR_TEMP in self._supported_color_modes
+            and self._attr_supported_color_modes
+            and ColorMode.COLOR_TEMP in self._attr_supported_color_modes
         ):
             # bring the selected color to something we can calculate on
             color_scale = (
-                float(kwargs[ATTR_COLOR_TEMP]) - float(self._min_mireds)
-            ) / float(self._max_mireds - self._min_mireds)
+                float(kwargs[ATTR_COLOR_TEMP]) - float(self._attr_min_mireds)
+            ) / float(self._attr_max_mireds - self._attr_min_mireds)
             _LOGGER.debug(f"Set color to : {color_scale}")
             # bring the color to
             color_scale_echonet = color_scale * (len(self._echonet_mireds) - 1)
@@ -186,74 +154,59 @@ class EchonetLight(LightEntity):
             await self._connector._instance.setColorTemperature(color_temp_int)
             self._attr_color_temp = kwargs[ATTR_COLOR_TEMP]
 
-    async def async_turn_off(self):
+    async def async_turn_off(self, **kwargs):
         """Turn off."""
         await self._connector._instance.off()
 
-    @property
-    def brightness(self):
-        """Return the brightness of this light between 0..255."""
-        _LOGGER.debug(
-            f"Current brightness of light: {self._connector._update_data[ENL_BRIGHTNESS]}"
-        )
-        brightness = (
-            int(self._connector._update_data[ENL_BRIGHTNESS], 16)
-            if ENL_BRIGHTNESS in self._connector._update_data
-            else -1
-        )
-        if brightness >= 0:
-            self._attr_brightness = min(
-                round(float(brightness) / DEVICE_SCALE * DEFAULT_BRIGHTNESS_SCALE), 255
+    def _set_attrs(self):
+        if (
+            self._attr_supported_color_modes
+            and ColorMode.BRIGHTNESS in self._attr_supported_color_modes
+        ):
+            """brightness of this light between 0..255."""
+            _LOGGER.debug(
+                f"Current brightness of light: {self._connector._update_data[ENL_BRIGHTNESS]}"
             )
-        else:
-            self._attr_brightness = 128
-        return self._attr_brightness
-
-    @property
-    def color_temp(self):
-        """Return the color temperature in mired."""
-        _LOGGER.debug(
-            f"Current color temp of light: {self._connector._update_data[ENL_COLOR_TEMP]}"
-        )
-
-        # calculate some helper
-        mired_steps = (self._max_mireds - self._min_mireds) / float(
-            len(self._echonet_mireds)
-        )
-
-        # get the current echonet mireds
-        color_temp = (
-            self._connector._update_data[ENL_COLOR_TEMP]
-            if ENL_COLOR_TEMP in self._connector._update_data
-            else 0
-        )
-        if color_temp in self._echonet_mireds:
-            self._attr_color_temp = (
-                round(self._echonet_mireds.index(color_temp) * mired_steps) + MIN_MIREDS
+            brightness = (
+                int(self._connector._update_data[ENL_BRIGHTNESS], 16)
+                if ENL_BRIGHTNESS in self._connector._update_data
+                else -1
             )
-        else:
-            self._attr_color_temp = MIN_MIREDS
-        return self._attr_color_temp
+            if brightness >= 0:
+                self._attr_brightness = min(
+                    round(float(brightness) / DEVICE_SCALE * DEFAULT_BRIGHTNESS_SCALE),
+                    255,
+                )
+            else:
+                self._attr_brightness = 128
 
-    @property
-    def color_mode(self) -> str:
-        """Return the color mode of the light."""
-        return self._color_mode
+        if (
+            self._attr_supported_color_modes
+            and ColorMode.COLOR_TEMP in self._attr_supported_color_modes
+        ):
+            """color temperature in mired."""
+            _LOGGER.debug(
+                f"Current color temp of light: {self._connector._update_data[ENL_COLOR_TEMP]}"
+            )
 
-    @property
-    def min_mireds(self) -> int:
-        """Return the coldest color_temp that this light supports."""
-        return self._min_mireds
+            # calculate some helper
+            mired_steps = (self._attr_max_mireds - self._attr_min_mireds) / float(
+                len(self._echonet_mireds)
+            )
 
-    @property
-    def max_mireds(self) -> int:
-        """Return the warmest color_temp that this light supports."""
-        return self._max_mireds
-
-    @property
-    def supported_color_modes(self) -> set:
-        """Flag supported features."""
-        return self._supported_color_modes
+            # get the current echonet mireds
+            color_temp = (
+                self._connector._update_data[ENL_COLOR_TEMP]
+                if ENL_COLOR_TEMP in self._connector._update_data
+                else "white"
+            )
+            if color_temp in self._echonet_mireds:
+                self._attr_color_temp = (
+                    round(self._echonet_mireds.index(color_temp) * mired_steps)
+                    + MIN_MIREDS
+                )
+            else:
+                self._attr_color_temp = MIN_MIREDS
 
     async def async_added_to_hass(self):
         """Register callbacks."""
@@ -263,28 +216,47 @@ class EchonetLight(LightEntity):
     async def async_update_callback(self, isPush=False):
         changed = (
             self._olddata != self._connector._update_data
-            or self._available != self._server_state["available"]
+            or self._attr_available != self._server_state["available"]
         )
         if changed:
+            _force = bool(not self._attr_available and self._server_state["available"])
             self._olddata = self._connector._update_data.copy()
-            self.async_schedule_update_ha_state()
-            if isPush and self._should_poll:
+            self._attr_is_on = (
+                True
+                if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON
+                else False
+            )
+            self._attr_available = self._server_state["available"]
+            self._attr_should_poll = (
+                self._real_should_poll if self._attr_available else False
+            )
+            self._set_attrs()
+            self.async_schedule_update_ha_state(_force)
+            if isPush and self._attr_should_poll:
                 try:
                     await self._connector.async_update()
                 except TimeoutError:
                     pass
 
     def update_option_listener(self):
-        self._should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False)
-            or ENL_STATUS not in self._connector._ntfPropertyMap
+        _should_poll = (
+            ENL_STATUS not in self._connector._ntfPropertyMap
             or (
-                COLOR_MODE_BRIGHTNESS in self._supported_color_modes
+                self._attr_supported_color_modes
+                and COLOR_MODE_BRIGHTNESS in self._attr_supported_color_modes
                 and ENL_BRIGHTNESS not in self._connector._ntfPropertyMap
             )
             or (
-                COLOR_MODE_COLOR_TEMP in self._supported_color_modes
+                self._attr_supported_color_modes
+                and COLOR_MODE_COLOR_TEMP in self._attr_supported_color_modes
                 and ENL_COLOR_TEMP not in self._connector._ntfPropertyMap
             )
         )
-        _LOGGER.info(f"{self._name}: _should_poll is {self._should_poll}")
+        self._real_should_poll = bool(
+            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
+        )
+        self._attr_should_poll = (
+            self._real_should_poll if self._attr_available else False
+        )
+        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
+        _LOGGER.debug(f"{self._attr_name}: _should_poll is {_should_poll}")

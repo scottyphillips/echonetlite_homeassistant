@@ -121,35 +121,25 @@ class EchonetSwitch(SwitchEntity):
         self._from_number = True if options.get(TYPE_NUMBER) else False
         self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
         self._attr_icon = options.get(CONF_ICON)
-        self._uid = (
+        self._attr_unique_id = (
             f"{self._connector._uidi}-{self._code}"
             if self._connector._uidi
             else f"{self._connector._uid}-{self._connector._eojgc}-{self._connector._eojcc}-{self._connector._eojci}-{self._code}"
         )
         if self._from_number:
-            self._uid += "-switch"
+            self._attr_unique_id += "-switch"
             self._attr_name += " " + options.get(CONF_NAME, "Switch")
         self._device_name = name
-        self._should_poll = True
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
-        self._available = True
+        self._attr_is_on = self._connector._update_data[self._code] in self._on_vals
+        self._attr_should_poll = True
+        self._attr_available = True
+
+        self._real_should_poll = True
+
         self.update_option_listener()
-
-    @property
-    def unique_id(self):
-        """Return a unique ID."""
-        return self._uid
-
-    @property
-    def icon(self):
-        """Icon to use in the frontend, if any."""
-        return self._attr_icon
-
-    @property
-    def should_poll(self):
-        return self._should_poll
 
     @property
     def device_info(self):
@@ -169,20 +159,6 @@ class EchonetSwitch(SwitchEntity):
                 self._connector._instance._eojcc
             ],
         }
-
-    @property
-    def available(self) -> bool:
-        """Return true if the device is available."""
-        self._available = (
-            self._server_state["available"]
-            if "available" in self._server_state
-            else True
-        )
-        return self._available
-
-    @property
-    def is_on(self):
-        return self._connector._update_data[self._code] in self._on_vals
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn switch on."""
@@ -231,13 +207,29 @@ class EchonetSwitch(SwitchEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush=False):
-        self.async_schedule_update_ha_state()
+        new_val = self._connector._update_data[self._code] in self._on_vals
+        changed = (
+            self._attr_is_on != new_val
+            or self._attr_available != self._server_state["available"]
+        )
+        if changed:
+            _force = bool(not self._attr_available and self._server_state["available"])
+            self._attr_is_on = new_val
+            self._attr_available = self._server_state["available"]
+            self._attr_should_poll = (
+                self._real_should_poll if self._attr_available else False
+            )
+            self.async_schedule_update_ha_state(_force)
 
     def update_option_listener(self):
-        self._should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False)
-            or self._code not in self._connector._ntfPropertyMap
+        _should_poll = self._code not in self._connector._ntfPropertyMap
+        self._real_should_poll = (
+            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
         )
-        _LOGGER.info(
-            f"{self._device_name}({self._code}): _should_poll is {self._should_poll}"
+        self._attr_should_poll = (
+            self._real_should_poll if self._attr_available else False
+        )
+        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
+        _LOGGER.debug(
+            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
         )

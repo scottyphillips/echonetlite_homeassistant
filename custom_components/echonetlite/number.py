@@ -75,8 +75,6 @@ class EchonetNumber(NumberEntity):
         self._attr_device_class = self._options.get(
             CONF_TYPE, options.get(CONF_TYPE, None)
         )
-        self._attr_should_poll = True
-        self._attr_available = True
         self._attr_native_value = self.get_value()
         self._attr_native_max_value = self.get_max_value()
         self._attr_native_min_value = self._options.get(CONF_MINIMUM, 0) - self._as_zero
@@ -87,6 +85,10 @@ class EchonetNumber(NumberEntity):
             self._attr_native_unit_of_measurement = get_unit_by_devise_class(
                 self._attr_device_class
             )
+        self._attr_should_poll = True
+        self._attr_available = True
+
+        self._real_should_poll = True
 
         self.update_option_listener()
 
@@ -164,16 +166,24 @@ class EchonetNumber(NumberEntity):
             or self._attr_native_max_value != self.get_max_value()
         )
         if changed:
+            _force = bool(not self._attr_available and self._server_state["available"])
             self._attr_native_value = new_val
             self._attr_native_max_value = self.get_max_value()
             self._attr_available = self._server_state["available"]
-            self.async_schedule_update_ha_state()
+            self._attr_should_poll = (
+                self._real_should_poll if self._attr_available else False
+            )
+            self.async_schedule_update_ha_state(_force)
 
     def update_option_listener(self):
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False)
-            or self._code not in self._connector._ntfPropertyMap
+        _should_poll = self._code not in self._connector._ntfPropertyMap
+        self._real_should_poll = (
+            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
         )
-        _LOGGER.info(
-            f"{self._device_name}({self._code}): _should_poll is {self._attr_should_poll}"
+        self._attr_should_poll = (
+            self._real_should_poll if self._attr_available else False
+        )
+        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
+        _LOGGER.debug(
+            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
         )
