@@ -301,7 +301,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 f"Connection error while connecting to {host}: {ex}"
             ) from ex
 
-        # instances = await config_entries.HANDLERS[DOMAIN].async_discover_newhost(hass, host)
+        # Maintain old entity configuration types to avoid duplicate creation of new entities
+        _registed_instances = {}
+        for _instance in entry.data["instances"]:
+            _uidi = f"{_instance['uid']}-{_instance['eojgc']}-{_instance['eojcc']}-{_instance['eojci']}"
+            _registed_instances[_uidi] = _instance
+        for _instance in instances:
+            _uidi = _instance["uidi"]
+            _registed = _registed_instances.get(_uidi)
+            if _registed and _registed.get("uidi") == None:
+                # keep old type config (echonetlite < 3.6.0)
+                del _instance["uidi"]
 
         hass.config_entries.async_update_entry(
             entry, title=entry.title, data={"host": host, "instances": instances}
