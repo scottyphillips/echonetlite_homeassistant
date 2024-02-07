@@ -63,7 +63,7 @@ _init_server = None
 
 async def enumerate_instances(
     hass: HomeAssistant, host: str, newhost: bool = False
-) -> dict[str, Any]:
+) -> list[dict[str, Any]]:
     """Validate the user input allows us to connect."""
     _LOGGER.debug(f"IP address is {host}")
     server = None
@@ -114,6 +114,8 @@ async def enumerate_instances(
         config_entry = None
         old_host = None
         entries = hass.config_entries.async_entries(DOMAIN)
+        entry = None
+        instances = None
 
         for entry in entries:
             instances = []
@@ -131,7 +133,7 @@ async def enumerate_instances(
                 )
                 break
 
-        if old_host:
+        if old_host and entry and instances and config_entry:
             _LOGGER.debug(
                 f"ECHONET registed node IP changed from {old_host} to {host}."
             )
