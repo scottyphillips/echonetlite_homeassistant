@@ -286,7 +286,8 @@ class EchonetSensor(SensorEntity):
 
         if "dict_key" in _attr_keys:
             self._attr_unique_id += f'-{self._sensor_attributes["dict_key"]}'
-            if isinstance(self._sensor_attributes[TYPE_DATA_DICT], int):
+            if type(self._sensor_attributes[TYPE_DATA_DICT]) == int:
+                # As of Version 3.8.0, no configuration is defined that uses this definition.
                 self._attr_name += f' {str(self._sensor_attributes["accessor_index"] + 1).zfill(len(str(self._sensor_attributes[TYPE_DATA_DICT])))}'
             else:
                 self._attr_name += f' {self._sensor_attributes["dict_key"]}'
