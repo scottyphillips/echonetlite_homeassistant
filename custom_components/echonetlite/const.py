@@ -303,7 +303,6 @@ ENL_OP_CODES = {
                 CONF_UNIT_OF_MEASUREMENT: PERCENTAGE,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
                 TYPE_NUMBER: {
-                    CONF_MINIMUM: 0,
                     CONF_MAXIMUM: 100,
                 },
             },  # Bath water volume setting",
@@ -315,22 +314,83 @@ ENL_OP_CODES = {
             # 0xE4: , # Manual bath reheating operation setting",
             # 0xE5: , # Manual bath hot water addition function setting",
             # 0xE6: , # Manual slight bath water temperature lowering function setting",
-            # 0xE7: , # Bath water volume setting 1",
-            # 0xE8: , # Bath water volume setting 2",
-            # 0xEE: , # Bath water volume setting 3",
-            # 0xD4: , # Bath water volume setting 4",
+            0xE7: {
+                CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0xFD,
+                },
+            },  # Bath water volume setting 1",
+            0xE8: {
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_AS_ZERO: 0x30,
+                    CONF_MINIMUM: 0x31,
+                    CONF_MAXIMUM: 0x38,
+                },
+            },  # Bath water volume setting 2",
+            0xEE: {
+                CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0xFFFD,
+                    CONF_BYTE_LENGTH: 2,
+                },
+            },  # Bath water volume setting 3",
+            0xD4: {
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0xFF,
+                    CONF_MAX_OPC: 0xD5,
+                },
+            },  # Bath water volume setting 4",
             0x90: {
                 CONF_ICON: "mdi:timer",
             },  # ON timer reservation setting",
             0x91: {
                 CONF_ICON: "mdi:timer-outline",
             },  # ON timer setting",
-            # 0xD6: , # Volume setting",
+            0xD6: {
+                CONF_UNIT_OF_MEASUREMENT: PERCENTAGE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0x64,
+                },
+            },  # Volume setting",
             # 0xD7: , # Mute setting",
             # 0xD8: , # Remaining hot water volume",
-            # 0xDB: , # Rated power consumption of H/P unit in wintertime",
-            # 0xDC: , # Rated power consumption of H/P unit in in-between seasons",
-            # 0xDD: , # Rated power consumption of H/P unit in summertime",
+            0xDB: {
+                CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },  # Rated power consumption of H/P unit in wintertime",
+            0xDC: {
+                CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },  # Rated power consumption of H/P unit in in-between seasons",
+            0xDD: {
+                CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },  # Rated power consumption of H/P unit in summertime",
+            0xCB: {
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_DATA_DICT: ["10:00", "13:00", "15:00", "17:00"],
+            },
+            0xCC: {
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_DATA_DICT: ["10:00", "13:00", "15:00", "17:00"],
+            },
+            0xCE: {
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_DATA_DICT: ["13:00", "15:00", "17:00"],
+            },
+            0xCF: {
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_DATA_DICT: ["13:00", "15:00", "17:00"],
+            },
         },
         0x6F: {  # Electric lock
             0xE0: {
