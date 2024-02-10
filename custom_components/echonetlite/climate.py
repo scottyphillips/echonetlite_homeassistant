@@ -101,7 +101,12 @@ class EchonetClimate(ClimateEntity):
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_precision = PRECISION_WHOLE
         self._attr_target_temperature_step = 1
-        self._attr_supported_features = ClimateEntityFeature(0)
+        if hasattr(ClimateEntityFeature, "TURN_ON"):
+            self._attr_supported_features = ClimateEntityFeature(
+                ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
+            )
+        else:
+            self._attr_supported_features = ClimateEntityFeature(0)
         self._attr_supported_features = (
             self._attr_supported_features | ClimateEntityFeature.TARGET_TEMPERATURE
         )
@@ -143,6 +148,9 @@ class EchonetClimate(ClimateEntity):
 
         self.update_option_listener()
         self._set_attrs()
+
+        # see, https://developers.home-assistant.io/blog/2024/01/24/climate-climateentityfeatures-expanded
+        self._enable_turn_on_off_backwards_compatibility = False
 
     async def async_update(self):
         """Get the latest state from the HVAC."""
