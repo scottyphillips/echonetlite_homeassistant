@@ -84,8 +84,6 @@ class EchonetSelect(SelectEntity):
         self._attr_available = True
         self._attr_force_update = False
 
-        self._real_should_poll = True
-
         self.update_option_listener()
 
     @property
@@ -153,19 +151,13 @@ class EchonetSelect(SelectEntity):
             _force = bool(not self._attr_available and self._server_state["available"])
             self._attr_current_option = new_val
             self._attr_available = self._server_state["available"]
-            self._attr_should_poll = (
-                self._real_should_poll if self._attr_available else False
-            )
             self.update_attr()
             self.async_schedule_update_ha_state(_force)
 
     def update_option_listener(self):
         _should_poll = self._code not in self._connector._ntfPropertyMap
-        self._real_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
         self._attr_should_poll = (
-            self._real_should_poll if self._attr_available else False
+            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
         )
         self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
         _LOGGER.debug(

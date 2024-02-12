@@ -144,8 +144,6 @@ class EchonetClimate(ClimateEntity):
         self._attr_should_poll = True
         self._attr_available = True
 
-        self._real_should_poll = True
-
         self.update_option_listener()
         self._set_attrs()
 
@@ -369,9 +367,6 @@ class EchonetClimate(ClimateEntity):
             _force = bool(not self._attr_available and self._server_state["available"])
             self._olddata = self._connector._update_data.copy()
             self._attr_available = self._server_state["available"]
-            self._attr_should_poll = (
-                self._real_should_poll if self._attr_available else False
-            )
             self._set_attrs()
             self.async_schedule_update_ha_state(_force)
             if isPush:

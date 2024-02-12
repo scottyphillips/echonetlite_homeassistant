@@ -82,8 +82,6 @@ class EchonetLight(LightEntity):
         self._attr_should_poll = True
         self._attr_available = True
 
-        self._real_should_poll = True
-
         self.update_option_listener()
 
     async def async_update(self):
@@ -227,9 +225,6 @@ class EchonetLight(LightEntity):
                 else False
             )
             self._attr_available = self._server_state["available"]
-            self._attr_should_poll = (
-                self._real_should_poll if self._attr_available else False
-            )
             self._set_attrs()
             self.async_schedule_update_ha_state(_force)
             if isPush and self._attr_should_poll:
@@ -252,11 +247,8 @@ class EchonetLight(LightEntity):
                 and ENL_COLOR_TEMP not in self._connector._ntfPropertyMap
             )
         )
-        self._real_should_poll = bool(
+        self._attr_should_poll = bool(
             self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_should_poll = (
-            self._real_should_poll if self._attr_available else False
         )
         self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
         _LOGGER.debug(f"{self._attr_name}: _should_poll is {_should_poll}")

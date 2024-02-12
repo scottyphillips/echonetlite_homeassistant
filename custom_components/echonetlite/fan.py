@@ -196,9 +196,6 @@ class EchonetFan(FanEntity):
         if changed:
             self._olddata = self._connector._update_data.copy()
             self._attr_available = self._server_state["available"]
-            self._attr_should_poll = (
-                self._real_should_poll if self._attr_available else False
-            )
             self._set_attrs()
             self.async_schedule_update_ha_state()
             if isPush:
@@ -227,11 +224,8 @@ class EchonetFan(FanEntity):
                 and ENL_FAN_OSCILLATION not in self._connector._ntfPropertyMap
             )
         )
-        self._real_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
         self._attr_should_poll = (
-            self._real_should_poll if self._attr_available else False
+            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
         )
         self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
         _LOGGER.debug(f"{self._attr_name}: _should_poll is {_should_poll}")
