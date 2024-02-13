@@ -180,7 +180,8 @@ class EchonetClimate(ClimateEntity):
     def _set_attrs(self):
         """current temperature."""
         _val = self._connector._update_data.get(ENL_HVAC_ROOM_TEMP)
-        if _val == 126:
+        # 0x7F: Overflow, 0x80: Underflow, 0x7E:Value cannot be returned
+        if _val in {0x7F, 0x80, 0x7E}:
             _val = None
         self._attr_current_temperature = _val
 
