@@ -31,14 +31,15 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                 and type(epc_function_data[1]) == dict
                 and len(epc_function_data[1]) > 2
             )
-            if _by_epc_func or TYPE_SELECT in _enl_op_codes.get(op_code, {}).keys():
+            _enl_op_code_dict = _enl_op_codes.get(op_code, {})
+            if _by_epc_func or TYPE_SELECT in _enl_op_code_dict.keys():
                 entities.append(
                     EchonetSelect(
                         hass,
                         entity["echonetlite"],
                         config,
                         op_code,
-                        _enl_op_codes.get(op_code, {}),
+                        _enl_op_code_dict,
                         entity["echonetlite"]._name or config.title,
                     )
                 )
