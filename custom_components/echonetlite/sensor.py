@@ -16,11 +16,10 @@ from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
 from pychonet.GeneralLighting import ENL_BRIGHTNESS, ENL_COLOR_TEMP
 
-from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import _hh_mm
 
-from . import get_unit_by_devise_class
+from . import get_name_by_epc_code, get_unit_by_devise_class
 from .const import (
     DOMAIN,
     ENL_OP_CODES,
@@ -274,15 +273,9 @@ class EchonetSensor(SensorEntity):
         self._attr_state_class = self._sensor_attributes.get(CONF_STATE_CLASS)
 
         # Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
-        self._attr_name = f"{name}"
-        if self._op_code in EPC_CODE[self._eojgc][self._eojcc].keys():
-            self._attr_name = (
-                f"{name} {EPC_CODE[self._eojgc][self._eojcc][self._op_code]}"
-            )
-        elif self._op_code in EPC_SUPER.keys():
-            self._attr_name = f"{name} {EPC_SUPER[self._op_code]}"
-        elif self._attr_device_class:
-            self._attr_name = f"{name} {self._attr_device_class}"
+        self._attr_name = get_name_by_epc_code(
+            self._eojgc, self._eojcc, self._op_code, self._attr_device_class
+        )
 
         if "dict_key" in _attr_keys:
             self._attr_unique_id += f'-{self._sensor_attributes["dict_key"]}'

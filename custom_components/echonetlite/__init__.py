@@ -183,19 +183,35 @@ STORAGE_BATTERY_API_CONNECTOR_DEFAULT_FLAGS = [
 ]
 
 
+def get_name_by_epc_code(
+    jgc: int, jcc: int, code: int, unknown: str | None = None
+) -> str:
+    if code in EPC_SUPER:
+        return EPC_SUPER[code]
+    else:
+        if unknown == None:
+            unknown = f"({code})"
+        name = EPC_CODE.get(jgc, {}).get(jcc, {}).get(code, None)
+        if name == None:
+            _code = f"[{hex(jgc)}({jgc})-{hex(jcc)}({jcc})-{hex(code)}({code})]"
+            _LOGGER.warning(
+                f"{_code} - Unable to resolve the item name. "
+                + f"Please report the unknown code {_code} at the issue tracker on GitHub!"
+            )
+            if unknown == None:
+                name = f"({code})"
+            else:
+                name = unknown
+        return name
+
+
 def polling_update_debug_log(values, eojgc, eojcc):
     debug_log = f"\nECHONETlite polling update data:\n"
     for value in list(values.keys()):
-        if value in EPC_SUPER:
-            debug_log = (
-                debug_log
-                + f" - {EPC_SUPER[value]} {value:#x}({value}): {values[value]}\n"
-            )
-        elif value in EPC_CODE[eojgc][eojcc]:
-            debug_log = (
-                debug_log
-                + f" - {EPC_CODE[eojgc][eojcc][value]} {value:#x}({value}): {values[value]}\n"
-            )
+        debug_log = (
+            debug_log
+            + f" - {get_name_by_epc_code(eojgc,eojcc,value)} {value:#x}({value}): {values[value]}\n"
+        )
     return debug_log
 
 

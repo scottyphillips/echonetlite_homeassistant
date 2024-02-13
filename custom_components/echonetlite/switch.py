@@ -2,6 +2,7 @@ import asyncio
 import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA, CONF_NAME
 from homeassistant.components.switch import SwitchEntity
+from . import get_name_by_epc_code
 from .const import (
     DOMAIN,
     ENL_OP_CODES,
@@ -16,7 +17,6 @@ from .const import (
     ENL_STATUS,
     CONF_FORCE_POLLING,
 )
-from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
 
 _LOGGER = logging.getLogger(__name__)
@@ -120,7 +120,7 @@ class EchonetSwitch(SwitchEntity):
             hex(self._options[CONF_SERVICE_DATA][DATA_STATE_ON])[2:],
         ]
         self._from_number = True if options.get(TYPE_NUMBER) else False
-        self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
+        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc,self._connector._eojcc,self._code)}"
         self._attr_icon = options.get(CONF_ICON)
         self._attr_unique_id = (
             f"{self._connector._uidi}-{self._code}"

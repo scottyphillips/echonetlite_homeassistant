@@ -8,9 +8,8 @@ from homeassistant.const import (
 )
 from homeassistant.exceptions import InvalidStateError
 from homeassistant.components.number import NumberEntity
-from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
-from . import get_unit_by_devise_class
+from . import get_name_by_epc_code, get_unit_by_devise_class
 from .const import (
     DOMAIN,
     CONF_FORCE_POLLING,
@@ -59,7 +58,7 @@ class EchonetNumber(NumberEntity):
             self._connector._instance._host
         ]
         self._attr_icon = options.get(CONF_ICON, None)
-        self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
+        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc,self._code)}"
         self._attr_unique_id = (
             f"{self._connector._uidi}-{self._code}"
             if self._connector._uidi

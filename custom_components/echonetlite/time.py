@@ -4,13 +4,13 @@ from datetime import time
 from homeassistant.const import CONF_ICON
 from homeassistant.components.time import TimeEntity
 from homeassistant.exceptions import InvalidStateError
+from . import get_name_by_epc_code
 from .const import (
     DOMAIN,
     CONF_FORCE_POLLING,
     ENL_OP_CODES,
     TYPE_TIME,
 )
-from pychonet.lib.epc import EPC_CODE
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import _hh_mm
 
@@ -58,7 +58,7 @@ class EchonetTime(TimeEntity):
             self._connector._instance._host
         ]
         self._attr_icon = options.get(CONF_ICON, None)
-        self._attr_name = f"{config.title} {EPC_CODE[self._connector._eojgc][self._connector._eojcc][self._code]}"
+        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc,self._connector._eojcc,self._code)}"
         self._attr_unique_id = (
             f"{self._connector._uidi}-{self._code}"
             if self._connector._uidi
