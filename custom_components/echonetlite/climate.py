@@ -187,7 +187,8 @@ class EchonetClimate(ClimateEntity):
 
         """temperature we try to reach."""
         _val = self._connector._update_data.get(ENL_HVAC_SET_TEMP)
-        if _val == -3:
+        # -3: Rule of thumb, 0xFD: Temperature indeterminable
+        if _val in {-3, 0xFD}:
             _val = None
         self._attr_target_temperature = _val
 
