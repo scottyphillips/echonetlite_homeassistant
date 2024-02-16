@@ -143,7 +143,7 @@ class EchonetSelect(SelectEntity):
         self._connector.add_update_option_listener(self.update_option_listener)
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
-    async def async_update_callback(self, isPush=False):
+    async def async_update_callback(self, isPush: bool = False):
         new_val = self._connector._update_data.get(self._code)
         changed = (
             new_val is not None and self._attr_current_option != new_val

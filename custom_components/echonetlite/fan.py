@@ -188,21 +188,17 @@ class EchonetFan(FanEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
         self._connector.add_update_option_listener(self.update_option_listener)
 
-    async def async_update_callback(self, isPush=False):
+    async def async_update_callback(self, isPush: bool = False):
         changed = (
             self._olddata != self._connector._update_data
             or self._attr_available != self._server_state["available"]
         )
         if changed:
+            _force = bool(not self._attr_available and self._server_state["available"])
             self._olddata = self._connector._update_data.copy()
             self._attr_available = self._server_state["available"]
             self._set_attrs()
-            self.async_schedule_update_ha_state()
-            if isPush:
-                try:
-                    await self._connector.async_update()
-                except TimeoutError:
-                    pass
+            self.async_schedule_update_ha_state(_force | isPush)
 
     def update_option_listener(self):
         _should_poll = (

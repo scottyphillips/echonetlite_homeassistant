@@ -450,7 +450,7 @@ class EchonetSensor(SensorEntity):
         self._connector.add_update_option_listener(self.update_option_listener)
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
-    async def async_update_callback(self, isPush=False):
+    async def async_update_callback(self, isPush: bool = False):
         new_val = self._connector._update_data.get(self._op_code)
         if "dict_key" in self._sensor_attributes:
             if hasattr(new_val, "get"):

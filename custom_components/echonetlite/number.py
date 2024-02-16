@@ -155,7 +155,7 @@ class EchonetNumber(NumberEntity):
         self._connector.add_update_option_listener(self.update_option_listener)
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
-    async def async_update_callback(self, isPush=False):
+    async def async_update_callback(self, isPush: bool = False):
         new_val = self.get_value()
         changed = (
             self._attr_native_value != new_val
