@@ -270,7 +270,7 @@ ENL_OP_CODES = {
                 TYPE_NUMBER: {
                     CONF_TYPE: NumberDeviceClass.TEMPERATURE,
                     CONF_MINIMUM: 30,
-                    CONF_MAXIMUM: 70,
+                    CONF_MAXIMUM: 90,
                 },
             },  # "Water heating temperature setting",
             # 0xB4: , # "Manual water heating stop days setting",
@@ -287,7 +287,7 @@ ENL_OP_CODES = {
                 TYPE_NUMBER: {
                     CONF_TYPE: NumberDeviceClass.TEMPERATURE,
                     CONF_MINIMUM: 30,
-                    CONF_MAXIMUM: 70,
+                    CONF_MAXIMUM: 90,
                 },
             },  # Temperature of supplied water setting",
             0xD3: {
@@ -296,7 +296,7 @@ ENL_OP_CODES = {
                 TYPE_NUMBER: {
                     CONF_TYPE: NumberDeviceClass.TEMPERATURE,
                     CONF_MINIMUM: 30,
-                    CONF_MAXIMUM: 70,
+                    CONF_MAXIMUM: 90,
                 },
             },  # Bath water temperature setting",
             0xE0: {
@@ -419,7 +419,7 @@ ENL_OP_CODES = {
                 TYPE_NUMBER: {
                     CONF_TYPE: NumberDeviceClass.TEMPERATURE,
                     CONF_MINIMUM: 30,
-                    CONF_MAXIMUM: 70,
+                    CONF_MAXIMUM: 90,
                 },
             },
             0xE1: {
@@ -428,7 +428,7 @@ ENL_OP_CODES = {
                 TYPE_NUMBER: {
                     CONF_TYPE: NumberDeviceClass.TEMPERATURE,
                     CONF_MINIMUM: 30,
-                    CONF_MAXIMUM: 70,
+                    CONF_MAXIMUM: 90,
                 },
             },
             0xE3: {
