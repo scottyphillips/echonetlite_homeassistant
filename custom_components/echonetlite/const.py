@@ -340,6 +340,7 @@ ENL_OP_CODES = {
             0xD4: {
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
                 TYPE_NUMBER: {
+                    CONF_MINIMUM: 0x01,
                     CONF_MAXIMUM: 0xFF,
                     CONF_MAX_OPC: 0xD5,
                 },
