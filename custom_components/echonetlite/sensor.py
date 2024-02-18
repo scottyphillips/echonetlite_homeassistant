@@ -129,32 +129,32 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     )
         else:  # For all other devices, sensors will be configured but customise if applicable.
             for op_code in list(entity["echonetlite"]._update_flags_full_list):
-                # if (power_switch and ENL_STATUS == op_code) or (
-                #     mode_select and ENL_OPENSTATE == op_code
-                # ):
                 if power_switch and ENL_STATUS == op_code:
                     continue
                 if eojgc == 0x02 and (eojcc == 0x90 or eojcc == 0x91):
                     # General Lighting, Single Function Lighting: skip already handled values
                     if op_code == ENL_BRIGHTNESS or op_code == ENL_COLOR_TEMP:
                         continue
+                # Is settable
+                _is_settable = op_code in entity["instance"]["setmap"]
+                # Check this op_code will be configured as input(switch, select ot time) entity
+                if _is_settable and regist_as_inputs(
+                    entity["echonetlite"]._instance.EPC_FUNCTIONS.get(op_code, None)
+                ):
+                    continue
+                # Configuration check with ENL_OP_CODE definition
                 if op_code in _enl_op_codes.keys():
                     _keys = _enl_op_codes.get(op_code, {}).keys()
-                    epc_function_data = entity[
-                        "echonetlite"
-                    ]._instance.EPC_FUNCTIONS.get(op_code, None)
-                    if op_code in entity["instance"]["setmap"] and (
+                    if _is_settable and (
                         TYPE_SWITCH in _keys
                         or TYPE_SELECT in _keys
                         or TYPE_TIME in _keys
                         or TYPE_NUMBER in _keys
-                        or regist_as_inputs(epc_function_data)
                     ):
-                        continue  # dont configure as sensor, it will be configured as switch instead.
+                        continue  # dont configure as sensor, it will be configured as switch, select or time instead.
 
                     if (
-                        CONF_SERVICE in _keys
-                        and op_code in entity["instance"]["setmap"]
+                        _is_settable and CONF_SERVICE in _keys
                     ):  # Some devices support advanced service calls.
                         for service_name in _enl_op_codes.get(op_code, {}).get(
                             CONF_SERVICE
