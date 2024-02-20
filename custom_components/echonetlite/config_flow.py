@@ -155,6 +155,8 @@ async def enumerate_instances(
 
     manufacturer = state["manufacturer"]
     host_product_code = state.get("product_code")
+    if type(host_product_code) == str:
+        host_product_code = str.strip(host_product_code)
     if not isinstance(manufacturer, str):
         # If unable to resolve the manufacturer,
         # the raw identification number will be passed as int.

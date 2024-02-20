@@ -153,7 +153,12 @@ class EchonetSwitch(SwitchEntity):
                 )
             },
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer,
+            "manufacturer": self._connector._manufacturer
+            + (
+                " " + self._connector._host_product_code
+                if self._connector._host_product_code
+                else ""
+            ),
             "model": EOJX_CLASS[self._connector._instance._eojgc][
                 self._connector._instance._eojcc
             ],
