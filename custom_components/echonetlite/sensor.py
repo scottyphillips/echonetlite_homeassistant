@@ -106,7 +106,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             )
             for op_code in _enl_op_codes.keys():
                 if op_code in entity["instance"]["getmap"]:
-                    _keys = _enl_op_codes.grt(op_code, {}).keys()
+                    _keys = _enl_op_codes.get(op_code, {}).keys()
                     epc_function_data = entity[
                         "echonetlite"
                     ]._instance.EPC_FUNCTIONS.get(op_code, None)
