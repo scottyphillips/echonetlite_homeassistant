@@ -24,6 +24,7 @@ from .const import (
     DOMAIN,
     ENL_OP_CODES,
     CONF_STATE_CLASS,
+    ENL_SUPER_CODES,
     TYPE_SWITCH,
     TYPE_SELECT,
     TYPE_TIME,
@@ -72,6 +73,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         power_switch = ENL_STATUS in entity["instance"]["setmap"]
         # mode_select = ENL_OPENSTATE in entity["instance"]["setmap"]
         _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
+        _enl_op_codes.update(ENL_SUPER_CODES)
         # Home Air Conditioner we dont bother exposing all sensors
         if eojgc == 1 and eojcc == 48:
             _LOGGER.debug(
@@ -83,33 +85,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                 )
                 if op_code in entity["instance"]["getmap"]:
                     _keys = _enl_op_codes.get(op_code, {}).keys()
-                    if op_code in entity["instance"]["setmap"] and (
-                        TYPE_SWITCH in _keys
-                        or TYPE_SELECT in _keys
-                        or TYPE_TIME in _keys
-                        or TYPE_NUMBER in _keys
-                        or regist_as_inputs(epc_function_data)
-                    ):
-                        continue
-                    entities.append(
-                        EchonetSensor(
-                            entity["echonetlite"],
-                            op_code,
-                            _enl_op_codes.get(op_code, {}),
-                            entity["echonetlite"]._name or config.title,
-                            hass,
-                        )
-                    )
-        elif eojgc == 1 and eojcc == 53:
-            _LOGGER.debug(
-                "This is an ECHONET fan device so not all sensors will be configured."
-            )
-            for op_code in _enl_op_codes.keys():
-                if op_code in entity["instance"]["getmap"]:
-                    _keys = _enl_op_codes.get(op_code, {}).keys()
-                    epc_function_data = entity[
-                        "echonetlite"
-                    ]._instance.EPC_FUNCTIONS.get(op_code, None)
                     if op_code in entity["instance"]["setmap"] and (
                         TYPE_SWITCH in _keys
                         or TYPE_SELECT in _keys

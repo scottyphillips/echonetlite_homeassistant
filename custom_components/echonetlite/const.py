@@ -86,6 +86,21 @@ FAN_SELECT_OP_CODES = {0xA0: FAN_SPEED}
 
 COVER_SELECT_OP_CODES = {0xE0: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43}}
 
+ENL_SUPER_CODES = {
+    0x84: {
+        CONF_TYPE: SensorDeviceClass.POWER,
+        CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+    },
+    0x85: {
+        CONF_TYPE: SensorDeviceClass.ENERGY,
+        CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+    },
+    0x97: {
+        CONF_ICON: "mdi:clock-outline",
+        TYPE_TIME: True,
+    },
+}
+
 ENL_OP_CODES = {
     0x00: {  # Sensor-related Device
         0x11: {  # Temperature sensor
@@ -164,28 +179,20 @@ ENL_OP_CODES = {
             },
         },
         0x35: {  # Air cleaner
-            0xA0: {
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-                TYPE_NUMBER: {
-                    CONF_AS_ZERO: 0x30,
-                    CONF_MINIMUM: 0x31,
-                    CONF_MAXIMUM: 0x38,
-                    TYPE_SWITCH: {
-                        CONF_NAME: "Auto",
-                        CONF_SERVICE_DATA: {DATA_STATE_ON: 0x41, DATA_STATE_OFF: 0x31},
-                    },
-                },
-            },
-            0x84: {
-                CONF_TYPE: SensorDeviceClass.POWER,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-            },
-            0x85: {
-                CONF_TYPE: SensorDeviceClass.ENERGY,
-                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+            0xE1: {
+                CONF_ICON: "mdi:air-filter",
             },
             0xA0: {
                 CONF_ICON: "mdi:fan",
+            },
+            0xC1: {
+                CONF_ICON: "mdi:smoking",
+            },
+            0xC2: {
+                CONF_ICON: "mdi:weather-sunny",
+            },
+            0xC0: {
+                CONF_ICON: "mdi:flower-pollen",
             },
         },
     },

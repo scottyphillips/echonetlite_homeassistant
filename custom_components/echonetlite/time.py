@@ -9,6 +9,7 @@ from .const import (
     DOMAIN,
     CONF_FORCE_POLLING,
     ENL_OP_CODES,
+    ENL_SUPER_CODES,
     TYPE_TIME,
 )
 from pychonet.lib.eojx import EOJX_CLASS
@@ -23,6 +24,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
         _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
+        _enl_op_codes.update(ENL_SUPER_CODES)
         # configure select entities by looking up full ENL_OP_CODE dict
         for op_code in entity["instance"]["setmap"]:
             epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
