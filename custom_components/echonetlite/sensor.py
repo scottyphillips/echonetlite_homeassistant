@@ -71,9 +71,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         )
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
-        # mode_select = ENL_OPENSTATE in entity["instance"]["setmap"]
-        _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
-        _enl_op_codes.update(ENL_SUPER_CODES)
+        _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {}) | ENL_SUPER_CODES
         _epc_functions = (
             entity["echonetlite"]._instance.EPC_FUNCTIONS | EPC_SUPER_FUNCTIONS
         )
