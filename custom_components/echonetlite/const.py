@@ -97,6 +97,8 @@ ENL_SUPER_CODES = {
     0x85: {
         CONF_TYPE: SensorDeviceClass.ENERGY,
         CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+        CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
+        CONF_MULTIPLIER: 0.001,
     },
     0x97: {
         CONF_ICON: "mdi:clock-outline",
@@ -372,22 +374,22 @@ ENL_OP_CODES = {
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },  # Rated power consumption of H/P unit in summertime",
             0xCB: {
-                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
                 TYPE_DATA_DICT: ["10:00", "13:00", "15:00", "17:00"],
             },
             0xCC: {
-                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
                 TYPE_DATA_DICT: ["10:00", "13:00", "15:00", "17:00"],
             },
             0xCE: {
-                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
                 TYPE_DATA_DICT: ["13:00", "15:00", "17:00"],
             },
             0xCF: {
-                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
                 TYPE_DATA_DICT: ["13:00", "15:00", "17:00"],
             },
