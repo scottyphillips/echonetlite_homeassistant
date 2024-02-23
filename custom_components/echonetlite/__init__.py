@@ -652,7 +652,9 @@ class ECHONETConnector:
     async def async_update_data(self, kwargs):
         update_data = {}
         no_request = "no_request" in kwargs and kwargs["no_request"]
-        for flags in self._update_flag_batches:
+        for i, flags in enumerate(self._update_flag_batches):
+            if i > 0:
+                await asyncio.sleep(0.5)
             batch_data = await self._instance.update(flags, no_request)
             if batch_data is not False:
                 if isinstance(batch_data, dict):
