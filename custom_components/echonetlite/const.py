@@ -21,12 +21,15 @@ from homeassistant.components.sensor import (
 from homeassistant.components.number.const import (
     NumberDeviceClass,
 )
+from pychonet.GeneralLighting import ENL_BRIGHTNESS, ENL_COLOR_TEMP
 from pychonet.HomeAirConditioner import (
     ENL_HVAC_MODE,
     ENL_FANSPEED,
     ENL_AIR_VERT,
     ENL_AIR_HORZ,
     ENL_AUTO_DIRECTION,
+    ENL_HVAC_SET_TEMP,
+    ENL_HVAC_SILENT_MODE,
     ENL_SWING_MODE,
     FAN_SPEED,
     AIRFLOW_VERT,
@@ -113,14 +116,6 @@ ENL_OP_CODES = {
     },
     0x01: {  # Air Conditioner-related Device
         0x30: {  # Home air conditioner
-            0x84: {
-                CONF_TYPE: SensorDeviceClass.POWER,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-            },
-            0x85: {
-                CONF_TYPE: SensorDeviceClass.ENERGY,
-                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
-            },
             # 0xB3: {  # for develop test
             #     CONF_TYPE: SensorDeviceClass.TEMPERATURE,
             #     CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
@@ -138,9 +133,6 @@ ENL_OP_CODES = {
             #         },
             #     },
             # },
-            # 0xB2: {  # Normal/highspeed/silent operation setting
-            #     CONF_ICON: "mdi:tailwind",
-            # }, # If settable, configure as preset mode for Climate entity.
             0xB4: {  # Humidity setting in dry mode
                 CONF_TYPE: SensorDeviceClass.HUMIDITY,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
@@ -882,6 +874,20 @@ ENL_OP_CODES = {
         CONF_ICON: None,
         CONF_TYPE: None,
         CONF_STATE_CLASS: None,
+    },
+}
+
+# Some entities that overlap with control entities are excluded from setup
+NON_SETUP_SINGLE_ENYITY = {
+    0x01: {
+        # Home Air Conditioner
+        0x30: {ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_SILENT_MODE},
+    },
+    0x02: {
+        # General Lighting
+        0x90: {ENL_BRIGHTNESS, ENL_COLOR_TEMP},
+        # Single Function Lighting
+        0x91: {ENL_BRIGHTNESS, ENL_COLOR_TEMP},
     },
 }
 

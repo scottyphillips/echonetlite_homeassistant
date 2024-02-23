@@ -17,7 +17,7 @@ from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 from pychonet.GeneralLighting import ENL_BRIGHTNESS, ENL_COLOR_TEMP
 
 from pychonet.lib.eojx import EOJX_CLASS
-from pychonet.lib.epc_functions import _hh_mm
+from pychonet.lib.epc_functions import EPC_SUPER_FUNCTIONS, _hh_mm
 
 from . import get_name_by_epc_code, get_unit_by_devise_class
 from .const import (
@@ -25,6 +25,7 @@ from .const import (
     ENL_OP_CODES,
     CONF_STATE_CLASS,
     ENL_SUPER_CODES,
+    NON_SETUP_SINGLE_ENYITY,
     TYPE_SWITCH,
     TYPE_SELECT,
     TYPE_TIME,
@@ -70,149 +71,116 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         )
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
-        power_switch = ENL_STATUS in entity["instance"]["setmap"]
         # mode_select = ENL_OPENSTATE in entity["instance"]["setmap"]
         _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
         _enl_op_codes.update(ENL_SUPER_CODES)
-        # Home Air Conditioner we dont bother exposing all sensors
-        if eojgc == 1 and eojcc == 48:
-            _LOGGER.debug(
-                "This is an ECHONET climate device so not all sensors will be configured."
-            )
-            for op_code in _enl_op_codes.keys():
-                epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
-                    op_code, None
-                )
-                if op_code in entity["instance"]["getmap"]:
-                    _keys = _enl_op_codes.get(op_code, {}).keys()
-                    if op_code in entity["instance"]["setmap"] and (
-                        TYPE_SWITCH in _keys
-                        or TYPE_SELECT in _keys
-                        or TYPE_TIME in _keys
-                        or TYPE_NUMBER in _keys
-                        or regist_as_inputs(epc_function_data)
-                    ):
-                        continue
-                    entities.append(
-                        EchonetSensor(
-                            entity["echonetlite"],
-                            op_code,
-                            _enl_op_codes.get(op_code, {}),
-                            entity["echonetlite"]._name or config.title,
-                            hass,
-                        )
-                    )
-        else:  # For all other devices, sensors will be configured but customise if applicable.
-            for op_code in list(entity["echonetlite"]._update_flags_full_list):
-                if power_switch and ENL_STATUS == op_code:
-                    continue
-                if eojgc == 0x02 and (eojcc == 0x90 or eojcc == 0x91):
-                    # General Lighting, Single Function Lighting: skip already handled values
-                    if op_code == ENL_BRIGHTNESS or op_code == ENL_COLOR_TEMP:
-                        continue
-                # Is settable
-                _is_settable = op_code in entity["instance"]["setmap"]
-                # Check this op_code will be configured as input(switch, select ot time) entity
-                if _is_settable and regist_as_inputs(
-                    entity["echonetlite"]._instance.EPC_FUNCTIONS.get(op_code, None)
+        _epc_functions = (
+            entity["echonetlite"]._instance.EPC_FUNCTIONS | EPC_SUPER_FUNCTIONS
+        )
+        # For all other devices, sensors will be configured but customise if applicable.
+        for op_code in list(
+            set(entity["echonetlite"]._update_flags_full_list)
+            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
+        ):
+            # Is settable
+            _is_settable = op_code in entity["instance"]["setmap"]
+            # Check this op_code will be configured as input(switch, select ot time) entity
+            if _is_settable and regist_as_inputs(_epc_functions.get(op_code, None)):
+                continue
+            # Configuration check with ENL_OP_CODE definition
+            if op_code in _enl_op_codes.keys():
+                _keys = _enl_op_codes.get(op_code, {}).keys()
+                if _is_settable and (
+                    TYPE_SWITCH in _keys
+                    or TYPE_SELECT in _keys
+                    or TYPE_TIME in _keys
+                    or TYPE_NUMBER in _keys
                 ):
-                    continue
-                # Configuration check with ENL_OP_CODE definition
-                if op_code in _enl_op_codes.keys():
-                    _keys = _enl_op_codes.get(op_code, {}).keys()
-                    if _is_settable and (
-                        TYPE_SWITCH in _keys
-                        or TYPE_SELECT in _keys
-                        or TYPE_TIME in _keys
-                        or TYPE_NUMBER in _keys
+                    continue  # dont configure as sensor, it will be configured as switch, select or time instead.
+
+                if (
+                    _is_settable and CONF_SERVICE in _keys
+                ):  # Some devices support advanced service calls.
+                    for service_name in _enl_op_codes.get(op_code, {}).get(
+                        CONF_SERVICE
                     ):
-                        continue  # dont configure as sensor, it will be configured as switch, select or time instead.
-
-                    if (
-                        _is_settable and CONF_SERVICE in _keys
-                    ):  # Some devices support advanced service calls.
-                        for service_name in _enl_op_codes.get(op_code, {}).get(
-                            CONF_SERVICE
-                        ):
-                            if service_name == SERVICE_SET_ON_TIMER_TIME:
-                                platform.async_register_entity_service(
-                                    service_name,
-                                    {vol.Required("timer_time"): cv.time_period},
-                                    "async_" + service_name,
-                                )
-                            elif service_name == SERVICE_SET_INT_1B:
-                                platform.async_register_entity_service(
-                                    service_name,
-                                    {
-                                        vol.Required("value"): cv.positive_int,
-                                        vol.Optional(
-                                            "epc", default=op_code
-                                        ): cv.positive_int,
-                                    },
-                                    "async_" + service_name,
-                                )
-
-                    if TYPE_DATA_DICT in _keys:
-                        type_data = _enl_op_codes.get(op_code, {}).get(TYPE_DATA_DICT)
-                        if isinstance(type_data, list):
-                            for attr_key in type_data:
-                                attr = _enl_op_codes.get(op_code).copy()
-                                attr["dict_key"] = attr_key
-                                entities.append(
-                                    EchonetSensor(
-                                        entity["echonetlite"],
-                                        op_code,
-                                        attr,
-                                        entity["echonetlite"]._name or config.title,
-                                        hass,
-                                    )
-                                )
-                            continue
-                        else:
-                            continue
-                    if TYPE_DATA_ARRAY_WITH_SIZE_OPCODE in _keys:
-                        array_size_op_code = _enl_op_codes[op_code][
-                            TYPE_DATA_ARRAY_WITH_SIZE_OPCODE
-                        ]
-                        array_max_size = await entity["echonetlite"]._instance.update(
-                            array_size_op_code
-                        )
-                        for x in range(0, array_max_size):
-                            attr = _enl_op_codes[op_code].copy()
-                            attr["accessor_index"] = x
-                            attr["accessor_lambda"] = lambda value, index: (
-                                value["values"][index]
-                                if index < value["range"]
-                                else None
+                        if service_name == SERVICE_SET_ON_TIMER_TIME:
+                            platform.async_register_entity_service(
+                                service_name,
+                                {vol.Required("timer_time"): cv.time_period},
+                                "async_" + service_name,
                             )
+                        elif service_name == SERVICE_SET_INT_1B:
+                            platform.async_register_entity_service(
+                                service_name,
+                                {
+                                    vol.Required("value"): cv.positive_int,
+                                    vol.Optional(
+                                        "epc", default=op_code
+                                    ): cv.positive_int,
+                                },
+                                "async_" + service_name,
+                            )
+
+                if TYPE_DATA_DICT in _keys:
+                    type_data = _enl_op_codes.get(op_code, {}).get(TYPE_DATA_DICT)
+                    if isinstance(type_data, list):
+                        for attr_key in type_data:
+                            attr = _enl_op_codes.get(op_code).copy()
+                            attr["dict_key"] = attr_key
                             entities.append(
                                 EchonetSensor(
                                     entity["echonetlite"],
                                     op_code,
                                     attr,
-                                    config.title,
+                                    entity["echonetlite"]._name or config.title,
+                                    hass,
                                 )
                             )
                         continue
                     else:
+                        continue
+                if TYPE_DATA_ARRAY_WITH_SIZE_OPCODE in _keys:
+                    array_size_op_code = _enl_op_codes[op_code][
+                        TYPE_DATA_ARRAY_WITH_SIZE_OPCODE
+                    ]
+                    array_max_size = await entity["echonetlite"]._instance.update(
+                        array_size_op_code
+                    )
+                    for x in range(0, array_max_size):
+                        attr = _enl_op_codes[op_code].copy()
+                        attr["accessor_index"] = x
+                        attr["accessor_lambda"] = lambda value, index: (
+                            value["values"][index] if index < value["range"] else None
+                        )
                         entities.append(
                             EchonetSensor(
                                 entity["echonetlite"],
                                 op_code,
-                                _enl_op_codes[op_code],
-                                entity["echonetlite"]._name or config.title,
-                                hass,
+                                attr,
+                                config.title,
                             )
                         )
                     continue
-                entities.append(
-                    EchonetSensor(
-                        entity["echonetlite"],
-                        op_code,
-                        ENL_OP_CODES["default"],
-                        entity["echonetlite"]._name or config.title,
+                else:
+                    entities.append(
+                        EchonetSensor(
+                            entity["echonetlite"],
+                            op_code,
+                            _enl_op_codes[op_code],
+                            entity["echonetlite"]._name or config.title,
+                            hass,
+                        )
                     )
+                continue
+            entities.append(
+                EchonetSensor(
+                    entity["echonetlite"],
+                    op_code,
+                    ENL_OP_CODES["default"],
+                    entity["echonetlite"]._name or config.title,
                 )
+            )
     async_add_entities(entities, True)
 
 
