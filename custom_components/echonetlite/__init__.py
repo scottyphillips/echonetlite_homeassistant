@@ -27,6 +27,7 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.number import NumberDeviceClass
 from .const import (
     DOMAIN,
+    EPC_CODES_FOR_UPDATE,
     USER_OPTIONS,
     TEMP_OPTIONS,
     CONF_BATCH_SIZE_MAX,
@@ -50,39 +51,8 @@ from pychonet.HomeAirConditioner import (
     ENL_SWING_MODE,
     ENL_AIR_VERT,
     ENL_AIR_HORZ,
-    ENL_HVAC_MODE,
-    ENL_HVAC_SET_TEMP,
-    ENL_HVAC_SET_HUMIDITY,
-    ENL_HVAC_ROOM_HUMIDITY,
-    ENL_HVAC_ROOM_TEMP,
-    ENL_HVAC_SILENT_MODE,
-    ENL_HVAC_OUT_TEMP,
 )
 
-from pychonet.DistributionPanelMeter import (
-    ENL_DPM_ENG_NOR,
-    ENL_DPM_ENG_REV,
-    ENL_DPM_ENG_UNIT,
-    ENL_DPM_DAY_GET_HISTORY,
-    ENL_DPM_INSTANT_ENG,
-    ENL_DPM_INSTANT_CUR,
-    ENL_DPM_INSTANT_VOL,
-    ENL_DPM_CHANNEL_SIMPLEX_CUMULATIVE_ENG,
-    ENL_DPM_CHANNEL_SIMPLEX_INSTANT_ENG,
-)
-
-from pychonet.LowVoltageSmartElectricEnergyMeter import (
-    ENL_LVSEEM_COEF,
-    ENL_LVSEEM_ENG_UNIT,
-    ENL_LVSEEM_ENG_NOR,
-    ENL_LVSEEM_ENG_REV,
-    ENL_LVSEEM_INSTANT_ENG,
-    ENL_LVSEEM_INSTANT_CUR,
-)
-
-from pychonet.GeneralLighting import ENL_BRIGHTNESS, ENL_COLOR_TEMP
-
-from pychonet.LightingSystem import ENL_SCENE, ENL_SCENE_MAX
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [
@@ -99,88 +69,6 @@ PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=1)
 MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
-
-HVAC_API_CONNECTOR_DEFAULT_FLAGS = [
-    ENL_STATUS,
-    ENL_FANSPEED,
-    ENL_AUTO_DIRECTION,
-    ENL_SWING_MODE,
-    ENL_AIR_VERT,
-    ENL_AIR_HORZ,
-    ENL_HVAC_MODE,
-    ENL_HVAC_SET_TEMP,
-    ENL_HVAC_SET_HUMIDITY,
-    ENL_HVAC_ROOM_HUMIDITY,
-    ENL_HVAC_ROOM_TEMP,
-    ENL_HVAC_OUT_TEMP,
-    ENL_HVAC_SILENT_MODE,
-    ENL_INSTANTANEOUS_POWER,
-    ENL_CUMULATIVE_POWER,
-]
-
-LIGHT_API_CONNECTOR_DEFAULT_FLAGS = [ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP]
-
-_0287_API_CONNECTOR_DEFAULT_FLAGS = [
-    ENL_STATUS,
-    ENL_DPM_ENG_NOR,
-    ENL_DPM_ENG_REV,
-    ENL_DPM_ENG_UNIT,
-    ENL_DPM_DAY_GET_HISTORY,
-    ENL_DPM_INSTANT_ENG,
-    ENL_DPM_INSTANT_CUR,
-    ENL_DPM_INSTANT_VOL,
-]
-
-_0288_API_CONNECTOR_DEFAULT_FLAGS = [
-    ENL_STATUS,
-    ENL_LVSEEM_ENG_NOR,
-    ENL_LVSEEM_ENG_REV,
-    ENL_LVSEEM_INSTANT_ENG,
-    ENL_LVSEEM_INSTANT_CUR,
-    ENL_LVSEEM_COEF,
-    ENL_LVSEEM_ENG_UNIT,
-]
-
-SINGLE_FUNCTION_LIGHT_API_CONNECTOR_DEFAULT_FLAGS = [
-    ENL_STATUS,
-    ENL_BRIGHTNESS,
-]
-
-LIGHTING_SYSTEM_API_CONNECTOR_DEFAULT_FLAGS = [
-    ENL_STATUS,
-    ENL_SCENE,
-    ENL_SCENE_MAX,
-]
-
-DISTRIBUTION_PANEL_METER_API_CONNECTOR_DEFAULT_FLAGS = [
-    ENL_STATUS,
-    ENL_DPM_ENG_NOR,
-    ENL_DPM_ENG_REV,
-    ENL_DPM_ENG_UNIT,
-    ENL_DPM_DAY_GET_HISTORY,
-    ENL_DPM_INSTANT_ENG,
-    ENL_DPM_INSTANT_CUR,
-    ENL_DPM_INSTANT_VOL,
-    ENL_DPM_CHANNEL_SIMPLEX_CUMULATIVE_ENG,
-    ENL_DPM_CHANNEL_SIMPLEX_INSTANT_ENG,
-]
-
-STORAGE_BATTERY_API_CONNECTOR_DEFAULT_FLAGS = [
-    ENL_STATUS,
-    0xA0,
-    0xA1,
-    0xA8,
-    0xA9,
-    0xCF,
-    0xD0,
-    0xD3,
-    0xD6,
-    0xD8,
-    0xE2,
-    0xE4,
-    0xE5,
-    0xE6,
-]
 
 
 def get_name_by_epc_code(
@@ -519,64 +407,30 @@ class ECHONETConnector:
         )
         self._entry = entry
 
-        # Detect HVAC - eventually we will use factory here.
+        # Make EPC codes for update
         self._update_flags_full_list = []
-        flags = []
-        if self._eojgc == 0x01 and self._eojcc == 0x30:
-            _LOGGER.debug(
-                f"Starting ECHONETLite HomeAirConditioner instance at {self._host}"
-            )
-            flags = HVAC_API_CONNECTOR_DEFAULT_FLAGS
-        elif self._eojgc == 0x02 and self._eojcc == 0x90:
-            _LOGGER.debug(
-                f"Starting ECHONETLite GeneralLighting instance at {self._host}"
-            )
-            flags = LIGHT_API_CONNECTOR_DEFAULT_FLAGS
-        elif self._eojgc == 0x02 and self._eojcc == 0x91:
-            _LOGGER.debug(
-                f"Starting ECHONETLite SingleFunctionLighting instance at {self._host}"
-            )
-            flags = SINGLE_FUNCTION_LIGHT_API_CONNECTOR_DEFAULT_FLAGS
-        elif self._eojgc == 0x02 and self._eojcc == 0xA3:
-            _LOGGER.debug(
-                f"Starting ECHONETLite LightingSystem instance at {self._host}"
-            )
-            flags = LIGHTING_SYSTEM_API_CONNECTOR_DEFAULT_FLAGS
-        elif self._eojgc == 0x02 and self._eojcc == 0x87:
-            _LOGGER.debug(
-                f"Starting ECHONETLite DistributionPanelMeter instance at {self._host}"
-            )
-            flags = _0287_API_CONNECTOR_DEFAULT_FLAGS
-            _LOGGER.debug(
-                f"Starting ECHONETLite DistributionPanelMeter instance at {self._host}"
-            )
-            flags = DISTRIBUTION_PANEL_METER_API_CONNECTOR_DEFAULT_FLAGS
-        elif self._eojgc == 0x02 and self._eojcc == 0x88:
-            _LOGGER.debug(
-                f"Starting ECHONETLite LowVoltageSmartElectricEnergyMeter instance at {self._host}"
-            )
-            flags = _0288_API_CONNECTOR_DEFAULT_FLAGS
-        elif self._eojgc == 0x02 and self._eojcc == 0x7D:
-            _LOGGER.debug(
-                f"Starting ECHONETLite StorageBattery instance at {self._host}"
-            )
-            flags = STORAGE_BATTERY_API_CONNECTOR_DEFAULT_FLAGS
-        else:
-            _LOGGER.debug(
-                f"Starting ECHONETLite Generic instance for {self._eojgc}-{self._eojcc}-{self._eojci} at {self._host}"
-            )
+        # Some classes use predefined data (Narrowed down items)
+        flags = EPC_CODES_FOR_UPDATE.get(self._eojgc, {}).get(self._eojcc, None)
+        # For classes where it is not defined
+        if flags == None:
             flags = [ENL_STATUS]
+            _epc_keys = set((EPC_CODE[self._eojgc][self._eojcc].keys())) - set(
+                EPC_SUPER.keys()
+            )
             for item in self._getPropertyMap:
-                if item not in list(EPC_SUPER.keys()):
-                    if item in list(EPC_CODE[self._eojgc][self._eojcc].keys()):
-                        flags.append(item)
+                if item in _epc_keys:
+                    flags.append(item)
 
         for value in flags:
             if value in self._getPropertyMap:
                 self._update_flags_full_list.append(value)
                 self._update_data[value] = None
+
         self._instance = echonet.Factory(
             self._host, self._api, self._eojgc, self._eojcc, self._eojci
+        )
+        _LOGGER.debug(
+            f"Starting ECHONETLite {self._instance.__class__.__name__} instance for {self._eojgc}-{self._eojcc}-{self._eojci} at {self._host}"
         )
 
         # TODO this looks messy.
