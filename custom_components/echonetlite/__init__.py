@@ -488,7 +488,7 @@ class ECHONETConnector:
                 MIN_UPDATE_BATCH_SIZE,
                 self._user_options[CONF_BATCH_SIZE_MAX] - 1,
             )
-            if batch_data_len <= self._user_options[CONF_BATCH_SIZE_MAX]:
+            if batch_data_len >= self._user_options[CONF_BATCH_SIZE_MAX]:
                 _LOGGER.error(
                     f"The integration has adjusted the number of batch requests to {self._host} to {self._user_options[CONF_BATCH_SIZE_MAX]}, but no response is received. Please check and try restarting the device etc."
                 )
