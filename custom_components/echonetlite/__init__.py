@@ -413,7 +413,7 @@ class ECHONETConnector:
         flags = EPC_CODES_FOR_UPDATE.get(self._eojgc, {}).get(self._eojcc, None)
         # For classes where it is not defined
         if flags == None:
-            flags = [ENL_STATUS]
+            flags = [ENL_STATUS, ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER]
             _epc_keys = set((EPC_CODE[self._eojgc][self._eojcc].keys())) - set(
                 EPC_SUPER.keys()
             )
