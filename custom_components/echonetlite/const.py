@@ -299,11 +299,17 @@ ENL_OP_CODES = {
                     CONF_MAXIMUM: 90,
                 },
             },  # "Water heating temperature setting",
-            # 0xB4: , # "Manual water heating stop days setting",
+            0xB4: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },  # "Manual water heating stop days setting",
             # 0xB5: , # "Relative time setting value for manual water heating OFF",
             # 0xB6: , # Tank operation mode setting",
             # 0xC0: , # Daytime reheating permission setting",
-            # 0xC1: , # Measured temperature of water in water heater",
+            0xC1: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },  # Measured temperature of water in water heater",
             # 0xC2: , # Alarm status",
             # 0xC3: , # Hot water supply status",
             # 0xC4: , # Relative time setting for keeping bath temperature",
@@ -332,8 +338,16 @@ ENL_OP_CODES = {
                     CONF_MAXIMUM: 100,
                 },
             },  # Bath water volume setting",
-            # 0xE1: , # Measured amount of water remaining in tank",
-            # 0xE2: , # Tank capacity",
+            0xE1: {
+                CONF_TYPE: SensorDeviceClass.WATER,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },  # Measured amount of water remaining in tank",
+            0xE2: {
+                CONF_TYPE: SensorDeviceClass.WATER,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },  # Tank capacity",
             # 0xE3: , # Automatic bath water heating mode setting",
             # 0xE9: , # Bathroom priority setting",
             # 0xEA: , # Bath operation status monitor",
@@ -385,7 +399,11 @@ ENL_OP_CODES = {
                 },
             },  # Volume setting",
             # 0xD7: , # Mute setting",
-            # 0xD8: , # Remaining hot water volume",
+            0xD8: {
+                CONF_TYPE: SensorDeviceClass.WATER,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },  # Remaining hot water volume",
             0xDB: {
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
@@ -464,8 +482,16 @@ ENL_OP_CODES = {
             0xE4: {
                 CONF_ICON: "mdi:heat-wave",
             },
-            0xE7: {CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS},
-            0xEE: {CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS},
+            0xE7: {
+                CONF_TYPE: SensorDeviceClass.WATER,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+            0xEE: {
+                CONF_TYPE: SensorDeviceClass.WATER,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
         },
         0x79: {  # Home solar power generation
             0xA0: {
