@@ -229,6 +229,11 @@ class EchonetLight(LightEntity):
                 if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON
                 else False
             )
+            if self._attr_available != self._server_state["available"]:
+                if self._server_state["available"]:
+                    self.update_option_listener()
+                else:
+                    self._attr_should_poll = True
             self._attr_available = self._server_state["available"]
             self._set_attrs()
             self.async_schedule_update_ha_state(_force)

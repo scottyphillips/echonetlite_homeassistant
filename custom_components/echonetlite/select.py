@@ -156,6 +156,11 @@ class EchonetSelect(SelectEntity):
         if changed:
             _force = bool(not self._attr_available and self._server_state["available"])
             self._attr_current_option = new_val
+            if self._attr_available != self._server_state["available"]:
+                if self._server_state["available"]:
+                    self.update_option_listener()
+                else:
+                    self._attr_should_poll = True
             self._attr_available = self._server_state["available"]
             self.update_attr()
             self.async_schedule_update_ha_state(_force)

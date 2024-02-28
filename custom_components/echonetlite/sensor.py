@@ -414,6 +414,11 @@ class EchonetSensor(SensorEntity):
             _force = bool(not self._attr_available and self._server_state["available"])
             self._state_value = new_val
             self._attr_native_value = self.get_attr_native_value()
+            if self._attr_available != self._server_state["available"]:
+                if self._server_state["available"]:
+                    self.update_option_listener()
+                else:
+                    self._attr_should_poll = True
             self._attr_available = self._server_state["available"]
             self.async_schedule_update_ha_state(_force)
 

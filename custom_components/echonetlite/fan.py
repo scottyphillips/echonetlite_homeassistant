@@ -201,6 +201,11 @@ class EchonetFan(FanEntity):
         if changed:
             _force = bool(not self._attr_available and self._server_state["available"])
             self._olddata = self._connector._update_data.copy()
+            if self._attr_available != self._server_state["available"]:
+                if self._server_state["available"]:
+                    self.update_option_listener()
+                else:
+                    self._attr_should_poll = True
             self._attr_available = self._server_state["available"]
             self._set_attrs()
             self.async_schedule_update_ha_state(_force | isPush)
