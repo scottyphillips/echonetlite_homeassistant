@@ -26,7 +26,11 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.number import NumberDeviceClass
 from .const import (
+    CONF_ENABLE_SUPER_ENERGY,
     DOMAIN,
+    ENABLE_SUPER_ENERGY_DEFAULT,
+    ENL_OP_CODES,
+    ENL_TIMER_SETTING,
     EPC_CODES_FOR_UPDATE,
     USER_OPTIONS,
     TEMP_OPTIONS,
@@ -367,8 +371,14 @@ async def update_listener(hass, entry):
                     {key: entry.options.get(key, option.get("default"))}
                 )
 
+        _need_reload = False
         for func in instance["echonetlite"]._update_option_func:
-            func()
+            _need_reload |= bool(func())
+
+        if _need_reload:
+            return await hass.config_entries.async_reload(entry.entry_id)
+        else:
+            return True
 
 
 class ECHONETConnector:
@@ -386,6 +396,7 @@ class ECHONETConnector:
         self._api = hass.data[DOMAIN]["api"]
         self._update_callbacks = []
         self._update_option_func = []
+        self._update_flags_full_list = []
         self._ntfPropertyMap = instance["ntfmap"]
         self._getPropertyMap = instance["getmap"]
         self._setPropertyMap = instance["setmap"]
@@ -406,25 +417,6 @@ class ECHONETConnector:
             self.async_update_callback,
         )
         self._entry = entry
-
-        # Make EPC codes for update
-        self._update_flags_full_list = []
-        # Some classes use predefined data (Narrowed down items)
-        flags = EPC_CODES_FOR_UPDATE.get(self._eojgc, {}).get(self._eojcc, None)
-        # For classes where it is not defined
-        if flags == None:
-            flags = [ENL_STATUS, ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER]
-            _epc_keys = set((EPC_CODE[self._eojgc][self._eojcc].keys())) - set(
-                EPC_SUPER.keys()
-            )
-            for item in self._getPropertyMap:
-                if item in _epc_keys:
-                    flags.append(item)
-
-        for value in flags:
-            if value in self._getPropertyMap:
-                self._update_flags_full_list.append(value)
-                self._update_data[value] = None
 
         self._instance = echonet.Factory(
             self._host, self._api, self._eojgc, self._eojcc, self._eojci
@@ -468,6 +460,10 @@ class ECHONETConnector:
         for key, option in MISC_OPTIONS.items():
             if entry.options.get(key) is not None:
                 self._user_options[key] = entry.options.get(key, option.get("default"))
+
+        # Make _update_flags_full_list
+        self._make_update_flags_full_list()
+        self._update_option_func.append(self._make_update_flags_full_list)
 
         # Make batch request flags
         self._make_batch_request_flags()
@@ -525,6 +521,49 @@ class ECHONETConnector:
         await self.async_update_data(kwargs={"no_request": True})
         for update_func in self._update_callbacks:
             await update_func(isPush)
+
+    def _make_update_flags_full_list(self):
+        _prev_update_flags_full_list = self._update_flags_full_list.copy()
+        # Make EPC codes for update
+        self._update_flags_full_list = []
+        # Is enabled CONF_ENABLE_SUPER_ENERGY
+        _enabled_super_energy = self._user_options.get(
+            CONF_ENABLE_SUPER_ENERGY,
+            ENABLE_SUPER_ENERGY_DEFAULT.get(self._eojgc, {}).get(self._eojcc, False),
+        )
+        # Some classes use predefined data (Narrowed down items)
+        flags = EPC_CODES_FOR_UPDATE.get(self._eojgc, {}).get(self._eojcc, None)
+        if flags != None:
+            if not _enabled_super_energy:
+                flags = list(
+                    set(flags) - {ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER}
+                )
+        else:
+            # For classes where it is not defined
+            flags = [ENL_STATUS, ENL_TIMER_SETTING]
+            if (
+                _enabled_super_energy
+                or ENL_OP_CODES.get(self._eojgc, {})
+                .get(self._eojcc, {})
+                .get(ENL_INSTANTANEOUS_POWER)
+                or ENL_OP_CODES.get(self._eojgc, {})
+                .get(self._eojcc, {})
+                .get(ENL_CUMULATIVE_POWER)
+            ):
+                flags += [ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER]
+            _epc_keys = set((EPC_CODE[self._eojgc][self._eojcc].keys())) - set(
+                EPC_SUPER.keys()
+            )
+            for item in self._getPropertyMap:
+                if item in _epc_keys:
+                    flags.append(item)
+
+        for value in flags:
+            if value in self._getPropertyMap:
+                self._update_flags_full_list.append(value)
+                self._update_data[value] = None
+
+        return _prev_update_flags_full_list != self._update_flags_full_list
 
     def _make_batch_request_flags(self):
         # Split list of codes into batches of 10

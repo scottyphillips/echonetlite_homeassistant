@@ -135,8 +135,6 @@ class EchonetClimate(ClimateEntity):
             )
         self._attr_hvac_modes = DEFAULT_HVAC_MODES
         self._attr_preset_modes = DEFAULT_PRESET_MODES
-        self._attr_min_temp = self._connector._user_options["min_temp_auto"]
-        self._attr_max_temp = self._connector._user_options["max_temp_auto"]
         self._olddata = {}
         # self._should_poll = True
         self._last_mode = HVACMode.OFF
@@ -181,6 +179,19 @@ class EchonetClimate(ClimateEntity):
             ],
             # "sw_version": "",
         }
+
+    def _set_min_max_temp(self):
+        self._attr_min_temp = self._connector._user_options["min_temp_auto"]
+        self._attr_max_temp = self._connector._user_options["max_temp_auto"]
+
+        if hasattr(self, "_attr_hvac_mode"):
+            """minimum/maximum temperature supported by the HVAC."""
+            if self._attr_hvac_mode == HVACMode.HEAT:
+                self._attr_min_temp = self._connector._user_options["min_temp_heat"]
+                self._attr_max_temp = self._connector._user_options["max_temp_heat"]
+            elif self._attr_hvac_mode == HVACMode.COOL:
+                self._attr_min_temp = self._connector._user_options["min_temp_cool"]
+                self._attr_max_temp = self._connector._user_options["max_temp_cool"]
 
     def _set_attrs(self):
         """current temperature."""
@@ -286,21 +297,7 @@ class EchonetClimate(ClimateEntity):
                 else None
             )
 
-        """minimum temperature supported by the HVAC."""
-        if self._attr_hvac_mode == HVACMode.HEAT:
-            self._attr_min_temp = self._connector._user_options["min_temp_heat"]
-        elif self._attr_hvac_mode == HVACMode.COOL:
-            self._attr_min_temp = self._connector._user_options["min_temp_cool"]
-        elif self._attr_hvac_mode == HVACMode.HEAT_COOL:
-            self._attr_min_temp = self._connector._user_options["min_temp_auto"]
-
-        """maximum temperature supported by the HVAC."""
-        if self._attr_hvac_mode == HVACMode.HEAT:
-            self._attr_max_temp = self._connector._user_options["max_temp_heat"]
-        if self._attr_hvac_mode == HVACMode.COOL:
-            self._attr_max_temp = self._connector._user_options["max_temp_cool"]
-        if self._attr_hvac_mode == HVACMode.HEAT_COOL:
-            self._attr_max_temp = self._connector._user_options["max_temp_auto"]
+        self._set_min_max_temp()
 
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode."""
@@ -391,5 +388,7 @@ class EchonetClimate(ClimateEntity):
             self._attr_swing_modes = _modes
         else:
             self._attr_swing_modes = DEFAULT_SWING_MODES
+
+        self._set_min_max_temp()
         if self.hass:
             self.async_schedule_update_ha_state()

@@ -69,6 +69,7 @@ CONF_STATE_CLASS = ATTR_STATE_CLASS
 CONF_ENSURE_ON = "ensureon"
 CONF_OTHER_MODE = "other_mode"
 CONF_FORCE_POLLING = "force_polling"
+CONF_ENABLE_SUPER_ENERGY = "super_energy"
 CONF_BATCH_SIZE_MAX = "batch_size_max"
 CONF_ON_VALUE = "on_val"
 CONF_OFF_VALUE = "off_val"
@@ -114,22 +115,25 @@ FAN_SELECT_OP_CODES = {0xA0: FAN_SPEED}
 
 COVER_SELECT_OP_CODES = {0xE0: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43}}
 
+ENL_TIMER_SETTING = 0x97
 ENL_SUPER_CODES = {
-    0x84: {
+    ENL_INSTANTANEOUS_POWER: {
         CONF_TYPE: SensorDeviceClass.POWER,
         CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
     },
-    0x85: {
+    ENL_CUMULATIVE_POWER: {
         CONF_TYPE: SensorDeviceClass.ENERGY,
         CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
         CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
         CONF_MULTIPLIER: 0.001,
     },
-    0x97: {
+    ENL_TIMER_SETTING: {
         CONF_ICON: "mdi:clock-outline",
         TYPE_TIME: True,
     },
 }
+
+ENL_SUPER_ENERGES = {ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER}
 
 ENL_OP_CODES = {
     0x00: {  # Sensor-related Device
@@ -930,6 +934,13 @@ ENL_OP_CODES = {
     },
 }
 
+ENABLE_SUPER_ENERGY_DEFAULT = {
+    # If False is not specified here, the default is True.
+    # 0x01: {
+    #     0x35: False,
+    # },
+}
+
 # Some entities that overlap with control entities are excluded from setup
 NON_SETUP_SINGLE_ENYITY = {
     0x01: {
@@ -1111,5 +1122,9 @@ TEMP_OPTIONS = {
 
 MISC_OPTIONS = {
     CONF_FORCE_POLLING: {"type": bool, "default": False},
+    CONF_ENABLE_SUPER_ENERGY: {
+        "type": bool,
+        "default": [ENABLE_SUPER_ENERGY_DEFAULT, True],
+    },
     CONF_BATCH_SIZE_MAX: {"type": int, "default": 10, "min": 1, "max": 30},
 }

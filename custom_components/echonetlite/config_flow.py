@@ -523,11 +523,25 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 )
             else:
                 _type = option["type"]
+            if type(option["default"]) == list and type(option["default"][0]) == dict:
+                option_default = None
+                for instance in self._config_entry.data["instances"]:
+                    option_default = (
+                        option["default"][0]
+                        .get(instance["eojgc"], {})
+                        .get(instance["eojcc"])
+                    )
+                    if option_default != None:
+                        break
+                if option_default == None:
+                    option_default = option["default"][1]
+            else:
+                option_default = option["default"]
             data_schema_structure.update(
                 {
                     vol.Required(
                         key,
-                        default=self._config_entry.options.get(key, option["default"]),
+                        default=self._config_entry.options.get(key, option_default),
                     ): _type
                 }
             )

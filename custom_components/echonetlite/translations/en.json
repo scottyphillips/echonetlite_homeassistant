@@ -54,7 +54,8 @@
                     "max_temp_cool": "Configure Maximum Temperature for Cooling Operation",
                     "min_temp_auto": "Configure Minimum Temperature for Automatic Operation",
                     "max_temp_auto": "Configure Maximum Temperature for Automatic Operation",
-                    "force_polling": "Do not stop polling even if immediate notification is expected.",
+                    "force_polling": "Do not stop polling even if immediate notification is expected",
+                    "super_energy": "Enable energy-related sensors (if available)",
                     "batch_size_max": "Maximum number of properties for batch requests"
                 },
                 "description": "Configure optional settings"
