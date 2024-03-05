@@ -20,8 +20,9 @@ compatible ECHONETLite Devices:
 | **Manufacturer**    | **Device**                                     | **ECHONETLite Object Class** | **Home Assistant Entities**      | **Notes**                                                                                         |
 |:--------------------|:-----------------------------------------------|:-----------------------------|:---------------------------------|:--------------------------------------------------------------------------------------------------|
 | Mitsubishi Electric | MAC-568IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
-| Mitsubishi Electric | HM-W002-AC                                     | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | MAC-578IF2-E                                   | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
+| Mitsubishi Electric | MAC-588IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
+| Mitsubishi Electric | HM-W002-AC                                     | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Sharp               | AY-J22H Air Conditioner                        | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
 | Sharp               | AY-L40P Air Conditioner                        | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
 | Sharp               | KI-HS70 Air Purifier                           | HomeAirCleaner               | Fan, Sensor, Select              |                                                                                                   |
@@ -57,10 +58,6 @@ compatible ECHONETLite Devices:
      * PEA-M100GAA
      * PEA-RP140GAA
 
-* Mitsubishi HM-W002-AC WiFi Adaptor connected to the following systems:
-  * JXV Series
-     * MSZ-JXV4018S
-
 * Mitsubishi MAC-578IF2-E WiFi Adaptor connected to the following systems:
   * AP Series
      * MSZ-AP22VGD
@@ -68,7 +65,16 @@ compatible ECHONETLite Devices:
      * MSZ-AP50VGD
   * Ducted
      * PEAD-RP71
-     
+
+* Mitsubishi MAC-588IF-E WiFi Adaptor connected to the following systems:
+  * Ducted
+     * PEA-M200LAA
+
+* Mitsubishi HM-W002-AC WiFi Adaptor connected to the following systems:
+  * JXV Series
+     * MSZ-JXV4018S
+
+
 ## Installation - Enable ECHONET protocol
 This Custom Component was originally designed for the Mitsubishi MAC-568IF-E WiFi
 Adaptor, a basic guide for enabling ECHONETlite is provided below.
@@ -79,6 +85,11 @@ the 'ECHONET lite' protocol under the 'edit unit' settings.
 ![echonet][echonetimg]
 
 Many other products will work using this custom-component, but they must correctly support the 'ECHONET lite' protocol. The author cannot assist with enabling ECHONET Lite for other vendor products.
+
+### Home Network
+If you have a firewall, ensure port 3610 is unblocked 
+
+([EchoNet Specifications](https://echonet.jp/spec_v113_lite_en/))
 
 ## Installation
 ### Install using HACS
