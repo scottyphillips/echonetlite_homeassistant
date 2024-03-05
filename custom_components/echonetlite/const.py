@@ -345,12 +345,10 @@ ENL_OP_CODES = {
             0xE1: {
                 CONF_TYPE: SensorDeviceClass.WATER,
                 CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },  # Measured amount of water remaining in tank",
             0xE2: {
                 CONF_TYPE: SensorDeviceClass.WATER,
                 CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },  # Tank capacity",
             # 0xE3: , # Automatic bath water heating mode setting",
             # 0xE9: , # Bathroom priority setting",
@@ -406,7 +404,6 @@ ENL_OP_CODES = {
             0xD8: {
                 CONF_TYPE: SensorDeviceClass.WATER,
                 CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },  # Remaining hot water volume",
             0xDB: {
                 CONF_TYPE: SensorDeviceClass.POWER,
@@ -489,12 +486,10 @@ ENL_OP_CODES = {
             0xE7: {
                 CONF_TYPE: SensorDeviceClass.WATER,
                 CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },
             0xEE: {
                 CONF_TYPE: SensorDeviceClass.WATER,
                 CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
-                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },
         },
         0x79: {  # Home solar power generation
