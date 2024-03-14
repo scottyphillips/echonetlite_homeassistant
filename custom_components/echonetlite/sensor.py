@@ -14,8 +14,6 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
-from pychonet.GeneralLighting import ENL_BRIGHTNESS, ENL_COLOR_TEMP
-
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import EPC_SUPER_FUNCTIONS, _hh_mm
 
@@ -34,7 +32,6 @@ from .const import (
     TYPE_NUMBER,
     SERVICE_SET_ON_TIMER_TIME,
     SERVICE_SET_INT_1B,
-    ENL_STATUS,
     CONF_FORCE_POLLING,
     CONF_ENABLE_SUPER_ENERGY,
     TYPE_DATA_DICT,
