@@ -389,7 +389,6 @@ class EchonetSensor(SensorEntity):
 
     async def async_set_on_timer_time(self, timer_time):
         val = str(timer_time).split(":")
-        hh_mm = ":".join([val[0], val[1]])
         mes = {"EPC": 0x91, "PDC": 0x02, "EDT": int(val[0]) * 256 + int(val[1])}
         if await self._connector._instance.setMessages([mes]):
             pass
