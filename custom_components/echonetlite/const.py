@@ -2,6 +2,7 @@
 
 from homeassistant.const import (
     CONF_ICON,
+    CONF_SERVICE,
     CONF_TYPE,
     CONF_SERVICE_DATA,
     CONF_UNIT_OF_MEASUREMENT,
@@ -172,6 +173,9 @@ ENL_OP_CODES = {
                     CONF_MINIMUM: 30,
                     CONF_MAXIMUM: 90,
                 },
+                CONF_SERVICE: [
+                    SERVICE_SET_INT_1B
+                ],  # For backward compatibility (Deprecated)
             },
             0xBA: {
                 CONF_TYPE: SensorDeviceClass.HUMIDITY,
@@ -458,6 +462,9 @@ ENL_OP_CODES = {
             },
             0x91: {  # Sensor with service
                 CONF_ICON: "mdi:timer-outline",
+                CONF_SERVICE: [
+                    SERVICE_SET_ON_TIMER_TIME
+                ],  # For backward compatibility (Deprecated)
             },
             0xD1: {  # Sensor
                 CONF_TYPE: SensorDeviceClass.TEMPERATURE,
@@ -467,6 +474,9 @@ ENL_OP_CODES = {
                     CONF_MINIMUM: 30,
                     CONF_MAXIMUM: 90,
                 },
+                CONF_SERVICE: [
+                    SERVICE_SET_INT_1B
+                ],  # For backward compatibility (Deprecated)
             },
             0xE1: {
                 CONF_TYPE: SensorDeviceClass.TEMPERATURE,
@@ -476,6 +486,9 @@ ENL_OP_CODES = {
                     CONF_MINIMUM: 30,
                     CONF_MAXIMUM: 90,
                 },
+                CONF_SERVICE: [
+                    SERVICE_SET_INT_1B
+                ],  # For backward compatibility (Deprecated)
             },
             0xE3: {
                 CONF_ICON: "mdi:bathtub-outline",

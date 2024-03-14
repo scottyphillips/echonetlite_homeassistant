@@ -95,23 +95,36 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         ):
             # Is settable
             _is_settable = op_code in entity["instance"]["setmap"]
+            # Conf Keys list
+            _keys = _enl_op_codes.get(op_code, {}).keys()
+            # For backward compatibility (Deprecated)
+            _has_conf_service = CONF_SERVICE in _keys
             # Check this op_code will be configured as input(switch, select ot time) entity
-            if _is_settable and regist_as_inputs(_epc_functions.get(op_code, None)):
+            if (
+                _is_settable
+                and not _has_conf_service
+                and regist_as_inputs(_epc_functions.get(op_code, None))
+            ):
                 continue
             # Configuration check with ENL_OP_CODE definition
-            if op_code in _enl_op_codes.keys():
-                _keys = _enl_op_codes.get(op_code, {}).keys()
-                if _is_settable and (
-                    TYPE_SWITCH in _keys
-                    or TYPE_SELECT in _keys
-                    or TYPE_TIME in _keys
-                    or TYPE_NUMBER in _keys
+            if len(_keys):
+                if (
+                    _is_settable
+                    and not _has_conf_service
+                    and (
+                        TYPE_SWITCH in _keys
+                        or TYPE_SELECT in _keys
+                        or TYPE_TIME in _keys
+                        or TYPE_NUMBER in _keys
+                    )
                 ):
                     continue  # dont configure as sensor, it will be configured as switch, select or time instead.
 
+                # For backward compatibility (Deprecated)
                 if (
-                    _is_settable and CONF_SERVICE in _keys
+                    _is_settable and _has_conf_service
                 ):  # Some devices support advanced service calls.
+                    _enl_op_codes[op_code][CONF_DISABLED_DEFAULT] = True
                     for service_name in _enl_op_codes.get(op_code, {}).get(
                         CONF_SERVICE
                     ):
@@ -137,13 +150,11 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     type_data = _enl_op_codes.get(op_code, {}).get(TYPE_DATA_DICT)
                     if isinstance(type_data, list):
                         for attr_key in type_data:
-                            attr = _enl_op_codes.get(op_code).copy()
-                            attr["dict_key"] = attr_key
                             entities.append(
                                 EchonetSensor(
                                     entity["echonetlite"],
                                     op_code,
-                                    attr,
+                                    _enl_op_codes.get(op_code) | {"dict_key": attr_key},
                                     entity["echonetlite"]._name or config.title,
                                     hass,
                                 )
