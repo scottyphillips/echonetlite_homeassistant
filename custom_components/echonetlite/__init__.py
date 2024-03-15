@@ -68,6 +68,7 @@ PLATFORMS = [
     Platform.SWITCH,
     Platform.TIME,
     Platform.NUMBER,
+    Platform.COVER,
 ]
 PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=1)

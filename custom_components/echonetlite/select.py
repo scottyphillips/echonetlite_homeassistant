@@ -8,6 +8,7 @@ from .const import (
     ENL_OP_CODES,
     CONF_ICONS,
     TYPE_SELECT,
+    NON_SETUP_SINGLE_ENYITY,
 )
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import _swap_dict
@@ -21,11 +22,16 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
         _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
+        _non_setup_single_entity = NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(
+            eojcc, set()
+        )
         # configure select entities by looking up full ENL_OP_CODE dict
         for op_code in entity["instance"]["setmap"]:
             epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
                 op_code, None
             )
+            if op_code in _non_setup_single_entity:
+                continue
             _by_epc_func = (
                 type(epc_function_data) == list
                 and type(epc_function_data[1]) == dict

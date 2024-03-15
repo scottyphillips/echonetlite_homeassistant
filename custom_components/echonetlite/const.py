@@ -224,76 +224,6 @@ ENL_OP_CODES = {
         },
     },
     0x02: {  # Housing/Facilities-related Device
-        0x60: {  # Electrically operated blind/shade
-            0xE0: {
-                CONF_ICON: "mdi:roller-shade",
-                CONF_ICONS: {
-                    OPEN: "mdi:roller-shade",
-                    CLOSE: "mdi:roller-shade-closed",
-                    STOP: "mdi:roller-shade",
-                },
-            }
-        },
-        0x61: {  # Electrically operated shutter
-            0xE0: {
-                CONF_ICON: "mdi:window-shutter-open",
-                CONF_ICONS: {
-                    OPEN: "mdi:window-shutter-open",
-                    CLOSE: "mdi:window-shutter",
-                    STOP: "mdi:window-shutter-open",
-                },
-            }
-        },
-        0x62: {  # Electrically operated curtain
-            0xE0: {
-                CONF_ICON: "mdi:curtains",
-                CONF_ICONS: {
-                    OPEN: "mdi:curtains",
-                    CLOSE: "mdi:curtains-closed",
-                    STOP: "mdi:curtains",
-                },
-            }
-        },
-        0x63: {  # Electrically operated rain sliding door/shutter
-            0xE0: {
-                CONF_ICON: "mdi:door-sliding-open",
-                CONF_ICONS: {
-                    OPEN: "mdi:door-sliding-open",
-                    CLOSE: "mdi:door-sliding",
-                    STOP: "mdi:door-sliding-open",
-                },
-            }
-        },
-        0x64: {  # Electrically operated gate
-            0xE0: {
-                CONF_ICON: "mdi:boom-gate-up-outline",
-                CONF_ICONS: {
-                    OPEN: "mdi:boom-gate-up-outline",
-                    CLOSE: "mdi:boom-gate-outline",
-                    STOP: "mdi:boom-gate-up-outline",
-                },
-            }
-        },
-        0x65: {  # Electrically operated window
-            0xE0: {
-                CONF_ICON: "mdi:window-open-variant",
-                CONF_ICONS: {
-                    OPEN: "mdi:window-open-variant",
-                    CLOSE: "mdi:window-closed-variant",
-                    STOP: "mdi:window-open-variant",
-                },
-            }
-        },
-        0x66: {  # Automatically operated entrance door/sliding door
-            0xE0: {
-                CONF_ICON: "mdi:door-sliding-open",
-                CONF_ICONS: {
-                    OPEN: "mdi:door-sliding-open",
-                    CLOSE: "mdi:door-sliding",
-                    STOP: "mdi:door-sliding-open",
-                },
-            }
-        },
         0x6B: {  # Electric water heater
             # 0xB0: , # "Automatic water heating setting",
             # 0xB1: , # "Automatic water temperature control setting",
@@ -956,6 +886,13 @@ NON_SETUP_SINGLE_ENYITY = {
         0x30: {ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_SILENT_MODE},
     },
     0x02: {
+        0x60: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
+        0x61: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
+        0x62: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
+        0x63: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
+        0x64: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
+        0x65: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
+        0x66: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
         # General Lighting
         0x90: {ENL_BRIGHTNESS, ENL_COLOR_TEMP},
         # Single Function Lighting
