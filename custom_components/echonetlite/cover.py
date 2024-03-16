@@ -3,6 +3,7 @@ import math
 import asyncio
 
 from typing import Any
+from . import get_device_name
 from .const import DOMAIN, CONF_FORCE_POLLING
 
 from homeassistant.components.cover import (
@@ -38,16 +39,16 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
             # 0x64: "Electrically operated gate"
             # 0x65: "Electrically operated window"
             # 0x66: "Automatically operated entrance door/sliding door"
-            name = f"{config_entry.title} {entity['instance']['eojci']}"
-            entities.append(EchonetCover(name, entity['echonetlite']))
+            entities.append(EchonetCover(entity['echonetlite'], config_entry))
     async_add_devices(entities, True)
 
 
 class EchonetCover(CoverEntity):
     """Representation of an ECHONETLite climate device."""
 
-    def __init__(self, name, connector):
+    def __init__(self, connector, config):
         """Initialize the cover device."""
+        name = get_device_name(connector, config)
         self._name = name
         self._device_name = name
         self._connector = connector  # new line
@@ -161,8 +162,15 @@ class EchonetCover(CoverEntity):
                 self._connector._instance._eojci
             )},
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer,
-            "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc]
+            "manufacturer": self._connector._manufacturer
+            + (
+                " " + self._connector._host_product_code
+                if self._connector._host_product_code
+                else ""
+            ),
+            "model": EOJX_CLASS[self._connector._instance._eojgc][
+                self._connector._instance._eojcc
+            ],
             # "sw_version": "",
         }
 

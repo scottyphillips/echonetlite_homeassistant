@@ -1,7 +1,7 @@
 import logging
 from homeassistant.const import CONF_ICON
 from homeassistant.components.select import SelectEntity
-from . import get_name_by_epc_code
+from . import get_name_by_epc_code, get_device_name
 from .const import (
     DOMAIN,
     CONF_FORCE_POLLING,
@@ -46,7 +46,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         config,
                         op_code,
                         _enl_op_code_dict,
-                        entity["echonetlite"]._name or config.title,
                     )
                 )
 
@@ -56,8 +55,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetSelect(SelectEntity):
     _attr_translation_key = DOMAIN
 
-    def __init__(self, hass, connector, config, code, options, name=None):
+    def __init__(self, hass, connector, config, code, options):
         """Initialize the select."""
+        name = get_device_name(connector, config)
         self._connector = connector
         self._config = config
         self._code = code

@@ -17,7 +17,7 @@ from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import EPC_SUPER_FUNCTIONS, _hh_mm
 
-from . import get_name_by_epc_code, get_unit_by_devise_class
+from . import get_name_by_epc_code, get_unit_by_devise_class, get_device_name
 from .const import (
     DOMAIN,
     ENABLE_SUPER_ENERGY_DEFAULT,
@@ -150,9 +150,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             entities.append(
                                 EchonetSensor(
                                     entity["echonetlite"],
+                                    config,
                                     op_code,
                                     _enl_op_codes.get(op_code) | {"dict_key": attr_key},
-                                    entity["echonetlite"]._name or config.title,
                                     hass,
                                 )
                             )
@@ -175,9 +175,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         entities.append(
                             EchonetSensor(
                                 entity["echonetlite"],
+                                config,
                                 op_code,
                                 attr,
-                                config.title,
                             )
                         )
                     continue
@@ -185,9 +185,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     entities.append(
                         EchonetSensor(
                             entity["echonetlite"],
+                            config,
                             op_code,
                             _enl_op_codes[op_code],
-                            entity["echonetlite"]._name or config.title,
                             hass,
                         )
                     )
@@ -195,9 +195,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             entities.append(
                 EchonetSensor(
                     entity["echonetlite"],
+                    config,
                     op_code,
                     ENL_OP_CODES["default"],
-                    entity["echonetlite"]._name or config.title,
                 )
             )
     async_add_entities(entities, True)
@@ -208,8 +208,9 @@ class EchonetSensor(SensorEntity):
 
     _attr_translation_key = DOMAIN
 
-    def __init__(self, connector, op_code, attributes, name=None, hass=None) -> None:
+    def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
         """Initialize the sensor."""
+        name = get_device_name(connector, config)
         self._connector = connector
         self._op_code = op_code
         self._sensor_attributes = attributes

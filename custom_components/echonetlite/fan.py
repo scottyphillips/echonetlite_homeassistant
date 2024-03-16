@@ -7,6 +7,7 @@ from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.const import (
     PRECISION_WHOLE,
 )
+from . import get_device_name
 from .const import CONF_FORCE_POLLING, DATA_STATE_ON, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,15 +29,16 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         if entity["instance"]["eojgc"] == 0x01 and (
             entity["instance"]["eojcc"] == 0x35 or entity["instance"]["eojcc"] == 0x3A
         ):  # Home Air Cleaner or Celing Fan
-            entities.append(EchonetFan(config_entry.title, entity["echonetlite"]))
+            entities.append(EchonetFan(entity["echonetlite"], config_entry))
     async_add_devices(entities, True)
 
 
 class EchonetFan(FanEntity):
     """Representation of an ECHONETLite Fan device (eg Air purifier)."""
 
-    def __init__(self, name, connector):
+    def __init__(self, connector, config):
         """Initialize the climate device."""
+        name = get_device_name(connector, config)
         self._attr_name = name
         self._device_name = name
         self._connector = connector  # new line

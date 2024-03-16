@@ -2,7 +2,7 @@ import asyncio
 import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA, CONF_NAME
 from homeassistant.components.switch import SwitchEntity
-from . import get_name_by_epc_code
+from . import get_name_by_epc_code, get_device_name
 from .const import (
     DOMAIN,
     ENL_OP_CODES,
@@ -48,7 +48,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         config,
                         op_code,
                         _enl_op_code_dict,
-                        entity["echonetlite"]._name or config.title,
                     )
                 )
                 if op_code == ENL_STATUS:
@@ -66,7 +65,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         config,
                         op_code,
                         switch_conf,
-                        entity["echonetlite"]._name or config.title,
                     )
                 )
         # Auto configure of the power switch
@@ -86,15 +84,15 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         CONF_ICON: "mdi:power-settings",
                         CONF_SERVICE_DATA: SWITCH_POWER,
                     },
-                    entity["echonetlite"]._name or config.title,
                 )
             )
     async_add_entities(entities, True)
 
 
 class EchonetSwitch(SwitchEntity):
-    def __init__(self, hass, connector, config, code, options, name=None):
+    def __init__(self, hass, connector, config, code, options):
         """Initialize the switch."""
+        name = get_device_name(connector, config)
         self._connector = connector
         self._config = config
         self._code = code
