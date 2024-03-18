@@ -311,10 +311,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         echonetlite = ECHONETConnector(instance, hass, entry)
         try:
-            await echonetlite.async_update()
-            hass.data[DOMAIN][entry.entry_id].append(
-                {"instance": instance, "echonetlite": echonetlite}
-            )
+            # Since there is a small chance of failure, perform a few retry for each instance
+            # (otherwise, assuming 50 instances and 1% failure rate, setup would suceed in (1-0.01)^50 = 60% cases only)
+            for retry in range(1, 4):
+                try:
+                    await echonetlite.async_update()
+                    hass.data[DOMAIN][entry.entry_id].append(
+                        {"instance": instance, "echonetlite": echonetlite}
+                    )
+                    break
+                except TimeoutError as ex:
+                    _LOGGER.debug(
+                        f"Setting up ECHONET Instance host {host} timed out. Retry {retry} of 3"
+                    )
+                    # if multiple error in a row, forward exception to outer loop
+                    if retry == 3:
+                        raise
         except (TimeoutError, asyncio.CancelledError) as ex:
             _LOGGER.debug(f"Connection error while connecting to {host}: {ex}")
             raise ConfigEntryNotReady(
