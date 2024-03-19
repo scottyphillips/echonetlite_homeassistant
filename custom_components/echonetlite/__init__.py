@@ -169,6 +169,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         if server._state.get(host):
             server._state.pop(host)
+        # Remove update callback function
+        for _key in list(server._update_callbacks.keys()):
+            if _key.startswith(host):
+                del server._update_callbacks[_key]
 
     entry.async_on_unload(unload_config_entry)
 
