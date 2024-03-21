@@ -35,6 +35,7 @@ from homeassistant.const import (
     PRECISION_WHOLE,
     UnitOfTemperature,
 )
+from . import get_device_name
 from .const import DATA_STATE_ON, DOMAIN, OPTION_HA_UI_SWING
 
 _LOGGER = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         if (
             entity["instance"]["eojgc"] == 0x01 and entity["instance"]["eojcc"] == 0x30
         ):  # Home Air Conditioner
-            entities.append(EchonetClimate(config_entry.title, entity["echonetlite"]))
+            entities.append(EchonetClimate(entity["echonetlite"], config_entry))
     async_add_devices(entities, True)
 
     platform = entity_platform.async_get_current_platform()
@@ -87,8 +88,9 @@ class EchonetClimate(ClimateEntity):
 
     _attr_translation_key = DOMAIN
 
-    def __init__(self, name, connector):
+    def __init__(self, connector, config):
         """Initialize the climate device."""
+        name = get_device_name(connector, config)
         self._attr_name = name
         self._device_name = name
         self._connector = connector  # new line

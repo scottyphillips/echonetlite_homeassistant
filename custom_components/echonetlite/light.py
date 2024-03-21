@@ -12,6 +12,7 @@ from homeassistant.components.light import (
     COLOR_MODE_COLOR_TEMP,
 )
 
+from . import get_device_name
 from .const import DATA_STATE_ON, DOMAIN, CONF_FORCE_POLLING
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,8 +34,8 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
             _LOGGER.debug("Configuring ECHONETlite Light entity")
             entities.append(
                 EchonetLight(
-                    entity["echonetlite"]._name or config_entry.title,
                     entity["echonetlite"],
+                    config_entry,
                 )
             )
     _LOGGER.debug(f"Number of light devices to be added: {len(entities)}")
@@ -44,8 +45,9 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 class EchonetLight(LightEntity):
     """Representation of a ECHONET light device."""
 
-    def __init__(self, name, connector):
+    def __init__(self, connector, config):
         """Initialize the climate device."""
+        name = get_device_name(connector, config)
         self._attr_name = name
         self._connector = connector  # new line
         self._attr_unique_id = (
