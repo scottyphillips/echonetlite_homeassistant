@@ -38,7 +38,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         entity["echonetlite"],
                         config,
                         op_code,
-                        _enl_op_codes[op_code]
+                        _enl_op_codes[op_code],
                     )
                 )
 

@@ -27,11 +27,20 @@ ENL_BLIND_ANGLE = 0xE2
 TILT_RANGE = (1, 180)
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass, config_entry, async_add_devices):
     """Set up entry."""
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
-        if entity['instance']['eojgc'] == 0x02 and entity['instance']['eojcc'] in (0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66):
+        if entity["instance"]["eojgc"] == 0x02 and entity["instance"]["eojcc"] in (
+            0x60,
+            0x61,
+            0x62,
+            0x63,
+            0x64,
+            0x65,
+            0x66,
+        ):
             # 0x60: "Electrically operated blind/shade"
             # 0x61: "Electrically operated shutter"
             # 0x62: "Electrically operated curtain"
@@ -39,7 +48,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
             # 0x64: "Electrically operated gate"
             # 0x65: "Electrically operated window"
             # 0x66: "Automatically operated entrance door/sliding door"
-            entities.append(EchonetCover(entity['echonetlite'], config_entry))
+            entities.append(EchonetCover(entity["echonetlite"], config_entry))
     async_add_devices(entities, True)
 
 
@@ -52,7 +61,9 @@ class EchonetCover(CoverEntity):
         self._name = name
         self._device_name = name
         self._connector = connector  # new line
-        self._uid = self._connector._uidi if self._connector._uidi else self._connector._uid
+        self._uid = (
+            self._connector._uidi if self._connector._uidi else self._connector._uid
+        )
         self._attr_is_closed = False
         self._server_state = self._connector._api._state[
             self._connector._instance._host
@@ -71,7 +82,7 @@ class EchonetCover(CoverEntity):
                 CoverEntityFeature.OPEN_TILT
                 | CoverEntityFeature.CLOSE_TILT
                 # not supported individually (just global STOP)
-                #| CoverEntityFeature.STOP_TILT
+                # | CoverEntityFeature.STOP_TILT
                 | CoverEntityFeature.SET_TILT_POSITION
             )
 
@@ -115,7 +126,9 @@ class EchonetCover(CoverEntity):
         self._connector._update_data[ENL_BLIND_ANGLE] = hex(180)
 
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
-        tilt = math.ceil(percentage_to_ranged_value(TILT_RANGE, kwargs[ATTR_TILT_POSITION]))
+        tilt = math.ceil(
+            percentage_to_ranged_value(TILT_RANGE, kwargs[ATTR_TILT_POSITION])
+        )
         await self._connector._instance.setMessage(ENL_BLIND_ANGLE, tilt)
         self._connector._update_data[ENL_BLIND_ANGLE] = hex(tilt)
 
@@ -131,16 +144,28 @@ class EchonetCover(CoverEntity):
         await self._connector.async_update()
 
     def update_attr(self):
-        self._attr_current_cover_position = int(self._connector._update_data[ENL_OPENING_LEVEL], 16)
+        self._attr_current_cover_position = int(
+            self._connector._update_data[ENL_OPENING_LEVEL], 16
+        )
         self._attr_is_closed = self._attr_current_cover_position == 0
         if ENL_OPENCLOSE_STATUS in self._connector._update_data:
-            self._attr_is_opening = int(self._connector._update_data[ENL_OPENCLOSE_STATUS], 16) == 0x43
-            self._attr_is_closing = int(self._connector._update_data[ENL_OPENCLOSE_STATUS], 16) == 0x44
+            self._attr_is_opening = (
+                int(self._connector._update_data[ENL_OPENCLOSE_STATUS], 16) == 0x43
+            )
+            self._attr_is_closing = (
+                int(self._connector._update_data[ENL_OPENCLOSE_STATUS], 16) == 0x44
+            )
         else:
-            self._attr_is_opening = self._connector._update_data[ENL_OPENSTATE] == "open"
-            self._attr_is_closing = self._connector._update_data[ENL_OPENSTATE] == "close"
+            self._attr_is_opening = (
+                self._connector._update_data[ENL_OPENSTATE] == "open"
+            )
+            self._attr_is_closing = (
+                self._connector._update_data[ENL_OPENSTATE] == "close"
+            )
         if ENL_BLIND_ANGLE in self._connector._update_data:
-            self._attr_current_cover_tilt_position = ranged_value_to_percentage(TILT_RANGE, int(self._connector._update_data[ENL_BLIND_ANGLE], 16))
+            self._attr_current_cover_tilt_position = ranged_value_to_percentage(
+                TILT_RANGE, int(self._connector._update_data[ENL_BLIND_ANGLE], 16)
+            )
 
     @property
     def supported_features(self):
@@ -155,12 +180,15 @@ class EchonetCover(CoverEntity):
     @property
     def device_info(self):
         return {
-            "identifiers": {(
-                DOMAIN, self._connector._uid,
-                self._connector._instance._eojgc,
-                self._connector._instance._eojcc,
-                self._connector._instance._eojci
-            )},
+            "identifiers": {
+                (
+                    DOMAIN,
+                    self._connector._uid,
+                    self._connector._instance._eojgc,
+                    self._connector._instance._eojcc,
+                    self._connector._instance._eojci,
+                )
+            },
             "name": self._device_name,
             "manufacturer": self._connector._manufacturer
             + (
@@ -189,7 +217,7 @@ class EchonetCover(CoverEntity):
         self._connector.add_update_option_listener(self.update_option_listener)
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
-    async def async_update_callback(self, isPush = False):
+    async def async_update_callback(self, isPush=False):
         changed = (
             self._olddata != self._connector._update_data
         ) or self._attr_available != self._server_state["available"]

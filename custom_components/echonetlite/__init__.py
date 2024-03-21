@@ -75,14 +75,14 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=1)
 MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
 
-def get_device_name(
-    connector, config
-) -> str:
+
+def get_device_name(connector, config) -> str:
     if connector._name:
         return connector._name
     if connector._instance._eojci > 1:
         return f"{config.title} {connector._instance._eojci}"
     return config.title
+
 
 def get_name_by_epc_code(
     jgc: int, jcc: int, code: int, unknown: str | None = None
