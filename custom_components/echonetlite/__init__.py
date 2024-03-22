@@ -30,6 +30,7 @@ from .const import (
     DOMAIN,
     ENABLE_SUPER_ENERGY_DEFAULT,
     ENL_OP_CODES,
+    ENL_SUPER_CODES,
     ENL_TIMER_SETTING,
     EPC_CODES_FOR_UPDATE,
     USER_OPTIONS,
@@ -547,6 +548,7 @@ class ECHONETConnector:
         # Some classes use predefined data (Narrowed down items)
         flags = EPC_CODES_FOR_UPDATE.get(self._eojgc, {}).get(self._eojcc, None)
         if flags != None:
+            flags = list(set(flags) | {ENL_STATUS} | set(ENL_SUPER_CODES.keys()))
             if not _enabled_super_energy:
                 flags = list(
                     set(flags) - {ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER}
