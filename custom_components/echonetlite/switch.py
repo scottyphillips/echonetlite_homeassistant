@@ -4,12 +4,14 @@ from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA, CONF_NAME
 from homeassistant.components.switch import SwitchEntity
 from . import get_name_by_epc_code, get_device_name
 from .const import (
+    CONF_DISABLED_DEFAULT,
     DOMAIN,
     ENL_OP_CODES,
     CONF_ON_VALUE,
     CONF_OFF_VALUE,
     DATA_STATE_ON,
     DATA_STATE_OFF,
+    NON_SETUP_SINGLE_ENYITY,
     SWITCH_POWER,
     CONF_ENSURE_ON,
     TYPE_SWITCH,
@@ -30,7 +32,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         set_enl_status = False
         _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
         # configure switch entities by looking up full ENL_OP_CODE dict
-        for op_code in entity["instance"]["setmap"]:
+        for op_code in list(
+            set(entity["instance"]["setmap"])
+            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
+        ):
             epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
                 op_code, None
             )
@@ -135,6 +140,10 @@ class EchonetSwitch(SwitchEntity):
         self._attr_is_on = self._connector._update_data[self._code] in self._on_vals
         self._attr_should_poll = True
         self._attr_available = True
+
+        self._attr_entity_registry_enabled_default = not bool(
+            options.get(CONF_DISABLED_DEFAULT)
+        )
 
         self.update_option_listener()
 

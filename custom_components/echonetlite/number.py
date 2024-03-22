@@ -11,12 +11,14 @@ from homeassistant.components.number import NumberEntity
 from pychonet.lib.eojx import EOJX_CLASS
 from . import get_name_by_epc_code, get_unit_by_devise_class, get_device_name
 from .const import (
+    CONF_DISABLED_DEFAULT,
     DOMAIN,
     CONF_FORCE_POLLING,
     ENL_OP_CODES,
     CONF_AS_ZERO,
     CONF_MAX_OPC,
     CONF_BYTE_LENGTH,
+    NON_SETUP_SINGLE_ENYITY,
     TYPE_NUMBER,
 )
 
@@ -30,7 +32,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         eojcc = entity["instance"]["eojcc"]
         _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
         # configure select entities by looking up full ENL_OP_CODE dict
-        for op_code in entity["instance"]["setmap"]:
+        for op_code in list(
+            set(entity["instance"]["setmap"])
+            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
+        ):
             if TYPE_NUMBER in _enl_op_codes.get(op_code, {}).keys():
                 entities.append(
                     EchonetNumber(
@@ -85,6 +90,10 @@ class EchonetNumber(NumberEntity):
             )
         self._attr_should_poll = True
         self._attr_available = True
+
+        self._attr_entity_registry_enabled_default = not bool(
+            options.get(CONF_DISABLED_DEFAULT)
+        )
 
         self.update_option_listener()
 
