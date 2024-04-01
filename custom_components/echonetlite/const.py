@@ -11,6 +11,7 @@ from homeassistant.const import (
     CONF_MAXIMUM,
     PERCENTAGE,
     UnitOfEnergy,
+    UnitOfTime,
     UnitOfVolume,
     UnitOfVolumeFlowRate,
 )
@@ -32,6 +33,11 @@ from pychonet.DistributionPanelMeter import (
     ENL_DPM_INSTANT_CUR,
     ENL_DPM_INSTANT_ENG,
     ENL_DPM_INSTANT_VOL,
+)
+from pychonet.ElectricBlind import (
+    ENL_OPENING_LEVEL,
+    ENL_BLIND_ANGLE,
+    ENL_OPENCLOSE_STATUS,
 )
 from pychonet.GeneralLighting import ENL_BRIGHTNESS, ENL_COLOR_TEMP
 from pychonet.HomeAirConditioner import (
@@ -224,6 +230,132 @@ ENL_OP_CODES = {
         },
     },
     0x02: {  # Housing/Facilities-related Device
+        0x60: {  # Electrically operated blind/shade
+            0xE0: {  # Configured as Cover but left for backward compatibility
+                CONF_ICON: "mdi:roller-shade",
+                CONF_ICONS: {
+                    OPEN: "mdi:roller-shade",
+                    CLOSE: "mdi:roller-shade-closed",
+                    STOP: "mdi:roller-shade",
+                },
+                CONF_DISABLED_DEFAULT: True,
+            },
+            0xD2: {
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0x00,
+                    CONF_MAXIMUM: 0xFD,
+                },
+            },  # Operation time
+        },
+        0x61: {  # Electrically operated shutter
+            0xE0: {  # Configured as Cover but left for backward compatibility
+                CONF_ICON: "mdi:window-shutter-open",
+                CONF_ICONS: {
+                    OPEN: "mdi:window-shutter-open",
+                    CLOSE: "mdi:window-shutter",
+                    STOP: "mdi:window-shutter-open",
+                },
+                CONF_DISABLED_DEFAULT: True,
+            },
+            0xD2: {
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0x00,
+                    CONF_MAXIMUM: 0xFD,
+                },
+            },  # Operation time
+        },
+        0x62: {  # Electrically operated curtain
+            0xE0: {  # Configured as Cover but left for backward compatibility
+                CONF_ICON: "mdi:curtains",
+                CONF_ICONS: {
+                    OPEN: "mdi:curtains",
+                    CLOSE: "mdi:curtains-closed",
+                    STOP: "mdi:curtains",
+                },
+                CONF_DISABLED_DEFAULT: True,
+            },
+            0xD2: {
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0x00,
+                    CONF_MAXIMUM: 0xFD,
+                },
+            },  # Operation time
+        },
+        0x63: {  # Electrically operated rain sliding door/shutter
+            0xE0: {  # Configured as Cover but left for backward compatibility
+                CONF_ICON: "mdi:door-sliding-open",
+                CONF_ICONS: {
+                    OPEN: "mdi:door-sliding-open",
+                    CLOSE: "mdi:door-sliding",
+                    STOP: "mdi:door-sliding-open",
+                },
+                CONF_DISABLED_DEFAULT: True,
+            },
+            0xD2: {
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0x00,
+                    CONF_MAXIMUM: 0xFD,
+                },
+            },  # Operation time
+        },
+        0x64: {  # Electrically operated gate
+            0xE0: {  # Configured as Cover but left for backward compatibility
+                CONF_ICON: "mdi:boom-gate-up-outline",
+                CONF_ICONS: {
+                    OPEN: "mdi:boom-gate-up-outline",
+                    CLOSE: "mdi:boom-gate-outline",
+                    STOP: "mdi:boom-gate-up-outline",
+                },
+                CONF_DISABLED_DEFAULT: True,
+            },
+            0xD2: {
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0x00,
+                    CONF_MAXIMUM: 0xFD,
+                },
+            },  # Operation time
+        },
+        0x65: {  # Electrically operated window
+            0xE0: {  # Configured as Cover but left for backward compatibility
+                CONF_ICON: "mdi:window-open-variant",
+                CONF_ICONS: {
+                    OPEN: "mdi:window-open-variant",
+                    CLOSE: "mdi:window-closed-variant",
+                    STOP: "mdi:window-open-variant",
+                },
+                CONF_DISABLED_DEFAULT: True,
+            },
+            0xD2: {
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0x00,
+                    CONF_MAXIMUM: 0xFD,
+                },
+            },  # Operation time
+        },
+        0x66: {  # Automatically operated entrance door/sliding door
+            0xE0: {  # Configured as Cover but left for backward compatibility
+                CONF_ICON: "mdi:door-sliding-open",
+                CONF_ICONS: {
+                    OPEN: "mdi:door-sliding-open",
+                    CLOSE: "mdi:door-sliding",
+                    STOP: "mdi:door-sliding-open",
+                },
+                CONF_DISABLED_DEFAULT: True,
+            },
+            0xD2: {
+                CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
+                TYPE_NUMBER: {
+                    CONF_MAXIMUM: 0x00,
+                    CONF_MAXIMUM: 0xFD,
+                },
+            },  # Operation time
+        },
         0x6B: {  # Electric water heater
             # 0xB0: , # "Automatic water heating setting",
             # 0xB1: , # "Automatic water temperature control setting",
@@ -886,13 +1018,13 @@ NON_SETUP_SINGLE_ENYITY = {
         0x30: {ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_SILENT_MODE},
     },
     0x02: {
-        0x60: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
-        0x61: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
-        0x62: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
-        0x63: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
-        0x64: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
-        0x65: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
-        0x66: {0xE0, 0xE1, 0xE2, 0xE9, 0xEA},
+        0x60: {ENL_OPENING_LEVEL, ENL_BLIND_ANGLE, ENL_OPENCLOSE_STATUS},
+        0x61: {ENL_OPENING_LEVEL, ENL_BLIND_ANGLE, ENL_OPENCLOSE_STATUS},
+        0x62: {ENL_OPENING_LEVEL, ENL_BLIND_ANGLE, ENL_OPENCLOSE_STATUS},
+        0x63: {ENL_OPENING_LEVEL, ENL_BLIND_ANGLE, ENL_OPENCLOSE_STATUS},
+        0x64: {ENL_OPENING_LEVEL, ENL_BLIND_ANGLE, ENL_OPENCLOSE_STATUS},
+        0x65: {ENL_OPENING_LEVEL, ENL_BLIND_ANGLE, ENL_OPENCLOSE_STATUS},
+        0x66: {ENL_OPENING_LEVEL, ENL_BLIND_ANGLE, ENL_OPENCLOSE_STATUS},
         # General Lighting
         0x90: {ENL_BRIGHTNESS, ENL_COLOR_TEMP},
         # Single Function Lighting
@@ -922,7 +1054,6 @@ EPC_CODES_FOR_UPDATE = {
     },
     0x02: {
         0x7D: [
-            ENL_STATUS,
             0xA0,
             0xA1,
             0xA8,
@@ -938,7 +1069,6 @@ EPC_CODES_FOR_UPDATE = {
             0xE6,
         ],
         0x87: [
-            ENL_STATUS,
             ENL_DPM_ENG_NOR,
             ENL_DPM_ENG_REV,
             ENL_DPM_ENG_UNIT,
@@ -950,7 +1080,6 @@ EPC_CODES_FOR_UPDATE = {
             ENL_DPM_CHANNEL_SIMPLEX_INSTANT_ENG,
         ],
         0x88: [
-            ENL_STATUS,
             ENL_LVSEEM_ENG_NOR,
             ENL_LVSEEM_ENG_REV,
             ENL_LVSEEM_INSTANT_ENG,
@@ -958,9 +1087,9 @@ EPC_CODES_FOR_UPDATE = {
             ENL_LVSEEM_COEF,
             ENL_LVSEEM_ENG_UNIT,
         ],
-        0x90: [ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP],
-        0x91: [ENL_STATUS, ENL_BRIGHTNESS],
-        0xA3: [ENL_STATUS, ENL_SCENE, ENL_SCENE_MAX],
+        0x90: [ENL_BRIGHTNESS, ENL_COLOR_TEMP],
+        0x91: [ENL_BRIGHTNESS],
+        0xA3: [ENL_SCENE, ENL_SCENE_MAX],
     },
 }
 
