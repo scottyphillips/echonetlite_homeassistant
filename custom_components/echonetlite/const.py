@@ -1048,8 +1048,6 @@ EPC_CODES_FOR_UPDATE = {
             ENL_HVAC_ROOM_TEMP,
             ENL_HVAC_OUT_TEMP,
             ENL_HVAC_SILENT_MODE,
-            ENL_INSTANTANEOUS_POWER,
-            ENL_CUMULATIVE_POWER,
         ],
     },
     0x02: {
