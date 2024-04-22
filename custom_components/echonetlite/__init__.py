@@ -555,7 +555,7 @@ class ECHONETConnector:
         # Is enabled CONF_ENABLE_SUPER_ENERGY
         _enabled_super_energy = self._user_options.get(
             CONF_ENABLE_SUPER_ENERGY,
-            ENABLE_SUPER_ENERGY_DEFAULT.get(self._eojgc, {}).get(self._eojcc, False),
+            ENABLE_SUPER_ENERGY_DEFAULT.get(self._eojgc, {}).get(self._eojcc, True),
         )
         # Some classes use predefined data (Narrowed down items)
         flags = EPC_CODES_FOR_UPDATE.get(self._eojgc, {}).get(self._eojcc, None)

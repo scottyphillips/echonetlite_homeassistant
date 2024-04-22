@@ -74,7 +74,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 
         if entity["echonetlite"]._user_options.get(
             CONF_ENABLE_SUPER_ENERGY,
-            ENABLE_SUPER_ENERGY_DEFAULT.get(eojgc, {}).get(eojcc, False),
+            ENABLE_SUPER_ENERGY_DEFAULT.get(eojgc, {}).get(eojcc, True),
         ):
             _enl_super_codes = ENL_SUPER_CODES
         else:
