@@ -187,7 +187,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             entity["echonetlite"],
                             config,
                             op_code,
-                            _enl_op_codes[op_code],
+                            _enl_op_codes.get(
+                                op_code,
+                                ENL_OP_CODES["default"] | {CONF_DISABLED_DEFAULT: True},
+                            ),
                             hass,
                         )
                     )
@@ -198,6 +201,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     config,
                     op_code,
                     ENL_OP_CODES["default"],
+                    hass,
                 )
             )
     async_add_entities(entities, True)

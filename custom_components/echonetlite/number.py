@@ -137,8 +137,14 @@ class EchonetNumber(NumberEntity):
 
     def get_max_opc_value(self):
         max_opc_value = None
-        if self._options.get(CONF_MAX_OPC):
-            max_opc_value = self._connector._update_data.get(CONF_MAX_OPC)
+        max_opc = self._options.get(CONF_MAX_OPC)
+        if max_opc:
+            if isinstance(max_opc, list):
+                max_opc_value = self._connector._update_data.get(max_opc[0]).get(
+                    max_opc[1]
+                )
+            else:
+                max_opc_value = self._connector._update_data.get(max_opc)
             if max_opc_value != None:
                 max_opc_value = int(max_opc_value)
         return max_opc_value

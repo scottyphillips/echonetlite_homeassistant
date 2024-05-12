@@ -70,6 +70,7 @@ from pychonet.LowVoltageSmartElectricEnergyMeter import (
     ENL_LVSEEM_INSTANT_ENG,
 )
 from pychonet.lib.const import ENL_CUMULATIVE_POWER, ENL_INSTANTANEOUS_POWER
+from pychonet.lib.epc_functions import DATA_STATE_CLOSE, DATA_STATE_OPEN
 
 DOMAIN = "echonetlite"
 CONF_STATE_CLASS = ATTR_STATE_CLASS
@@ -996,6 +997,196 @@ ENL_OP_CODES = {
                 },
             },
         },
+    },
+    0x03: {  # Cooking/housework-related device class group
+        0x7B: {  # Refrigerator
+            0xB0: {
+                CONF_ICON: "mdi:door",
+                CONF_ICONS: {
+                    DATA_STATE_OPEN: "mdi:door-open",
+                    DATA_STATE_CLOSE: "mdi:door-closed",
+                },
+            },  # "Door open/close status",
+            0xB1: {
+                CONF_ICON: "mdi:door",
+                CONF_ICONS: {
+                    DATA_STATE_OPEN: "mdi:door-open",
+                    DATA_STATE_CLOSE: "mdi:door-closed",
+                },
+            },  # "Door open warning",
+            0xB2: {
+                CONF_ICON: "mdi:door",
+                CONF_ICONS: {
+                    DATA_STATE_OPEN: "mdi:door-open",
+                    DATA_STATE_CLOSE: "mdi:door-closed",
+                },
+            },  # "Refrigerator compartment door status",
+            0xB3: {
+                CONF_ICON: "mdi:door",
+                CONF_ICONS: {
+                    DATA_STATE_OPEN: "mdi:door-open",
+                    DATA_STATE_CLOSE: "mdi:door-closed",
+                },
+            },  # "Freezer compartment door status",
+            0xB4: {
+                CONF_ICON: "mdi:door",
+                CONF_ICONS: {
+                    DATA_STATE_OPEN: "mdi:door-open",
+                    DATA_STATE_CLOSE: "mdi:door-closed",
+                },
+            },  # "Ice compartment door status",
+            0xB5: {
+                CONF_ICON: "mdi:door",
+                CONF_ICONS: {
+                    DATA_STATE_OPEN: "mdi:door-open",
+                    DATA_STATE_CLOSE: "mdi:door-closed",
+                },
+            },  # "Vegetable compartment door status",
+            0xB6: {
+                CONF_ICON: "mdi:door",
+                CONF_ICONS: {
+                    DATA_STATE_OPEN: "mdi:door-open",
+                    DATA_STATE_CLOSE: "mdi:door-closed",
+                },
+            },  # "Multi-refrigera-ting mode compartment door",
+            0xE0: {
+                TYPE_DATA_DICT: [
+                    "refrigerator",
+                    "freezer",
+                    "ice",
+                    "vegetable",
+                    "multi_refrigerating",
+                ]
+            },  # "Maximum allowable temperature setting level",
+            0xE2: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: -127,
+                    CONF_MAXIMUM: 126,
+                },
+            },  # "Refrigerator compartment temperature setting",
+            0xE3: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: -127,
+                    CONF_MAXIMUM: 126,
+                },
+            },  # "Freezer compartment temperature setting",
+            0xE4: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: -127,
+                    CONF_MAXIMUM: 126,
+                },
+            },  # "Ice temperature setting",
+            0xE5: {
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: -127,
+                    CONF_MAXIMUM: 126,
+                },
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+            },  # "Vegetable compartment temperature setting",
+            0xE6: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: -127,
+                    CONF_MAXIMUM: 126,
+                },
+            },  # "Multi-refrigera-ting mode compartment temperature setting",
+            0xE9: {
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: 1,
+                    CONF_MAXIMUM: 0xFF,
+                    CONF_MAX_OPC: {"code": 0xE0, "key": "refrigerator"},
+                },
+            },  # "Refrigerator compartment temperature level setting",
+            0xEA: {
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: 1,
+                    CONF_MAXIMUM: 0xFF,
+                    CONF_MAX_OPC: [0xE0, "freezer"],
+                },
+            },  # "Freezer compartment temperature level setting",
+            0xEB: {
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: 1,
+                    CONF_MAXIMUM: 0xFF,
+                    CONF_MAX_OPC: [0xE0, "ice"],
+                },
+            },  # "ice compartment temperature level setting",
+            0xEC: {
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: 1,
+                    CONF_MAXIMUM: 0xFF,
+                    CONF_MAX_OPC: [0xE0, "vegetable"],
+                },
+            },  # "Vegetable compartment temperature level setting",
+            0xED: {
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.TEMPERATURE,
+                    CONF_MINIMUM: 1,
+                    CONF_MAXIMUM: 0xFF,
+                    CONF_MAX_OPC: [0xE0, "multi_refrigerating"],
+                },
+            },  # "Multi-refrigera-ting mode compartment temperature level setting",
+            0xD1: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+            },  # "Measured refrigerator compartment temperature",
+            0xD2: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+            },  # "Measured freezer compartment temperature",
+            0xD3: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+            },  # "Measured subzero-fresh compartment temperature",
+            0xD4: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+            },  # "Measured vegetable compartment temperature",
+            0xD5: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+            },  # "Measured multi-refrigeratin g mode compartment temperature",
+            0xD8: {
+                TYPE_DATA_DICT: ["maximum_rotation_speed", "rotation_speed"]
+            },  # "Compressor rotation speed",
+            0xDA: {
+                CONF_TYPE: SensorDeviceClass.CURRENT,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                CONF_MULTIPLIER: 0.1,
+            },  # "Measured electric current consumption",
+            0xDC: {
+                CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },  # "Rated power consumption",
+            0xA0: {
+                CONF_ICON: "mdi:snowflake-check"
+            },  # "Quick freeze function setting",
+            0xA1: {
+                CONF_ICON: "mdi:fridge-bottom"
+            },  # "Quick refrigeration function setting",
+            0xA4: {CONF_ICON: "mdi:dice-1-outline"},  # "Icemaker setting",
+            0xA5: {CONF_ICON: "mdi:dice-1-outline"},  # "Icemaker operation status",
+            0xA6: {CONF_ICON: "mdi:water-alert-outline"},  # "Icemaker tank status",
+            0xA8: {
+                CONF_ICON: "mdi:water-thermometer"
+            },  # "Refrigerator compartment humidification function setting",
+            0xA9: {
+                CONF_ICON: "mdi:water-thermometer"
+            },  # "Vegetable compartment humidification function setting",
+            0xAD: {CONF_ICON: "mdi:scent"},  # "Deodorization function setting",
+        },  # Refrigerator
     },
     "default": {
         CONF_ICON: None,
