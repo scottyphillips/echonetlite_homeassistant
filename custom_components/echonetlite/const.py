@@ -1108,7 +1108,7 @@ ENL_OP_CODES = {
                     CONF_TYPE: NumberDeviceClass.TEMPERATURE,
                     CONF_MINIMUM: 1,
                     CONF_MAXIMUM: 0xFF,
-                    CONF_MAX_OPC: {"code": 0xE0, "key": "refrigerator"},
+                    CONF_MAX_OPC: [0xE0, "refrigerator"],
                 },
             },  # "Refrigerator compartment temperature level setting",
             0xEA: {
