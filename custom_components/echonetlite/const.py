@@ -999,7 +999,7 @@ ENL_OP_CODES = {
         },
     },
     0x03: {  # Cooking/housework-related device class group
-        0x7B: {  # Refrigerator
+        0xB7: {  # Refrigerator
             0xB0: {
                 CONF_ICON: "mdi:door",
                 CONF_ICONS: {
