@@ -1056,7 +1056,8 @@ ENL_OP_CODES = {
                     "ice",
                     "vegetable",
                     "multi_refrigerating",
-                ]
+                ],
+                CONF_DISABLED_DEFAULT: True,
             },  # "Maximum allowable temperature setting level",
             0xE2: {
                 CONF_TYPE: SensorDeviceClass.TEMPERATURE,
