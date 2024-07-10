@@ -59,7 +59,10 @@ compatible ECHONETLite Devices:
      * MSZ-LN50VG2
   * Ducted
      * PEA-M100GAA
+     * PEA-M100HAA
      * PEA-RP140GAA
+  * Bulkhead
+     * SEZ-M71DA
 
 * Mitsubishi MAC-578IF2-E WiFi Adaptor connected to the following systems:
   * AP Series
@@ -86,6 +89,9 @@ From the official Mitsubishi AU/NZ Wifi App, you will need to enable
 the 'ECHONET lite' protocol under the 'edit unit' settings.
 
 ![echonet][echonetimg]
+
+Note that the proprietary Mitsubishi app (MELCloud/MELView/Kumo Cloud) controls some models in single ˚F or half ˚C, but
+ECHONET works in whole ˚C.
 
 Many other products will work using this custom-component, but they must correctly support the 'ECHONET lite' protocol. The author cannot assist with enabling ECHONET Lite for other vendor products.
 
