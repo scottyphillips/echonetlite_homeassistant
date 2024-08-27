@@ -47,26 +47,22 @@ class EchonetFan(FanEntity):
         )
         self._precision = 1.0
         self._target_temperature_step = 1
-        self._attr_support_flags = FanEntityFeature(0)
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
+        self._attr_support_flags = FanEntityFeature(0)
+        if hasattr(FanEntityFeature, "TURN_ON"):  # v2024.8
+            self._attr_support_flags |= FanEntityFeature.TURN_ON
+        if hasattr(FanEntityFeature, "TURN_OFF"):
+            self._attr_support_flags |= FanEntityFeature.TURN_OFF
         if ENL_FANSPEED in list(self._connector._setPropertyMap):
-            self._attr_support_flags = (
-                self._attr_support_flags | FanEntityFeature.PRESET_MODE
-            )
+            self._attr_support_flags |= FanEntityFeature.PRESET_MODE
         if ENL_FANSPEED_PERCENT in list(self._connector._setPropertyMap):
-            self._attr_support_flags = (
-                self._attr_support_flags | FanEntityFeature.SET_SPEED
-            )
+            self._attr_support_flags |= FanEntityFeature.SET_SPEED
         if ENL_FAN_DIRECTION in list(self._connector._setPropertyMap):
-            self._attr_support_flags = (
-                self._attr_support_flags | FanEntityFeature.DIRECTION
-            )
+            self._attr_support_flags |= FanEntityFeature.DIRECTION
         if ENL_FAN_OSCILLATION in list(self._connector._setPropertyMap):
-            self._attr_support_flags = (
-                self._attr_support_flags | FanEntityFeature.OSCILLATE
-            )
+            self._attr_support_flags |= FanEntityFeature.OSCILLATE
         self._olddata = {}
 
         self._attr_should_poll = True
@@ -74,6 +70,9 @@ class EchonetFan(FanEntity):
 
         self._set_attrs()
         self.update_option_listener()
+
+        # see, https://developers.home-assistant.io/blog/2024/07/19/fan-fanentityfeatures-turn-on_off/
+        self._enable_turn_on_off_backwards_compatibility = False
 
     async def async_update(self):
         try:
