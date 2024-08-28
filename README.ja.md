@@ -47,6 +47,14 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
   * 換気システム
      * PEAD-RP71
 
+* 三菱電機 MAC-600IF WiFi アダプターでコントロールされている以下の機器:
+  * Z シリーズ
+     * MSZ-ZW4022S
+
+* 三菱電機 REF-WLAN001 アダプターでコントロールされている以下の機器:
+  * 冷蔵庫
+     * MR-WZ55H
+
 * 'MoekadenRoom' ECHONETLite シミュレーター: https://github.com/SonyCSL/MoekadenRoom
      * エアコンオブジェクト
      * 照明オブジェクト
