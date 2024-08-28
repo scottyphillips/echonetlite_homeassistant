@@ -51,7 +51,8 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
   * Z シリーズ
      * MSZ-ZW4022S
 
-* 三菱電機 冷蔵庫 REF-WLAN001 アダプターでコントロールされている以下の機器:
+* 三菱電機 REF-WLAN001 アダプターでコントロールされている以下の機器:
+  * 冷蔵庫
      * MR-WZ55H
 
 * 'MoekadenRoom' ECHONETLite シミュレーター: https://github.com/SonyCSL/MoekadenRoom

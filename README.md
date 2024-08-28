@@ -86,7 +86,8 @@ compatible ECHONETLite Devices:
      * MSZ-JXV4018S
 
 
-* Mitsubishi (Fridge) REF-WLAN001 WiFi Adaptor connected to the following systems:
+* Mitsubishi REF-WLAN001 WiFi Adaptor connected to the following systems:
+  * Refrigerator
      * MR-WZ55H
 
 
