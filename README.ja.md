@@ -15,7 +15,7 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
 # 現在動作確認されている機器:
 フィードバックに基づいて、このカスタムコンポーネントは以下の互換性のあるECHONETLite機器で動作します:
 
-* 三菱電機 エアコン MAC-568IF-E WiFi アダプターでコントロールされている以下の機器:
+* 三菱電機 MAC-568IF-E WiFi アダプターでコントロールされている以下の機器:
   * GE シリーズ
      * MSZ-GE42VAD
      * MSZ-GE24VAD
@@ -35,11 +35,11 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
      * PEA-M100GAA
      * PEA-RP140GAA
 
-* 三菱電機 エアコン HM-W002-AC WiFi アダプターでコントロールされている以下の機器:
+* 三菱電機 HM-W002-AC WiFi アダプターでコントロールされている以下の機器:
   * JXV シリーズ
      * MSZ-JXV4018S
 
-* 三菱電機 エアコン MAC-578IF2-E WiFi アダプターでコントロールされている以下の機器:
+* 三菱電機 MAC-578IF2-E WiFi アダプターでコントロールされている以下の機器:
   * AP シリーズ
      * MSZ-AP22VGD
      * MSZ-AP35VGD
@@ -47,11 +47,11 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
   * 換気システム
      * PEAD-RP71
 
-* 三菱電機 エアコン MAC-600IF WiFi アダプターでコントロールされている以下の機器:
+* 三菱電機 MAC-600IF WiFi アダプターでコントロールされている以下の機器:
   * Z シリーズ
      * MSZ-ZW4022S
 
-* 三菱電機 冷蔵庫 REF--WLAN001 アダプターでコントロールされている以下の機器:
+* 三菱電機 冷蔵庫 REF-WLAN001 アダプターでコントロールされている以下の機器:
      * MR-WZ55H
 
 * 'MoekadenRoom' ECHONETLite シミュレーター: https://github.com/SonyCSL/MoekadenRoom
