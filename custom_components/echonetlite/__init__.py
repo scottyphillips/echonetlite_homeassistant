@@ -32,7 +32,6 @@ from .const import (
     ENL_OP_CODES,
     ENL_SUPER_CODES,
     ENL_TIMER_SETTING,
-    EPC_CODES_FOR_UPDATE,
     USER_OPTIONS,
     TEMP_OPTIONS,
     CONF_BATCH_SIZE_MAX,
@@ -557,33 +556,23 @@ class ECHONETConnector:
             CONF_ENABLE_SUPER_ENERGY,
             ENABLE_SUPER_ENERGY_DEFAULT.get(self._eojgc, {}).get(self._eojcc, True),
         )
-        # Some classes use predefined data (Narrowed down items)
-        flags = EPC_CODES_FOR_UPDATE.get(self._eojgc, {}).get(self._eojcc, None)
-        if flags != None:
-            flags = list(set(flags) | {ENL_STATUS} | set(ENL_SUPER_CODES.keys()))
-            if not _enabled_super_energy:
-                flags = list(
-                    set(flags) - {ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER}
-                )
-        else:
-            # For classes where it is not defined
-            flags = [ENL_STATUS, ENL_TIMER_SETTING]
-            if (
-                _enabled_super_energy
-                or ENL_OP_CODES.get(self._eojgc, {})
-                .get(self._eojcc, {})
-                .get(ENL_INSTANTANEOUS_POWER)
-                or ENL_OP_CODES.get(self._eojgc, {})
-                .get(self._eojcc, {})
-                .get(ENL_CUMULATIVE_POWER)
-            ):
-                flags += [ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER]
-            _epc_keys = set((EPC_CODE[self._eojgc][self._eojcc].keys())) - set(
-                EPC_SUPER.keys()
-            )
-            for item in self._getPropertyMap:
-                if item in _epc_keys:
-                    flags.append(item)
+        # General purpose data items
+        flags = [ENL_STATUS, ENL_TIMER_SETTING]
+        if (
+            _enabled_super_energy
+            or ENL_OP_CODES.get(self._eojgc, {})
+            .get(self._eojcc, {})
+            .get(ENL_INSTANTANEOUS_POWER)
+            or ENL_OP_CODES.get(self._eojgc, {})
+            .get(self._eojcc, {})
+            .get(ENL_CUMULATIVE_POWER)
+        ):
+            flags += [ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER]
+        # Get supported EPC_FUNCTIONS in pychonet object class
+        _epc_keys = set(self._instance.EPC_FUNCTIONS.keys()) - set(EPC_SUPER.keys())
+        for item in self._getPropertyMap:
+            if item in _epc_keys:
+                flags.append(item)
 
         for value in flags:
             if value in self._getPropertyMap:
