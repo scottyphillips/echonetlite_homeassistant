@@ -112,7 +112,9 @@ class EchonetFan(FanEntity):
     @property
     def is_on(self):
         """Return true if the device is on."""
-        return True if self._connector._update_data[0x80] == DATA_STATE_ON else False
+        return (
+            True if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON else False
+        )
 
     def _set_attrs(self):
         # @property
