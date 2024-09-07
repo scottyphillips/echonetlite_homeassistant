@@ -3,6 +3,11 @@ from pychonet.HomeAirCleaner import FAN_SPEED
 from pychonet.lib.const import ENL_STATUS
 
 from pychonet.lib.eojx import EOJX_CLASS
+from pychonet.CeilingFan import (
+    ENL_FANSPEED_PERCENT,
+    ENL_FAN_DIRECTION,
+    ENL_FAN_OSCILLATION,
+)
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.const import (
     PRECISION_WHOLE,
@@ -13,9 +18,6 @@ from .const import CONF_FORCE_POLLING, DATA_STATE_ON, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 ENL_FANSPEED = 0xA0
-ENL_FANSPEED_PERCENT = 0xF0
-ENL_FAN_DIRECTION = 0xF1
-ENL_FAN_OSCILLATION = 0xF2
 
 DEFAULT_FAN_MODES = list(
     FAN_SPEED.keys()

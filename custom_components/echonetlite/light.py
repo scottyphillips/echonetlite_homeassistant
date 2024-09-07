@@ -152,7 +152,7 @@ class EchonetLight(LightEntity):
 
     async def async_turn_on(self, **kwargs):
         """Turn on."""
-        await self._connector._instance[self._custom_options["on"]]()
+        await getattr(self._connector._instance, self._custom_options["on"])()
 
         if (
             ATTR_BRIGHTNESS in kwargs
@@ -203,7 +203,7 @@ class EchonetLight(LightEntity):
 
     async def async_turn_off(self, **kwargs):
         """Turn off."""
-        await self._connector._instance[self._custom_options["off"]]()
+        await getattr(self._connector._instance, self._custom_options["off"])()
 
     def _set_attrs(self):
         if (
