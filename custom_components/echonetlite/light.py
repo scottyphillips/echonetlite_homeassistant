@@ -36,7 +36,9 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
         if (eojgc == 0x02 and eojcc in (0x90, 0x91)) or (
-            eojgc == 0x01 and eojcc == 0x3A
+            eojgc == 0x01
+            and eojcc == 0x3A
+            and ENL_FAN_LIGHT_STATUS in entity["echonetlite"]._setPropertyMap
         ):
             custom_options = {}
             # General Lighting (0x90), Mono Functional Lighting (0x91)
