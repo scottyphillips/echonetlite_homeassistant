@@ -68,6 +68,8 @@ class EchonetFan(FanEntity):
         self._attr_should_poll = True
         self._attr_available = True
 
+        self._attr_speed_count = self._connector._instance.get("SPEED_COUNT", 100)
+
         self._set_attrs()
         self.update_option_listener()
 

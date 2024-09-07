@@ -1,6 +1,12 @@
 import logging
 
 from pychonet.GeneralLighting import ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
+from pychonet.CeilingFan import (
+    ENL_FAN_LIGHT_STATUS,
+    ENL_FAN_LIGHT_BRIGHTNESS,
+    ENL_FAN_LIGHT_COLOR_TEMP,
+)
+
 
 from pychonet.lib.eojx import EOJX_CLASS
 
@@ -29,13 +35,44 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
-        if eojgc == 0x02 and eojcc in (0x90, 0x91):
+        if (eojgc == 0x02 and eojcc in (0x90, 0x91)) or (
+            eojgc == 0x01 and eojcc == 0x3A
+        ):
+            custom_options = {}
             # General Lighting (0x90), Mono Functional Lighting (0x91)
+            if eojgc == 0x02 and eojcc in (0x90, 0x91):
+                custom_options = {
+                    ENL_STATUS: ENL_STATUS,
+                    ENL_BRIGHTNESS: ENL_BRIGHTNESS,
+                    ENL_COLOR_TEMP: ENL_COLOR_TEMP,
+                    "echonet_mireds": [
+                        "daylight_color",
+                        "daylight_white",
+                        "white",
+                        "other",
+                        "incandescent_lamp_color",
+                    ],
+                    "echonet_mireds_int": [68, 67, 66, 64, 65],  # coolest to warmest
+                    "on": "on",
+                    "off": "off",
+                }
+            # Ceiling Fan (0x01-0x3A)
+            elif eojgc == 0x01 and eojcc == 0x3A:
+                custom_options = {
+                    ENL_STATUS: ENL_FAN_LIGHT_STATUS,
+                    ENL_BRIGHTNESS: ENL_FAN_LIGHT_BRIGHTNESS,
+                    ENL_COLOR_TEMP: ENL_FAN_LIGHT_COLOR_TEMP,
+                    "echonet_mireds": None,
+                    "echonet_mireds_int": None,
+                    "on": "light_on",
+                    "off": "light_off",
+                }
             _LOGGER.debug("Configuring ECHONETlite Light entity")
             entities.append(
                 EchonetLight(
                     entity["echonetlite"],
                     config_entry,
+                    custom_options,
                 )
             )
     _LOGGER.debug(f"Number of light devices to be added: {len(entities)}")
@@ -45,7 +82,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 class EchonetLight(LightEntity):
     """Representation of a ECHONET light device."""
 
-    def __init__(self, connector, config):
+    def __init__(self, connector, config, custom_options):
         """Initialize the climate device."""
         name = get_device_name(connector, config)
         self._attr_name = name
@@ -62,24 +99,19 @@ class EchonetLight(LightEntity):
         self._attr_max_mireds = MAX_MIREDS
         self._attr_supported_color_modes.add(ColorMode.ONOFF)
         self._attr_color_mode = ColorMode.ONOFF
-        if ENL_BRIGHTNESS in list(self._connector._setPropertyMap):
+        self._custom_options = custom_options
+        if custom_options[ENL_BRIGHTNESS] in list(self._connector._setPropertyMap):
             self._attr_supported_color_modes.add(ColorMode.BRIGHTNESS)
             self._attr_color_mode = ColorMode.BRIGHTNESS
-        if ENL_COLOR_TEMP in list(self._connector._setPropertyMap):
+        if custom_options[ENL_COLOR_TEMP] in list(self._connector._setPropertyMap):
             self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
             self._attr_color_mode = ColorMode.COLOR_TEMP
 
-        self._echonet_mireds = [
-            "daylight_color",
-            "daylight_white",
-            "white",
-            "other",
-            "incandescent_lamp_color",
-        ]  # coolest to warmest
-        self._echonet_mireds_int = [68, 67, 66, 64, 65]  # coolest to warmest
         self._olddata = {}
         self._attr_is_on = (
-            True if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON else False
+            True
+            if self._connector._update_data[custom_options[ENL_STATUS]] == DATA_STATE_ON
+            else False
         )
         self._attr_should_poll = True
         self._attr_available = True
@@ -120,7 +152,7 @@ class EchonetLight(LightEntity):
 
     async def async_turn_on(self, **kwargs):
         """Turn on."""
-        await self._connector._instance.on()
+        await self._connector._instance[self._custom_options["on"]]()
 
         if (
             ATTR_BRIGHTNESS in kwargs
@@ -148,20 +180,30 @@ class EchonetLight(LightEntity):
                 float(kwargs[ATTR_COLOR_TEMP]) - float(self._attr_min_mireds)
             ) / float(self._attr_max_mireds - self._attr_min_mireds)
             _LOGGER.debug(f"Set color to : {color_scale}")
-            # bring the color to
-            color_scale_echonet = color_scale * (len(self._echonet_mireds) - 1)
-            # round it to an index
-            echonet_idx = round(color_scale_echonet)
-            color_temp = self._echonet_mireds[echonet_idx]
-            color_temp_int = self._echonet_mireds_int[echonet_idx]
+            if self._custom_options["echonet_mireds"]:
+                # bring the color to
+                color_scale_echonet = color_scale * (
+                    len(self._custom_options["echonet_mireds"]) - 1
+                )
+                # round it to an index
+                echonet_idx = round(color_scale_echonet)
+                color_temp = self._custom_options["echonet_mireds"][echonet_idx]
+                color_temp_int = self._custom_options["echonet_mireds_int"][echonet_idx]
 
-            _LOGGER.debug(f"New color temp of light: {color_temp} - {color_temp_int}")
+                _LOGGER.debug(
+                    f"New color temp of light: {color_temp} - {color_temp_int}"
+                )
+            else:
+                color_temp_int = color_scale * 100
+                _LOGGER.debug(
+                    f"New color temp of light: {kwargs[ATTR_COLOR_TEMP]} mireds - {color_temp_int}"
+                )
             await self._connector._instance.setColorTemperature(color_temp_int)
             self._attr_color_temp = kwargs[ATTR_COLOR_TEMP]
 
     async def async_turn_off(self, **kwargs):
         """Turn off."""
-        await self._connector._instance.off()
+        await self._connector._instance[self._custom_options["off"]]()
 
     def _set_attrs(self):
         if (
@@ -170,11 +212,14 @@ class EchonetLight(LightEntity):
         ):
             """brightness of this light between 0..255."""
             _LOGGER.debug(
-                f"Current brightness of light: {self._connector._update_data[ENL_BRIGHTNESS]}"
+                f"Current brightness of light: {self._connector._update_data[self._custom_options[ENL_BRIGHTNESS]]}"
             )
             brightness = (
-                int(self._connector._update_data[ENL_BRIGHTNESS], 16)
-                if ENL_BRIGHTNESS in self._connector._update_data
+                int(
+                    self._connector._update_data[self._custom_options[ENL_BRIGHTNESS]],
+                    16,
+                )
+                if self._custom_options[ENL_BRIGHTNESS] in self._connector._update_data
                 else -1
             )
             if brightness >= 0:
@@ -190,28 +235,39 @@ class EchonetLight(LightEntity):
             and ColorMode.COLOR_TEMP in self._attr_supported_color_modes
         ):
             """color temperature in mired."""
+            enl_color_temp = self._custom_options[ENL_COLOR_TEMP]
             _LOGGER.debug(
-                f"Current color temp of light: {self._connector._update_data[ENL_COLOR_TEMP]}"
+                f"Current color temp of light: {self._connector._update_data[enl_color_temp]}"
             )
 
-            # calculate some helper
-            mired_steps = (self._attr_max_mireds - self._attr_min_mireds) / float(
-                len(self._echonet_mireds)
-            )
-
-            # get the current echonet mireds
-            color_temp = (
-                self._connector._update_data[ENL_COLOR_TEMP]
-                if ENL_COLOR_TEMP in self._connector._update_data
-                else "white"
-            )
-            if color_temp in self._echonet_mireds:
-                self._attr_color_temp = (
-                    round(self._echonet_mireds.index(color_temp) * mired_steps)
-                    + MIN_MIREDS
+            if self._custom_options["echonet_mireds"]:
+                # calculate some helper
+                mired_steps = (self._attr_max_mireds - self._attr_min_mireds) / float(
+                    len(self._custom_options["echonet_mireds"])
                 )
+
+                # get the current echonet mireds
+                color_temp = (
+                    self._connector._update_data[enl_color_temp]
+                    if enl_color_temp in self._connector._update_data
+                    else "white"
+                )
+                if color_temp in self._custom_options["echonet_mireds"]:
+                    self._attr_color_temp = (
+                        round(
+                            self._custom_options["echonet_mireds"].index(color_temp)
+                            * mired_steps
+                        )
+                        + MIN_MIREDS
+                    )
+                else:
+                    self._attr_color_temp = MIN_MIREDS
             else:
-                self._attr_color_temp = MIN_MIREDS
+                self._attr_color_temp = (
+                    self._attr_max_mireds - self._attr_min_mireds
+                ) * (
+                    self._connector._update_data[enl_color_temp] / 100
+                ) + self._attr_min_mireds
 
     async def async_added_to_hass(self):
         """Register callbacks."""
@@ -228,7 +284,8 @@ class EchonetLight(LightEntity):
             self._olddata = self._connector._update_data.copy()
             self._attr_is_on = (
                 True
-                if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON
+                if self._connector._update_data[self._custom_options[ENL_STATUS]]
+                == DATA_STATE_ON
                 else False
             )
             if self._attr_available != self._server_state["available"]:
@@ -247,11 +304,12 @@ class EchonetLight(LightEntity):
 
     def update_option_listener(self):
         _should_poll = (
-            ENL_STATUS not in self._connector._ntfPropertyMap
+            self._custom_options[ENL_STATUS] not in self._connector._ntfPropertyMap
             or (
                 self._attr_supported_color_modes
                 and COLOR_MODE_BRIGHTNESS in self._attr_supported_color_modes
-                and ENL_BRIGHTNESS not in self._connector._ntfPropertyMap
+                and self._custom_options[ENL_BRIGHTNESS]
+                not in self._connector._ntfPropertyMap
             )
             or (
                 self._attr_supported_color_modes

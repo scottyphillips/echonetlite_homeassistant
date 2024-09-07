@@ -47,6 +47,11 @@ from pychonet.HomeAirConditioner import (
 from pychonet.EchonetInstance import ENL_STATUS, ENL_ON, ENL_OFF
 from pychonet.lib.const import ENL_CUMULATIVE_POWER, ENL_INSTANTANEOUS_POWER
 from pychonet.lib.epc_functions import DATA_STATE_CLOSE, DATA_STATE_OPEN
+from pychonet.CeilingFan import (
+    ENL_FAN_LIGHT_STATUS,
+    ENL_FAN_LIGHT_BRIGHTNESS,
+    ENL_FAN_LIGHT_COLOR_TEMP,
+)
 
 from custom_components.echonetlite.fan import (
     ENL_FAN_DIRECTION,
@@ -1191,7 +1196,14 @@ NON_SETUP_SINGLE_ENYITY = {
         # Home Air Conditioner
         0x30: {ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_SILENT_MODE},
         # Ceiling fan
-        0x3A: {ENL_FANSPEED_PERCENT, ENL_FAN_DIRECTION, ENL_FAN_OSCILLATION},
+        0x3A: {
+            ENL_FANSPEED_PERCENT,
+            ENL_FAN_DIRECTION,
+            ENL_FAN_OSCILLATION,
+            ENL_FAN_LIGHT_STATUS,
+            ENL_FAN_LIGHT_BRIGHTNESS,
+            ENL_FAN_LIGHT_COLOR_TEMP,
+        },
     },
     0x02: {
         0x60: {ENL_OPENING_LEVEL, ENL_BLIND_ANGLE, ENL_OPENCLOSE_STATUS},
