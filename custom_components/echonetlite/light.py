@@ -217,10 +217,7 @@ class EchonetLight(LightEntity):
                 f"Current brightness of light: {self._connector._update_data[self._custom_options[ENL_BRIGHTNESS]]}"
             )
             brightness = (
-                int(
-                    self._connector._update_data[self._custom_options[ENL_BRIGHTNESS]],
-                    16,
-                )
+                int(self._connector._update_data[self._custom_options[ENL_BRIGHTNESS]])
                 if self._custom_options[ENL_BRIGHTNESS] in self._connector._update_data
                 else -1
             )
