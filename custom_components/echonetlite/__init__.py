@@ -504,14 +504,17 @@ class ECHONETConnector:
             return await self.async_update_data(kwargs=kwargs)
         except EchonetMaxOpcError as ex:
             # Adjust the maximum number of properties for batch requests
+            batch_size_max = self._user_options.get(
+                CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
+            )
             batch_data_len = max(
                 ex.args[0],
                 MIN_UPDATE_BATCH_SIZE,
-                self._user_options[CONF_BATCH_SIZE_MAX] - 1,
+                batch_size_max - 1,
             )
-            if batch_data_len >= self._user_options[CONF_BATCH_SIZE_MAX]:
+            if batch_data_len >= batch_size_max:
                 _LOGGER.error(
-                    f"The integration has adjusted the number of batch requests to {self._host} to {self._user_options[CONF_BATCH_SIZE_MAX]}, but no response is received. Please check and try restarting the device etc."
+                    f"The integration has adjusted the number of batch requests to {self._host} to {batch_size_max}, but no response is received. Please check and try restarting the device etc."
                 )
                 return None
             self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
