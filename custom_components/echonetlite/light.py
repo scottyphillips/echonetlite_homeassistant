@@ -8,6 +8,7 @@ from pychonet.CeilingFan import (
 )
 
 
+from pychonet.lib.const import ENL_ON
 from pychonet.lib.eojx import EOJX_CLASS
 
 from homeassistant.components.light import LightEntity, ColorMode, LightEntityFeature
@@ -153,8 +154,7 @@ class EchonetLight(LightEntity):
         }
 
     async def async_turn_on(self, **kwargs):
-        """Turn on."""
-        await getattr(self._connector._instance, self._custom_options["on"])()
+        states = {"status": ENL_ON}
 
         if (
             ATTR_BRIGHTNESS in kwargs
@@ -169,7 +169,7 @@ class EchonetLight(LightEntity):
             device_brightness = max(device_brightness, 1)
 
             # send the message to the lamp
-            await self._connector._instance.setBrightness(device_brightness)
+            states["brightness"] = device_brightness
             self._attr_brightness = kwargs[ATTR_BRIGHTNESS]
 
         if (
@@ -200,8 +200,27 @@ class EchonetLight(LightEntity):
                 _LOGGER.debug(
                     f"New color temp of light: {kwargs[ATTR_COLOR_TEMP]} mireds - {color_temp_int}"
                 )
-            await self._connector._instance.setColorTemperature(color_temp_int)
+            states["color_temperature"] = int(color_temp_int)
             self._attr_color_temp = kwargs[ATTR_COLOR_TEMP]
+
+        if hasattr(self._connector._instance, "setLightStates"):
+            return await self._connector._instance.setLightStates(states)
+        else:
+            """Turn on."""
+            result = await getattr(
+                self._connector._instance, self._custom_options["on"]
+            )()
+
+            if result:
+                if states.get("brightness"):
+                    result &= await self._connector._instance.setBrightness(
+                        states["brightness"]
+                    )
+
+                if states.get("color_temperature"):
+                    result &= await self._connector._instance.setColorTemperature(
+                        states["color_temperature"]
+                    )
 
     async def async_turn_off(self, **kwargs):
         """Turn off."""
