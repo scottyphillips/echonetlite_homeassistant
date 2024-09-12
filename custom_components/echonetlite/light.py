@@ -207,7 +207,7 @@ class EchonetLight(LightEntity):
                     f"New color temp of light: {color_temp} - {color_temp_int}"
                 )
             else:
-                color_temp_int = color_scale * 100
+                color_temp_int = (1 - color_scale) * 100
                 _LOGGER.debug(
                     f"New color temp of light: {kwargs[ATTR_COLOR_TEMP]} mireds - {color_temp_int}"
                 )
