@@ -11,7 +11,12 @@ from pychonet.CeilingFan import (
 from pychonet.lib.const import ENL_ON
 from pychonet.lib.eojx import EOJX_CLASS
 
-from homeassistant.components.light import LightEntity, ColorMode, LightEntityFeature
+from homeassistant.components.light import (
+    ATTR_EFFECT,
+    LightEntity,
+    ColorMode,
+    LightEntityFeature,
+)
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP,
@@ -116,6 +121,12 @@ class EchonetLight(LightEntity):
             if self._connector._update_data[custom_options[ENL_STATUS]] == DATA_STATE_ON
             else False
         )
+
+        if hasattr(self._connector._instance, "getEffectList"):
+            self._attr_effect_list = self._connector._instance.getEffectList()
+            if self._attr_effect_list:
+                self._attr_supported_features |= LightEntityFeature.EFFECT
+
         self._attr_should_poll = True
         self._attr_available = True
 
@@ -203,6 +214,9 @@ class EchonetLight(LightEntity):
             states["color_temperature"] = int(color_temp_int)
             self._attr_color_temp = kwargs[ATTR_COLOR_TEMP]
 
+        if ATTR_EFFECT in kwargs and kwargs[ATTR_EFFECT] in self._attr_effect_list:
+            states[ATTR_EFFECT] = kwargs[ATTR_EFFECT]
+
         if hasattr(self._connector._instance, "setLightStates"):
             return await self._connector._instance.setLightStates(states)
         else:
@@ -286,6 +300,9 @@ class EchonetLight(LightEntity):
                 ) * (
                     self._connector._update_data[enl_color_temp] / 100
                 ) + self._attr_min_mireds
+
+        if hasattr(self._connector._instance, "getEffect"):
+            self._attr_effect = self._connector._instance.getEffect()
 
     async def async_added_to_hass(self):
         """Register callbacks."""
