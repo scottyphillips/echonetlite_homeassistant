@@ -10,6 +10,7 @@ from pychonet.CeilingFan import (
 
 from pychonet.lib.const import ENL_ON
 from pychonet.lib.eojx import EOJX_CLASS
+from pychonet.lib.epc_functions import _swap_dict
 
 from homeassistant.components.light import (
     ATTR_EFFECT,
@@ -30,8 +31,8 @@ from .const import DATA_STATE_ON, DOMAIN, CONF_FORCE_POLLING
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_BRIGHTNESS_SCALE = 255
-MIN_MIREDS = 153
-MAX_MIREDS = 500
+MIN_MIREDS = 153  # 6500k
+MAX_MIREDS = 500  # 2000k
 DEVICE_SCALE = 100
 
 
@@ -53,24 +54,33 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
                     ENL_STATUS: ENL_STATUS,
                     ENL_BRIGHTNESS: ENL_BRIGHTNESS,
                     ENL_COLOR_TEMP: ENL_COLOR_TEMP,
-                    "echonet_mireds": [
-                        "daylight_color",
-                        "daylight_white",
-                        "white",
-                        "other",
-                        "incandescent_lamp_color",
-                    ],
-                    "echonet_mireds_int": [68, 67, 66, 64, 65],  # coolest to warmest
+                    "echonet_color": {
+                        0x44: "daylight_color",
+                        0x43: "daylight_white",
+                        0x42: "white",
+                        0x40: "other",
+                        0x41: "incandescent_lamp_color",
+                    },
+                    "echonet_mireds_int": {
+                        0x44: 153,  # 6500K
+                        0x43: 200,  # 5000K
+                        0x42: 238,  # 4200K
+                        0x40: 285,  # 3500K
+                        0x41: 370,  # 2700K
+                    },  # coolest to warmest value is mired
                     "on": "on",
                     "off": "off",
                 }
+                custom_options["echonet_int_color"] = _swap_dict(
+                    custom_options["echonet_color"]
+                )
             # Ceiling Fan (0x01-0x3A)
             elif eojgc == 0x01 and eojcc == 0x3A:
                 custom_options = {
                     ENL_STATUS: ENL_FAN_LIGHT_STATUS,
                     ENL_BRIGHTNESS: ENL_FAN_LIGHT_BRIGHTNESS,
                     ENL_COLOR_TEMP: ENL_FAN_LIGHT_COLOR_TEMP,
-                    "echonet_mireds": None,
+                    "echonet_color": None,
                     "echonet_mireds_int": None,
                     "on": "light_on",
                     "off": "light_off",
@@ -103,17 +113,24 @@ class EchonetLight(LightEntity):
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
-        self._attr_min_mireds = MIN_MIREDS
-        self._attr_max_mireds = MAX_MIREDS
-        self._attr_supported_color_modes.add(ColorMode.ONOFF)
-        self._attr_color_mode = ColorMode.ONOFF
+        if "echonet_mireds_int" in custom_options:
+            mireds = custom_options["echonet_mireds_int"].values()
+            self._attr_min_mireds = min(mireds)
+            self._attr_max_mireds = max(mireds)
+        else:
+            self._attr_min_mireds = MIN_MIREDS
+            self._attr_max_mireds = MAX_MIREDS
         self._custom_options = custom_options
-        if custom_options[ENL_BRIGHTNESS] in list(self._connector._setPropertyMap):
-            self._attr_supported_color_modes.add(ColorMode.BRIGHTNESS)
-            self._attr_color_mode = ColorMode.BRIGHTNESS
         if custom_options[ENL_COLOR_TEMP] in list(self._connector._setPropertyMap):
             self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
             self._attr_color_mode = ColorMode.COLOR_TEMP
+        if custom_options[ENL_BRIGHTNESS] in list(self._connector._setPropertyMap):
+            if not self._attr_supported_color_modes:
+                self._attr_supported_color_modes.add(ColorMode.BRIGHTNESS)
+                self._attr_color_mode = ColorMode.BRIGHTNESS
+        if not self._attr_supported_color_modes:
+            self._attr_supported_color_modes.add(ColorMode.ONOFF)
+            self._attr_color_mode = ColorMode.ONOFF
 
         self._olddata = {}
         self._attr_is_on = (
@@ -129,6 +146,8 @@ class EchonetLight(LightEntity):
 
         self._attr_should_poll = True
         self._attr_available = True
+
+        self._set_attrs()
 
         self.update_option_listener()
 
@@ -170,7 +189,7 @@ class EchonetLight(LightEntity):
         if (
             ATTR_BRIGHTNESS in kwargs
             and self._attr_supported_color_modes
-            and ColorMode.BRIGHTNESS in self._attr_supported_color_modes
+            and self._attr_color_mode in {ColorMode.BRIGHTNESS, ColorMode.COLOR_TEMP}
         ):
             normalized_brightness = (
                 float(kwargs[ATTR_BRIGHTNESS]) / DEFAULT_BRIGHTNESS_SCALE
@@ -186,33 +205,34 @@ class EchonetLight(LightEntity):
         if (
             ATTR_COLOR_TEMP in kwargs
             and self._attr_supported_color_modes
-            and ColorMode.COLOR_TEMP in self._attr_supported_color_modes
+            and self._attr_color_mode == ColorMode.COLOR_TEMP
         ):
-            # bring the selected color to something we can calculate on
-            color_scale = (
-                float(kwargs[ATTR_COLOR_TEMP]) - float(self._attr_min_mireds)
-            ) / float(self._attr_max_mireds - self._attr_min_mireds)
-            _LOGGER.debug(f"Set color to : {color_scale}")
-            if self._custom_options["echonet_mireds"]:
-                # bring the color to
-                color_scale_echonet = color_scale * (
-                    len(self._custom_options["echonet_mireds"]) - 1
-                )
-                # round it to an index
-                echonet_idx = round(color_scale_echonet)
-                color_temp = self._custom_options["echonet_mireds"][echonet_idx]
-                color_temp_int = self._custom_options["echonet_mireds_int"][echonet_idx]
-
+            attr_color_tmp = float(kwargs[ATTR_COLOR_TEMP])
+            if self._custom_options["echonet_color"]:
+                color_temp_int = 0x41
+                for i, mired in self._custom_options["echonet_mireds_int"].items():
+                    if attr_color_tmp <= mired + 15:
+                        color_temp_int = i
+                        break
+                color_temp = self._custom_options["echonet_color"].get(color_temp_int)
                 _LOGGER.debug(
                     f"New color temp of light: {color_temp} - {color_temp_int}"
                 )
+                self._attr_color_temp = int(
+                    self._custom_options["echonet_mireds_int"].get(color_temp_int)
+                )
             else:
+                color_scale = (attr_color_tmp - float(self._attr_min_mireds)) / float(
+                    self._attr_max_mireds - self._attr_min_mireds
+                )
+                _LOGGER.debug(f"Set color to : {color_scale}")
                 color_temp_int = (1 - color_scale) * 100
                 _LOGGER.debug(
-                    f"New color temp of light: {kwargs[ATTR_COLOR_TEMP]} mireds - {color_temp_int}"
+                    f"New color temp of light: {attr_color_tmp} mireds - {color_temp_int}"
                 )
+                self._attr_color_temp = int(attr_color_tmp)
+
             states["color_temperature"] = int(color_temp_int)
-            self._attr_color_temp = kwargs[ATTR_COLOR_TEMP]
 
         if ATTR_EFFECT in kwargs and kwargs[ATTR_EFFECT] in self._attr_effect_list:
             states[ATTR_EFFECT] = kwargs[ATTR_EFFECT]
@@ -241,10 +261,10 @@ class EchonetLight(LightEntity):
         await getattr(self._connector._instance, self._custom_options["off"])()
 
     def _set_attrs(self):
-        if (
-            self._attr_supported_color_modes
-            and ColorMode.BRIGHTNESS in self._attr_supported_color_modes
-        ):
+        if self._attr_supported_color_modes and self._attr_color_mode in {
+            ColorMode.BRIGHTNESS,
+            ColorMode.COLOR_TEMP,
+        }:
             """brightness of this light between 0..255."""
             _LOGGER.debug(
                 f"Current brightness of light: {self._connector._update_data[self._custom_options[ENL_BRIGHTNESS]]}"
@@ -264,7 +284,7 @@ class EchonetLight(LightEntity):
 
         if (
             self._attr_supported_color_modes
-            and ColorMode.COLOR_TEMP in self._attr_supported_color_modes
+            and self._attr_color_mode == ColorMode.COLOR_TEMP
         ):
             """color temperature in mired."""
             enl_color_temp = self._custom_options[ENL_COLOR_TEMP]
@@ -272,33 +292,21 @@ class EchonetLight(LightEntity):
                 f"Current color temp of light: {self._connector._update_data[enl_color_temp]}"
             )
 
-            if self._custom_options["echonet_mireds"]:
-                # calculate some helper
-                mired_steps = (self._attr_max_mireds - self._attr_min_mireds) / float(
-                    len(self._custom_options["echonet_mireds"])
-                )
-
+            if self._custom_options["echonet_color"]:
                 # get the current echonet mireds
                 color_temp = (
                     self._connector._update_data[enl_color_temp]
                     if enl_color_temp in self._connector._update_data
                     else "white"
                 )
-                if color_temp in self._custom_options["echonet_mireds"]:
-                    self._attr_color_temp = (
-                        round(
-                            self._custom_options["echonet_mireds"].index(color_temp)
-                            * mired_steps
-                        )
-                        + MIN_MIREDS
-                    )
-                else:
-                    self._attr_color_temp = MIN_MIREDS
+                self._attr_color_temp = self._custom_options["echonet_mireds_int"].get(
+                    self._custom_options["echonet_int_color"].get(color_temp), 153
+                )
             else:
                 self._attr_color_temp = (
                     self._attr_max_mireds - self._attr_min_mireds
                 ) * (
-                    self._connector._update_data[enl_color_temp] / 100
+                    (100 - self._connector._update_data[enl_color_temp]) / 100
                 ) + self._attr_min_mireds
 
         if hasattr(self._connector._instance, "getEffect"):
