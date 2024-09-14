@@ -226,7 +226,7 @@ class EchonetLight(LightEntity):
                     self._attr_max_mireds - self._attr_min_mireds
                 )
                 _LOGGER.debug(f"Set color to : {color_scale}")
-                color_temp_int = (1 - color_scale) * 100
+                color_temp_int = min(100, max(1, (1 - color_scale) * 100))
                 _LOGGER.debug(
                     f"New color temp of light: {attr_color_tmp} mireds - {color_temp_int}"
                 )
