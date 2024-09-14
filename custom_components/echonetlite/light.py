@@ -144,6 +144,13 @@ class EchonetLight(LightEntity):
             if self._attr_effect_list:
                 self._attr_supported_features |= LightEntityFeature.EFFECT
 
+        if hasattr(self._connector._instance, "getLightColorLevelMax"):
+            self._light_color_level_max = (
+                self._connector._instance.getLightColorLevelMax()
+            )
+        else:
+            self._light_color_level_max = 100
+
         self._attr_should_poll = True
         self._attr_available = True
 
@@ -226,7 +233,10 @@ class EchonetLight(LightEntity):
                     self._attr_max_mireds - self._attr_min_mireds
                 )
                 _LOGGER.debug(f"Set color to : {color_scale}")
-                color_temp_int = min(100, max(1, (1 - color_scale) * 100))
+                color_temp_int = min(
+                    self._light_color_level_max,
+                    max(1, (1 - color_scale) * self._light_color_level_max),
+                )
                 _LOGGER.debug(
                     f"New color temp of light: {attr_color_tmp} mireds - {color_temp_int}"
                 )
@@ -306,7 +316,11 @@ class EchonetLight(LightEntity):
                 self._attr_color_temp = (
                     self._attr_max_mireds - self._attr_min_mireds
                 ) * (
-                    (100 - self._connector._update_data[enl_color_temp]) / 100
+                    (
+                        self._light_color_level_max
+                        - self._connector._update_data[enl_color_temp]
+                    )
+                    / self._light_color_level_max
                 ) + self._attr_min_mireds
 
         if hasattr(self._connector._instance, "getEffect"):
