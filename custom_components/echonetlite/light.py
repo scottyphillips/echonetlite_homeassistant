@@ -113,8 +113,8 @@ class EchonetLight(LightEntity):
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
-        if "echonet_mireds_int" in custom_options:
-            mireds = custom_options["echonet_mireds_int"].values()
+        if mireds_int := custom_options.get("echonet_mireds_int"):
+            mireds = mireds_int.values()
             self._attr_min_mireds = min(mireds)
             self._attr_max_mireds = max(mireds)
         else:
