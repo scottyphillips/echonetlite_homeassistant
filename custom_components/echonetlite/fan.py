@@ -15,7 +15,7 @@ from .const import (
     ENL_FANSPEED,
     ENL_FANSPEED_PERCENT,
     ENL_FAN_DIRECTION,
-    ENL_FAN_OSCILLATION
+    ENL_FAN_OSCILLATION,
 )
 
 _LOGGER = logging.getLogger(__name__)
