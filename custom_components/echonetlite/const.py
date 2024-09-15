@@ -49,6 +49,7 @@ from pychonet.lib.const import ENL_CUMULATIVE_POWER, ENL_INSTANTANEOUS_POWER
 from pychonet.lib.epc_functions import DATA_STATE_CLOSE, DATA_STATE_OPEN
 from pychonet.CeilingFan import (
     ENL_BUZZER,
+    ENL_FANSPEED_PERCENT,
     ENL_FAN_DIRECTION,
     ENL_FAN_LIGHT_BRIGHTNESS,
     ENL_FAN_LIGHT_COLOR_TEMP,
@@ -56,7 +57,6 @@ from pychonet.CeilingFan import (
     ENL_FAN_LIGHT_NIGHT_BRIGHTNESS,
     ENL_FAN_LIGHT_STATUS,
     ENL_FAN_OSCILLATION,
-    ENL_FANSPEED_PERCENT,
 )
 
 DOMAIN = "echonetlite"

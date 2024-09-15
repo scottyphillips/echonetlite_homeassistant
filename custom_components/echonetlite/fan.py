@@ -13,11 +13,14 @@ from homeassistant.const import (
     PRECISION_WHOLE,
 )
 from . import get_device_name
-from .const import CONF_FORCE_POLLING, DATA_STATE_ON, DOMAIN
+from .const import (
+    CONF_FORCE_POLLING,
+    DATA_STATE_ON,
+    DOMAIN,
+    ENL_FANSPEED,
+)
 
 _LOGGER = logging.getLogger(__name__)
-
-ENL_FANSPEED = 0xA0
 
 DEFAULT_FAN_MODES = list(
     FAN_SPEED.keys()
