@@ -50,7 +50,7 @@ from pychonet.lib.epc_functions import DATA_STATE_CLOSE, DATA_STATE_OPEN
 from pychonet.CeilingFan import (
     ENL_FANSPEED_PERCENT,
     ENL_FAN_DIRECTION,
-    ENL_FAN_OSCILLATION
+    ENL_FAN_OSCILLATION,
 )
 
 DOMAIN = "echonetlite"
