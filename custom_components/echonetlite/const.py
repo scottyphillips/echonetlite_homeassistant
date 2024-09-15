@@ -47,11 +47,10 @@ from pychonet.HomeAirConditioner import (
 from pychonet.EchonetInstance import ENL_STATUS, ENL_ON, ENL_OFF
 from pychonet.lib.const import ENL_CUMULATIVE_POWER, ENL_INSTANTANEOUS_POWER
 from pychonet.lib.epc_functions import DATA_STATE_CLOSE, DATA_STATE_OPEN
-
-from custom_components.echonetlite.fan import (
-    ENL_FAN_DIRECTION,
-    ENL_FAN_OSCILLATION,
+from pychonet.CeilingFan import (
     ENL_FANSPEED_PERCENT,
+    ENL_FAN_DIRECTION,
+    ENL_FAN_OSCILLATION
 )
 
 DOMAIN = "echonetlite"
