@@ -3,6 +3,11 @@ from pychonet.HomeAirCleaner import FAN_SPEED
 from pychonet.lib.const import ENL_STATUS
 
 from pychonet.lib.eojx import EOJX_CLASS
+from pychonet.CeilingFan import (
+    ENL_FANSPEED_PERCENT,
+    ENL_FAN_DIRECTION,
+    ENL_FAN_OSCILLATION,
+)
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.const import (
     PRECISION_WHOLE,
@@ -13,9 +18,6 @@ from .const import (
     DATA_STATE_ON,
     DOMAIN,
     ENL_FANSPEED,
-    ENL_FANSPEED_PERCENT,
-    ENL_FAN_DIRECTION,
-    ENL_FAN_OSCILLATION,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -70,6 +72,8 @@ class EchonetFan(FanEntity):
 
         self._attr_should_poll = True
         self._attr_available = True
+
+        self._attr_speed_count = getattr(self._connector._instance, "SPEED_COUNT", 100)
 
         self._set_attrs()
         self.update_option_listener()
