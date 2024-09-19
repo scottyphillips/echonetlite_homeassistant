@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import logging
+from typing import Any
 import pychonet as echonet
 from pychonet.echonetapiclient import EchonetMaxOpcError
 from pychonet.lib.epc import EPC_SUPER, EPC_CODE
@@ -94,7 +95,7 @@ def get_name_by_epc_code(
             unknown = f"({code})"
         name = EPC_CODE.get(jgc, {}).get(jcc, {}).get(code, None)
         if name == None:
-            _code = f"[{hex(jgc)}({jgc})-{hex(jcc)}({jcc})-{hex(code)}({code})]"
+            _code = f"[{hex(int(jgc))}({jgc})-{hex(int(jcc))}({jcc})-{hex(int(code))}({code})]"
             _LOGGER.warning(
                 f"{_code} - Unable to resolve the item name. "
                 + f"Please report the unknown code {_code} at the issue tracker on GitHub!"
@@ -106,7 +107,7 @@ def get_name_by_epc_code(
         return name
 
 
-def polling_update_debug_log(values, eojgc, eojcc):
+def polling_update_debug_log(values: dict[int, Any], eojgc: int, eojcc: int):
     debug_log = f"\nECHONETlite polling update data:\n"
     for value in list(values.keys()):
         debug_log = (
@@ -539,7 +540,7 @@ class ECHONETConnector:
                 if isinstance(batch_data, dict):
                     update_data.update(batch_data)
                 elif len(flags) == 1:
-                    update_data[flags[0]] = batch_data
+                    update_data[int(flags[0])] = batch_data
         _LOGGER.debug(polling_update_debug_log(update_data, self._eojgc, self._eojcc))
         if len(update_data) > 0:
             self._update_data.update(update_data)
