@@ -196,8 +196,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data.setdefault(DOMAIN, {})
         hass.data[DOMAIN].update({entry.entry_id: []})
         udp = UDPServer()
-        loop = asyncio.get_event_loop()
-        udp.run("0.0.0.0", 3610, loop=loop)
+        udp.run("0.0.0.0", 3610, loop=hass.loop)
         server = ECHONETAPIClient(udp)
         server._debug_flag = True
         server._logger = _LOGGER.debug

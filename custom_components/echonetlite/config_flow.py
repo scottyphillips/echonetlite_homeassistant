@@ -83,8 +83,7 @@ async def enumerate_instances(
         server = _init_server
     else:
         udp = UDPServer()
-        loop = asyncio.get_event_loop()
-        udp.run("0.0.0.0", 3610, loop=loop)
+        udp.run("0.0.0.0", 3610, loop=hass.loop)
         server = ECHONETAPIClient(server=udp)
         server._debug_flag = True
         server._logger = _LOGGER.debug
@@ -232,7 +231,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for echonetlite."""
 
     host = None
-    title = None
+    title = ""
     discover_task = None
     instance_list = None
     instances = None
@@ -252,8 +251,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         else:
             udp = UDPServer()
-            loop = asyncio.get_event_loop()
-            udp.run("0.0.0.0", 3610, loop=loop)
+            udp.run("0.0.0.0", 3610, loop=self.hass.loop)
             server = ECHONETAPIClient(server=udp)
             server._debug_flag = True
             server._logger = _LOGGER.debug
