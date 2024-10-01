@@ -1,6 +1,14 @@
 import logging
 from homeassistant.const import CONF_ICON
 from homeassistant.components.select import SelectEntity
+from pychonet.HomeAirConditioner import (
+    ENL_AIR_HORZ,
+    ENL_AIR_VERT,
+    ENL_AUTO_DIRECTION,
+    ENL_FANSPEED,
+    ENL_HVAC_MODE,
+    ENL_SWING_MODE,
+)
 from . import get_name_by_epc_code, get_device_name
 from .const import (
     CONF_DISABLED_DEFAULT,
@@ -59,6 +67,24 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetSelect(SelectEntity):
     _attr_translation_key = DOMAIN
 
+    SELECT_USING_USER_OPTIONS = {
+        "0x1-0x30": {
+            ENL_FANSPEED,
+            ENL_SWING_MODE,
+            ENL_AUTO_DIRECTION,
+            ENL_AIR_HORZ,
+            ENL_AIR_VERT,
+            ENL_HVAC_MODE,
+        },
+        "0x1-0x35": {
+            ENL_FANSPEED,
+            ENL_SWING_MODE,
+            ENL_AUTO_DIRECTION,
+            ENL_AIR_HORZ,
+            ENL_AIR_VERT,
+        },
+    }
+
     def __init__(self, hass, connector, config, code, options):
         """Initialize the select."""
         name = get_device_name(connector, config)
@@ -80,7 +106,15 @@ class EchonetSelect(SelectEntity):
         self._attr_icon = options.get(CONF_ICON, None)
         self._icon_default = self._attr_icon
         self._attr_options = list(self._options.keys())
-        if self._code in list(self._connector._user_options.keys()):
+
+        self._user_option_epcs = self.SELECT_USING_USER_OPTIONS.get(
+            hex(self._connector._instance._eojgc)
+            + "-"
+            + hex(self._connector._instance._eojcc),
+            set(),
+        ).intersection(set(self._connector._user_options.keys()))
+
+        if self._code in self._user_option_epcs:
             if self._connector._user_options[code] is not False:
                 self._attr_options = self._connector._user_options[code]
         self._attr_current_option = self._connector._update_data.get(self._code)
@@ -153,7 +187,7 @@ class EchonetSelect(SelectEntity):
             if keys:
                 self._attr_current_option = keys[0]
         self._attr_icon = self._icons.get(self._attr_current_option, self._icon_default)
-        if self._code in list(self._connector._user_options.keys()):
+        if self._code in self._user_option_epcs:
             if self._connector._user_options[self._code] is not False:
                 self._attr_options = self._connector._user_options[self._code]
 
