@@ -15,7 +15,7 @@ from homeassistant.const import (
     UnitOfVolume,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.components.sensor import (
+from homeassistant.components.sensor.const import (
     ATTR_STATE_CLASS,
     SensorStateClass,
     SensorDeviceClass,
@@ -553,6 +553,19 @@ ENL_OP_CODES = {
             0xEE: {
                 CONF_TYPE: SensorDeviceClass.WATER,
                 CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
+            },
+        },
+        0x73: {  # Bathroom dryer
+            0xBA: {
+                CONF_TYPE: SensorDeviceClass.HUMIDITY,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+            0xBB: {
+                CONF_TYPE: SensorDeviceClass.TEMPERATURE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+            0xE0: {
+                CONF_ICON: "mdi:motion-sensor",
             },
         },
         0x79: {  # Home solar power generation
