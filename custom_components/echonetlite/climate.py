@@ -127,7 +127,9 @@ class EchonetClimate(ClimateEntity):
             self._attr_supported_features = (
                 self._attr_supported_features | ClimateEntityFeature.FAN_MODE
             )
-        if ENL_AIR_VERT in list(self._connector._setPropertyMap):
+        if ENL_AIR_VERT in list(
+            self._connector._setPropertyMap
+        ) or ENL_SWING_MODE in list(self._connector._setPropertyMap):
             self._attr_supported_features = (
                 self._attr_supported_features | ClimateEntityFeature.SWING_MODE
             )
