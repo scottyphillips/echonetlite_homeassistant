@@ -997,6 +997,16 @@ ENL_OP_CODES = {
                 },
             },
         },
+        0xA6: {  # Hybrid Water Heater
+            0xE1: {  # Measured amount of hot water remaining in tank
+                CONF_TYPE: SensorDeviceClass.WATER,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
+            },
+            0xE2: {  # Tank Capacity
+                CONF_TYPE: SensorDeviceClass.WATER,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfVolume.LITERS,
+            },
+        },
     },
     0x03: {  # Cooking/housework-related device class group
         0xB7: {  # Refrigerator
