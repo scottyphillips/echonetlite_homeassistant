@@ -11,6 +11,8 @@ This custom component makes use of the 'pychonet'
 Python3 library also maintained by this author.
 (https://github.com/scottyphillips/pychonet)
 
+*Important note - this repo is no longer in active developement, and i will no longer be actively involved in troubleshooting any issues with the component. However i will respond and approve PRs.
+
 **This component will set up the climate, fan, sensor, select and switch platforms.**
 
 # Current working systems:
