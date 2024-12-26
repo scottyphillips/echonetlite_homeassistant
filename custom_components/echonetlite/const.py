@@ -997,6 +997,22 @@ ENL_OP_CODES = {
                 },
             },
         },
+        0xA5: {  # Multiple Input PCS
+            0xE0: {  # Measured cumulative amount of electric energy (normal direction)
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
+                CONF_MULTIPLIER: 0.001,
+            0xE3: {  # Measured cumulative amount of electric energy (reverse direction)
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
+                CONF_MULTIPLIER: 0.001,
+            0xE7: {  # Measured instantaneous amount of electricity
+                CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+        },
         0xA6: {  # Hybrid Water Heater
             0xE1: {  # Measured amount of hot water remaining in tank
                 CONF_TYPE: SensorDeviceClass.WATER,
