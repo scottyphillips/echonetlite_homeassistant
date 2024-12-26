@@ -1003,11 +1003,13 @@ ENL_OP_CODES = {
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
                 CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
                 CONF_MULTIPLIER: 0.001,
+            },
             0xE3: {  # Measured cumulative amount of electric energy (reverse direction)
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
                 CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
                 CONF_MULTIPLIER: 0.001,
+            },
             0xE7: {  # Measured instantaneous amount of electricity
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
