@@ -132,13 +132,30 @@ ENL_SUPER_ENERGES = {ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER}
 
 ENL_OP_CODES = {
     0x00: {  # Sensor-related Device
+        0x08: {  # Visitor sensor class
+            0xB0: {
+                CONF_ICON: "mdi:motion-sensor",
+            },  # Detection threshold level
+            0xB1: {
+                CONF_ICON: "mdi:motion-sensor",
+            },  # Visitor detection status
+            0xBE: {
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.DURATION,
+                    CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
+                    CONF_MINIMUM: 0,
+                    CONF_MAXIMUM: 0xFFFD,
+                    CONF_MULTIPLIER: 10,
+                },
+            },  # Visitor detection holding time
+        },
         0x11: {  # Temperature sensor
             0xE0: {
                 CONF_ICON: "mdi:thermometer",
                 CONF_TYPE: SensorDeviceClass.TEMPERATURE,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },
-        }
+        },
     },
     0x01: {  # Air Conditioner-related Device
         0x30: {  # Home air conditioner
