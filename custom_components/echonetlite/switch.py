@@ -6,7 +6,6 @@ from . import get_name_by_epc_code, get_device_name
 from .const import (
     CONF_DISABLED_DEFAULT,
     DOMAIN,
-    ENL_OP_CODES,
     CONF_ON_VALUE,
     CONF_OFF_VALUE,
     DATA_STATE_ON,
@@ -30,7 +29,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
         set_enl_status = False
-        _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
+        _enl_op_codes = entity["echonetlite"]._enl_op_codes
         # configure switch entities by looking up full ENL_OP_CODE dict
         for op_code in list(
             set(entity["instance"]["setmap"])
@@ -123,7 +122,7 @@ class EchonetSwitch(SwitchEntity):
             hex(self._options[CONF_SERVICE_DATA][DATA_STATE_ON])[2:],
         ]
         self._from_number = True if options.get(TYPE_NUMBER) else False
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc,self._connector._eojcc,self._code)}"
+        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, self._connector._enl_op_codes.get(CONF_NAME))}"
         self._attr_icon = options.get(CONF_ICON)
         self._attr_unique_id = (
             f"{self._connector._uidi}-{self._code}"

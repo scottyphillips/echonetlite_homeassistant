@@ -1,6 +1,7 @@
 """The echonetlite integration."""
-
 from __future__ import annotations
+import os
+from importlib import import_module
 import logging
 from typing import Any
 import pychonet as echonet
@@ -427,6 +428,7 @@ class ECHONETConnector:
         self._setPropertyMap = instance["setmap"]
         self._manufacturer = None
         self._host_product_code = None
+        self._enl_op_codes = ENL_OP_CODES.get(self._eojgc, {}).get(self._eojcc, {})
         if "manufacturer" in instance:
             self._manufacturer = instance["manufacturer"]
         if "host_product_code" in instance:
@@ -447,8 +449,10 @@ class ECHONETConnector:
             self._host, self._api, self._eojgc, self._eojcc, self._eojci
         )
         _LOGGER.debug(
-            f"Starting ECHONETLite {self._instance.__class__.__name__} instance for {self._eojgc}-{self._eojcc}-{self._eojci} at {self._host}"
+            f"Starting ECHONETLite {self._instance.__class__.__name__} instance for {self._eojgc}-{self._eojcc}-{self._eojci}, manufacturer: {self._manufacturer}, host_product_code: {self._host_product_code} at {self._host}"
         )
+        # Check Check the definition of quirk
+        hass.async_add_executor_job(self._load_quirk)
 
         # TODO this looks messy.
         self._user_options = {
@@ -563,12 +567,8 @@ class ECHONETConnector:
         flags = [ENL_STATUS, ENL_TIMER_SETTING]
         if (
             _enabled_super_energy
-            or ENL_OP_CODES.get(self._eojgc, {})
-            .get(self._eojcc, {})
-            .get(ENL_INSTANTANEOUS_POWER)
-            or ENL_OP_CODES.get(self._eojgc, {})
-            .get(self._eojcc, {})
-            .get(ENL_CUMULATIVE_POWER)
+            or self._enl_op_codes.get(ENL_INSTANTANEOUS_POWER)
+            or self._enl_op_codes.get(ENL_CUMULATIVE_POWER)
         ):
             flags += [ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER]
         # Get supported EPC_FUNCTIONS in pychonet object class
@@ -611,3 +611,41 @@ class ECHONETConnector:
 
     def add_update_option_listener(self, update_func):
         self._update_option_func.append(update_func)
+
+    def _load_quirk(self):
+        # self._manufacturer, self._host_product_code, self._eojgc, self._eojcc
+        def update(extention):
+            for epc in extention.QUIRKS:
+                if func := extention.QUIRKS[epc].get("EPC_FUNCTION"):
+                    self._instance.EPC_FUNCTIONS.update({epc: func})
+                    if op_code := extention.QUIRKS[epc].get("ENL_OP_CODE"):
+                        self._enl_op_codes.update({epc: op_code})
+            _LOGGER.debug(f"Echonet EPC_FUNCTIONS is: {self._instance.EPC_FUNCTIONS}")
+            _LOGGER.debug(f"Echonet _enl_op_codes is: {self._enl_op_codes}")
+
+        if self._manufacturer:
+            check = [
+                "quirks",
+                self._manufacturer,
+                "all",
+                "{:0>2X}".format(self._eojgc) + "{:0>2X}".format(self._eojcc),
+            ]
+            path = os.path.dirname(__file__) + "/" + "/".join(check) + ".py"
+            _LOGGER.debug(f"Echonet _load_quirk check path is: {path}")
+            if os.path.isfile(path):
+                mod = "." + ".".join(check)
+                _LOGGER.debug(f"Echonet import module is: {mod} of {__package__}")
+                update(import_module(mod, package=__package__))
+            if self._host_product_code:
+                check = [
+                    "quirks",
+                    self._manufacturer,
+                    self._host_product_code,
+                    "{:0>2X}".format(self._eojgc) + "{:0>2X}".format(self._eojcc),
+                ]
+                path = os.path.dirname(__file__) + "/" + "/".join(check) + ".py"
+                _LOGGER.debug(f"Echonet _load_quirk check path is: {path}")
+                if os.path.isfile(path):
+                    mod = "." + ".".join(check)
+                    _LOGGER.debug(f"Echonet import module is: {mod} of {__package__}")
+                    update(import_module(mod, package=__package__))

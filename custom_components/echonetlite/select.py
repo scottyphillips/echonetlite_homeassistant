@@ -1,5 +1,5 @@
 import logging
-from homeassistant.const import CONF_ICON
+from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.components.select import SelectEntity
 from pychonet.HomeAirConditioner import (
     ENL_AIR_HORZ,
@@ -14,7 +14,6 @@ from .const import (
     CONF_DISABLED_DEFAULT,
     DOMAIN,
     CONF_FORCE_POLLING,
-    ENL_OP_CODES,
     CONF_ICONS,
     TYPE_SELECT,
     NON_SETUP_SINGLE_ENYITY,
@@ -30,7 +29,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     for entity in hass.data[DOMAIN][config.entry_id]:
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
-        _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
+        _enl_op_codes = entity["echonetlite"]._enl_op_codes
         _non_setup_single_entity = NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(
             eojcc, set()
         )
@@ -118,7 +117,7 @@ class EchonetSelect(SelectEntity):
             if self._connector._user_options[code] is not False:
                 self._attr_options = self._connector._user_options[code]
         self._attr_current_option = self._connector._update_data.get(self._code)
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc,self._connector._eojcc,self._code)}"
+        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, self._connector._enl_op_codes.get(CONF_NAME))}"
         self._attr_unique_id = (
             f"{self._connector._uidi}-{self._code}"
             if self._connector._uidi
