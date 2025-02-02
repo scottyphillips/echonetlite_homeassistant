@@ -122,7 +122,7 @@ class EchonetSwitch(SwitchEntity):
             hex(self._options[CONF_SERVICE_DATA][DATA_STATE_ON])[2:],
         ]
         self._from_number = True if options.get(TYPE_NUMBER) else False
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, self._connector._enl_op_codes.get(CONF_NAME))}"
+        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(CONF_NAME))}"
         self._attr_icon = options.get(CONF_ICON)
         self._attr_unique_id = (
             f"{self._connector._uidi}-{self._code}"

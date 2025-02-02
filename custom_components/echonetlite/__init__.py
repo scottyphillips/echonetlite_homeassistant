@@ -88,8 +88,14 @@ def get_device_name(connector, config) -> str:
 
 
 def get_name_by_epc_code(
-    jgc: int, jcc: int, code: int, unknown: str | None = None
+    jgc: int,
+    jcc: int,
+    code: int,
+    unknown: str | None = None,
+    given_name: str | None = None,
 ) -> str:
+    if given_name != None:
+        return given_name
     if code in EPC_SUPER:
         return EPC_SUPER[code]
     else:
