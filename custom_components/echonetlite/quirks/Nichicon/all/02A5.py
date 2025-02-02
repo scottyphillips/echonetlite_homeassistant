@@ -4,7 +4,7 @@ from homeassistant.components.sensor.const import (
     SensorStateClass,
 )
 from homeassistant.const import CONF_NAME, CONF_TYPE
-from homeassistant.exceptions import NoEntitySpecifiedError
+from ....const import TYPE_DATA_DICT
 
 
 def _16x2_int(edt):
