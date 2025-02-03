@@ -4,26 +4,30 @@ from homeassistant.components.sensor.const import (
     SensorStateClass,
 )
 from homeassistant.const import CONF_NAME, CONF_TYPE
+from pychonet.lib.epc_functions import _int, _signed_int
 from ....const import TYPE_DATA_DICT
 
 
-def _16x2_int(edt):
-    d1 = None
-    d2 = None
-    if len(edt) == 16:
-        d1 = int.from_bytes(edt[0:8], "big")
-        d2 = int.from_bytes(edt[8:16], "big")
-    return [d1, d2]
-
-
 def _02A5F5(edt):
-    (v1, v2) = _16x2_int(edt)
-    return {"household": v1, "grid": v2}
+    d1 = d2 = None
+    try:
+        d1 = _signed_int(edt[0:8])
+        d2 = _signed_int(edt[8:16])
+    except:
+        pass
+    finally:
+        return {"household_consumption": d1, "from/to_grid": d2}
 
 
 def _02A5F6(edt):
-    (v1, v2) = _16x2_int(edt)
-    return {"purchased": v1, "sold": v2}
+    d1 = d2 = None
+    try:
+        d1 = _int(edt[0:8])
+        d2 = _int(edt[8:16])
+    except:
+        pass
+    finally:
+        return {"normal_direction": d1, "reverse_direction": d2}
 
 
 QUIRKS = {
@@ -33,16 +37,16 @@ QUIRKS = {
             CONF_NAME: "Instantaneous amount of energy",
             CONF_TYPE: SensorDeviceClass.POWER,
             CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
-            TYPE_DATA_DICT: ["household", "grid"],
+            TYPE_DATA_DICT: ["household_consumption", "from/to_grid"],
         },
     },
     0xF6: {
         "EPC_FUNCTION": _02A5F6,
         "ENL_OP_CODE": {
-            CONF_NAME: "Cumulative amount of energy",
+            CONF_NAME: "Cumulative energy",
             CONF_TYPE: SensorDeviceClass.ENERGY,
             CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
-            TYPE_DATA_DICT: ["purchased", "sold"],
+            TYPE_DATA_DICT: ["normal_direction", "reverse_direction"],
         },
     },
 }
