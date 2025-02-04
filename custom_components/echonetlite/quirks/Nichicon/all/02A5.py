@@ -3,7 +3,12 @@ from homeassistant.components.sensor.const import (
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import CONF_NAME, CONF_TYPE
+from homeassistant.const import (
+    CONF_NAME,
+    CONF_TYPE,
+    CONF_UNIT_OF_MEASUREMENT,
+    UnitOfEnergy,
+)
 from pychonet.lib.epc_functions import _int, _signed_int
 from ....const import TYPE_DATA_DICT
 
@@ -11,8 +16,8 @@ from ....const import TYPE_DATA_DICT
 def _02A5F5(edt):
     d1 = d2 = None
     try:
-        d1 = _signed_int(edt[0:8])
-        d2 = _signed_int(edt[8:16])
+        d1 = _signed_int(edt[0:4])
+        d2 = _signed_int(edt[4:8])
     except:
         pass
     finally:
@@ -22,8 +27,8 @@ def _02A5F5(edt):
 def _02A5F6(edt):
     d1 = d2 = None
     try:
-        d1 = _int(edt[0:8])
-        d2 = _int(edt[8:16])
+        d1 = float(_int(edt[0:4])) / 1000
+        d2 = float(_int(edt[4:8])) / 1000
     except:
         pass
     finally:
@@ -46,6 +51,7 @@ QUIRKS = {
             CONF_NAME: "Cumulative energy",
             CONF_TYPE: SensorDeviceClass.ENERGY,
             CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+            CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
             TYPE_DATA_DICT: ["normal_direction", "reverse_direction"],
         },
     },
