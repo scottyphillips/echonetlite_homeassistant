@@ -46,7 +46,7 @@ QUIRKS = {
     0xF5: {
         "EPC_FUNCTION": _02A5F5,
         "ENL_OP_CODE": {
-            CONF_NAME: "Instantaneous amount of energy",
+            CONF_NAME: "Instantaneous Power",
             CONF_TYPE: SensorDeviceClass.POWER,
             CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             TYPE_DATA_DICT: [
