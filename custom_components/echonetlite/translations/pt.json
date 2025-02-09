@@ -1,0 +1,184 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Dispositivo já configurado"
+    },
+    "error": {
+      "cannot_connect": "Falha ao ligar.",
+      "invalid_auth": "Autenticação inválida.",
+      "unknown": "Erro inesperado.",
+      "not_found": "Não foi possível detetar o dispositivo.",
+      "already_configured": "O dispositivo com esse IP já está configurado.",
+      "cannot_get_property_maps": "Não foi possível obter os mapas de propriedades necessários para a operação."
+    },
+    "step": {
+      "user": {
+        "title": "Definição de endereço IP e nome do dispositivo (Descoberta Automática)",
+        "description": "Para deteção automática, após pressionar o botão Enviar, efetue operações como ligar ou desligar o dispositivo dentro de 30 segundos. Se souber o endereço IP, introduza o endereço IP e o nome.",
+        "data": {
+          "host": "Anfitrião (Endereço IP)",
+          "title": "Nome do Dispositivo"
+        }
+      },
+      "user_man": {
+        "title": "Definição de endereço IP e nome do dispositivo",
+        "description": "",
+        "data": {
+          "host": "Anfitrião (Endereço IP)",
+          "title": "Nome do Dispositivo"
+        }
+      }
+    },
+    "progress": {
+      "discover": "A descobrir dispositivos ECHONETLite.."
+    }
+  },
+  "options": {
+    "error": {
+      "invalid_path": "O caminho fornecido não é válido. Deve estar no formato `utilizador/nome-repo` e deve ser um repositório github válido."
+    },
+    "step": {
+      "init": {
+        "title": "Opções ECHONETLite",
+        "data": {
+          "other_mode": "Tratamento do modo de operação \"Outro\"",
+          "fan_settings": "Configurar definições da ventoinha",
+          "swing_horiz": "Configurar definições de Oscilação Horizontal",
+          "swing_vert": "Configurar definições de Oscilação Vertical",
+          "auto_direction": "Configurar Direção Automática",
+          "swing_mode": "Configurar Modo de Oscilação",
+          "ha_ui_swing": "Configurar Modo de Oscilação para a interface de utilizador da entidade Clima",
+          "min_temp_heat": "Configurar Temperatura Mínima para Operação de Aquecimento",
+          "max_temp_heat": "Configurar Temperatura Máxima para Operação de Aquecimento",
+          "min_temp_cool": "Configurar Temperatura Mínima para Operação de Arrefecimento",
+          "max_temp_cool": "Configurar Temperatura Máxima para Operação de Arrefecimento",
+          "min_temp_auto": "Configurar Temperatura Mínima para Operação Automática",
+          "max_temp_auto": "Configurar Temperatura Máxima para Operação Automática",
+          "force_polling": "Não parar o polling mesmo que a notificação imediata seja esperada",
+          "super_energy": "Ativar sensores relacionados com energia (se disponíveis)",
+          "batch_size_max": "Número máximo de propriedades para pedidos em lote"
+        },
+        "description": "Configurar definições opcionais"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "echonetlite": {
+        "state": {
+          "stopped": "Parado",
+          "supplying hot water": "A fornecer água quente",
+          "keeping bath temperature": "A manter a temperatura do banho",
+          "heating": "A aquecer",
+          "not heating": "Não está a aquecer"
+        }
+      }
+    },
+    "select": {
+      "echonetlite": {
+        "state": {
+          "auto": "Automático",
+          "minimum": "Mínimo",
+          "low": "Baixo",
+          "medium-low": "Médio-Baixo",
+          "medium": "Médio",
+          "medium-high": "Médio-Alto",
+          "high": "Alto",
+          "very-high": "Muito Alto",
+          "max": "Máximo",
+          "rc-right": "> >>",
+          "left-lc": "<< <",
+          "lc-center-rc": "< || >",
+          "left-lc-rc-right": "<< < > >>",
+          "right": ">>",
+          "rc": ">",
+          "center": "||",
+          "center-right": "|| >>",
+          "center-rc": "|| >",
+          "center-rc-right": "|| > >>",
+          "lc": "<",
+          "lc-right": "< >>",
+          "lc-rc": "< >",
+          "lc-rc-right": "< > >>",
+          "lc-center": "< ||",
+          "lc-center-right": "< || >>",
+          "lc-center-rc-right": "< || > >>",
+          "left": "<<",
+          "left-right": "<< >>",
+          "left-rc": "<< >",
+          "left-rc-right": "<< > >>",
+          "left-center": "<< ||",
+          "left-center-right": "<< || >>",
+          "left-center-rc": "<< || >",
+          "left-center-rc-right": "<< || > >>",
+          "left-lc-right": "<< < >>",
+          "left-lc-rc": "<< < >",
+          "left-lc-center": "<< < ||",
+          "left-lc-center-right": "<< < || >>",
+          "left-lc-center-rc": "<< < || >",
+          "left-lc-center-rc-right": "<< < || > >>",
+          "upper": "Superior",
+          "upper-central": "Superior Central",
+          "central": "Central",
+          "lower-central": "Inferior Central",
+          "lower": "Inferior",
+          "not-used": "Não Usado (Desligado)",
+          "vert": "Vertical",
+          "horiz": "Horizontal",
+          "vert-horiz": "Vertical-Horizontal",
+          "non-auto": "Fixo",
+          "auto-vert": "Automático Vertical",
+          "auto-horiz": "Automático Horizontal"
+        }
+      }
+    },
+    "climate": {
+      "echonetlite": {
+        "state_attributes": {
+          "fan_mode": {
+            "state": {
+              "auto": "Automático",
+              "minimum": "Mínimo",
+              "low": "Baixo",
+              "medium-low": "Médio-Baixo",
+              "medium": "Médio",
+              "medium-high": "Médio-Alto",
+              "high": "Alto",
+              "very-high": "Muito Alto",
+              "max": "Máximo"
+            }
+          },
+          "swing_mode": {
+            "name": "Direção do ar",
+            "state": {
+              "rc-right": "> >>",
+              "left-lc": "<< <",
+              "lc-center-rc": "< || >",
+              "left-lc-rc-right": "<< < > >>",
+              "right": ">>",
+              "rc": ">",
+              "center": "||",
+              "center-right": "|| >>",
+              "center-rc": "|| >",
+              "center-rc-right": "|| > >>",
+              "lc": "<",
+              "lc-right": "< >>",
+              "lc-rc": "< >",
+              "lc-rc-right": "< > >>",
+              "lc-center": "< ||",
+              "lc-center-right": "< || >>",
+              "lc-center-rc-right": "< || > >>",
+              "left": "<<",
+              "left-right": "<< >>",
+              "left-rc": "<< >",
+              "left-rc-right": "<< > >>",
+              "left-center": "<< ||",
+              "left-center-right": "<< || >>",
+              "left-center-rc": "<< || >",
+              "left-center-rc-right": "<< || > >>",
+              "left-lc-right": "<< < >>",
+              "left-lc-rc": "<< < >",
+              "left-lc-center": "<< < ||",
+              "left-lc-center-right": "<< < || >>",
+              "left-lc-center-rc": "<< < || >",
+              "left-lc-center-rc-right": "<< < || > >>",
