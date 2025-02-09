@@ -459,7 +459,7 @@ class ECHONETConnector:
             f"Starting ECHONETLite {self._instance.__class__.__name__} instance for {self._eojgc}-{self._eojcc}-{self._eojci}, manufacturer: {self._manufacturer}, host_product_code: {self._host_product_code} at {self._host}"
         )
         # Check Check the definition of quirk
-        hass.async_add_executor_job(self._load_quirk)
+        self._load_quirk()
 
         # TODO this looks messy.
         self._user_options = {
@@ -589,6 +589,10 @@ class ECHONETConnector:
                 self._update_flags_full_list.append(value)
                 self._update_data[value] = None
 
+        _LOGGER.debug(
+            f"Echonet device {self._host}-{self._eojgc}-{self._eojcc}-{self._eojci} update_flags_full_list: {self._update_flags_full_list}"
+        )
+
         return _prev_update_flags_full_list != self._update_flags_full_list
 
     def _make_batch_request_flags(self):
@@ -610,7 +614,7 @@ class ECHONETConnector:
             self._update_flags_full_list[start_index:full_list_length]
         )
         _LOGGER.debug(
-            f"Echonet device {self._host}'s batch request flags list: {self._update_flag_batches}"
+            f"Echonet device {self._host}-{self._eojgc}-{self._eojcc}-{self._eojci} batch request flags list: {self._update_flag_batches}"
         )
 
     def register_async_update_callbacks(self, update_func):
