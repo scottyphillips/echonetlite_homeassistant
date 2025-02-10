@@ -4,18 +4,20 @@ from __future__ import annotations
 import os
 from importlib import import_module
 import logging
+import asyncio
+from functools import partial
 from typing import Any
 import pychonet as echonet
 from pychonet.echonetapiclient import EchonetMaxOpcError
 from pychonet.lib.epc import EPC_SUPER, EPC_CODE
 from pychonet.lib.const import VERSION, ENL_STATMAP
 from datetime import timedelta
-import asyncio
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
 from homeassistant.const import (
+    CONF_NAME,
     Platform,
     PERCENTAGE,
     UnitOfPower,
@@ -33,7 +35,6 @@ from .const import (
     DOMAIN,
     ENABLE_SUPER_ENERGY_DEFAULT,
     ENL_OP_CODES,
-    ENL_SUPER_CODES,
     ENL_TIMER_SETTING,
     USER_OPTIONS,
     TEMP_OPTIONS,
@@ -115,12 +116,15 @@ def get_name_by_epc_code(
         return name
 
 
-def polling_update_debug_log(values: dict[int, Any], eojgc: int, eojcc: int):
+def polling_update_debug_log(values: dict[int, Any], conn_instance: ECHONETConnector):
+    eojgc = conn_instance._eojgc
+    eojcc = conn_instance._eojcc
     debug_log = f"\nECHONETlite polling update data:\n"
     for value in list(values.keys()):
+        name = conn_instance._enl_op_codes.get(value, {}).get(CONF_NAME)
         debug_log = (
             debug_log
-            + f" - {get_name_by_epc_code(eojgc,eojcc,value)} {value:#x}({value}): {values[value]}\n"
+            + f" - {get_name_by_epc_code(eojgc, eojcc, value, None, name)} {value:#x}({value}): {values[value]}\n"
         )
     return debug_log
 
@@ -317,6 +321,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
 
         echonetlite = ECHONETConnector(instance, hass, entry)
+        await echonetlite.startup()
         try:
             # Since there is a small chance of failure, perform a few retry for each instance
             # (otherwise, assuming 50 instances and 1% failure rate, setup would suceed in (1-0.01)^50 = 60% cases only)
@@ -414,6 +419,10 @@ async def update_listener(hass, entry):
             return True
 
 
+async def get_echonet_connector():
+    return
+
+
 class ECHONETConnector:
     """EchonetAPIConnector is used to centralise API calls for  Echonet devices.
     API calls are aggregated per instance (not per node!)"""
@@ -455,11 +464,16 @@ class ECHONETConnector:
         self._instance = echonet.Factory(
             self._host, self._api, self._eojgc, self._eojcc, self._eojci
         )
+
+    async def startup(self):
+        entry = self._entry
+
         _LOGGER.debug(
             f"Starting ECHONETLite {self._instance.__class__.__name__} instance for {self._eojgc}-{self._eojcc}-{self._eojci}, manufacturer: {self._manufacturer}, host_product_code: {self._host_product_code} at {self._host}"
         )
+
         # Check Check the definition of quirk
-        self._load_quirk()
+        await self._load_quirk()
 
         # TODO this looks messy.
         self._user_options = {
@@ -551,7 +565,7 @@ class ECHONETConnector:
                     update_data[flags[0]] = batch_data
                 elif isinstance(batch_data, dict):
                     update_data.update(batch_data)
-        _LOGGER.debug(polling_update_debug_log(update_data, self._eojgc, self._eojcc))
+        _LOGGER.debug(polling_update_debug_log(update_data, self))
         if len(update_data) > 0:
             self._update_data.update(update_data)
             return self._update_data
@@ -623,7 +637,7 @@ class ECHONETConnector:
     def add_update_option_listener(self, update_func):
         self._update_option_func.append(update_func)
 
-    def _load_quirk(self):
+    async def _load_quirk(self):
         # self._manufacturer, self._host_product_code, self._eojgc, self._eojcc
         def update(extention):
             for epc in extention.QUIRKS:
@@ -646,7 +660,10 @@ class ECHONETConnector:
             if os.path.isfile(path):
                 mod = "." + ".".join(check)
                 _LOGGER.debug(f"Echonet import module is: {mod} of {__package__}")
-                update(import_module(mod, package=__package__))
+                extention = await self.hass.async_add_executor_job(
+                    partial(import_module, mod, package=__package__)
+                )
+                update(extention)
             if self._host_product_code:
                 check = [
                     "quirks",
@@ -659,4 +676,7 @@ class ECHONETConnector:
                 if os.path.isfile(path):
                     mod = "." + ".".join(check)
                     _LOGGER.debug(f"Echonet import module is: {mod} of {__package__}")
-                    update(import_module(mod, package=__package__))
+                    extention = await self.hass.async_add_executor_job(
+                        partial(import_module, mod, package=__package__)
+                    )
+                    update(extention)
