@@ -24,8 +24,8 @@ from homeassistant.const import (
     UnitOfElectricPotential,
 )
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.components.number import NumberDeviceClass
+from homeassistant.components.sensor.const import SensorDeviceClass
+from homeassistant.components.number.const import NumberDeviceClass
 from .const import (
     CONF_ENABLE_SUPER_ENERGY,
     DOMAIN,
@@ -38,7 +38,7 @@ from .const import (
     CONF_BATCH_SIZE_MAX,
     MISC_OPTIONS,
 )
-from .config_flow import enumerate_instances, ErrorConnect
+from .config_flow import enumerate_instances, async_discover_newhost, ErrorConnect
 from pychonet.lib.udpserver import UDPServer
 
 from pychonet import ECHONETAPIClient
@@ -167,22 +167,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
     host = None
     udp = None
-    loop = None
     server = None
 
     async def discover_callback(host):
-        await config_entries.HANDLERS[DOMAIN].async_discover_newhost(hass, host)
+        await async_discover_newhost(hass, host)
 
     def unload_config_entry():
-        _LOGGER.debug(
-            f"Called unload_config_entry() try to remove {host} from server._state."
-        )
-        if server._state.get(host):
-            server._state.pop(host)
-        # Remove update callback function
-        for _key in list(server._update_callbacks.keys()):
-            if _key.startswith(host):
-                del server._update_callbacks[_key]
+        if server != None:
+            _LOGGER.debug(
+                f"Called unload_config_entry() try to remove {host} from server._state."
+            )
+            if server._state.get(host):
+                server._state.pop(host)
+            # Remove update callback function
+            for _key in list(server._update_callbacks.keys()):
+                if _key.startswith(host):
+                    del server._update_callbacks[_key]
 
     entry.async_on_unload(unload_config_entry)
 
@@ -338,11 +338,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _LOGGER.debug(f"Plaform entry data - {entry.data}")
 
-    if hasattr(hass.config_entries, "async_forward_entry_setups"):
-        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    else:
-        # this api is too recent (around April 2021) but keep for backwards compatibility
-        hass.config_entries.async_setup_platforms(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
@@ -403,7 +399,7 @@ async def update_listener(hass, entry):
         if _need_reload:
             return await hass.config_entries.async_reload(entry.entry_id)
         else:
-            return True
+            return None
 
 
 class ECHONETConnector:
@@ -501,7 +497,7 @@ class ECHONETConnector:
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self, **kwargs):
         try:
-            return await self.async_update_data(kwargs=kwargs)
+            await self.async_update_data(kwargs)
         except EchonetMaxOpcError as ex:
             # Adjust the maximum number of properties for batch requests
             batch_size_max = self._user_options.get(
@@ -525,7 +521,7 @@ class ECHONETConnector:
             )
             self._make_batch_request_flags()
 
-            return await self.async_update(kwargs=kwargs)
+            await self.async_update(**kwargs)
 
     async def async_update_data(self, kwargs):
         update_data = {}
@@ -543,7 +539,6 @@ class ECHONETConnector:
         _LOGGER.debug(polling_update_debug_log(update_data, self._eojgc, self._eojcc))
         if len(update_data) > 0:
             self._update_data.update(update_data)
-            return self._update_data
 
     async def async_update_callback(self, isPush: bool = False):
         await self.async_update_data(kwargs={"no_request": True})

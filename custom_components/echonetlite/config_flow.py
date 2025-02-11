@@ -9,7 +9,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigEntryState
+from homeassistant.config_entries import ConfigEntryState, ConfigFlowResult
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
@@ -227,6 +227,23 @@ async def enumerate_instances(
     return instance_list
 
 
+async def async_discover_newhost(hass, host):
+    _LOGGER.debug(f"received newip discovery: {host}")
+    if host not in _detected_hosts.keys():
+        try:
+            instance_list = await enumerate_instances(hass, host, newhost=True)
+            _LOGGER.debug(f"ECHONET Node detected in {host}")
+        except ErrorConnect as e:
+            _LOGGER.debug(f"ECHONET Node Error Connect ({e})")
+        except ErrorIpChanged as e:
+            _LOGGER.debug(f"ECHONET Detected Node IP Changed to '{e}'")
+        else:
+            if len(instance_list):
+                _detected_hosts.update({host: instance_list})
+            else:
+                _LOGGER.debug(f"ECHONET Node not found in {host}")
+
+
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for echonetlite."""
 
@@ -239,9 +256,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def init_discover(self):
         async def discover_callback(host):
-            await config_entries.HANDLERS[DOMAIN].async_discover_newhost(
-                self.hass, host
-            )
+            await async_discover_newhost(self.hass, host)
 
         if DOMAIN in self.hass.data:  # maybe set up by config entry?
             _LOGGER.debug("API listener has already been setup previously..")
@@ -276,7 +291,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         errors = {}
         """Handle the initial step."""
         scm = STEP_USER_DATA_SCHEMA
@@ -342,24 +357,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         return OptionsFlowHandler(config_entry)
-
-    @staticmethod
-    @callback
-    async def async_discover_newhost(hass, host):
-        _LOGGER.debug(f"received newip discovery: {host}")
-        if host not in _detected_hosts.keys():
-            try:
-                instance_list = await enumerate_instances(hass, host, newhost=True)
-                _LOGGER.debug(f"ECHONET Node detected in {host}")
-            except ErrorConnect as e:
-                _LOGGER.debug(f"ECHONET Node Error Connect ({e})")
-            except ErrorIpChanged as e:
-                _LOGGER.debug(f"ECHONET Detected Node IP Changed to '{e}'")
-            else:
-                if len(instance_list):
-                    _detected_hosts.update({host: instance_list})
-                else:
-                    _LOGGER.debug(f"ECHONET Node not found in {host}")
 
 
 class ErrorConnect(HomeAssistantError):
