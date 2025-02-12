@@ -1,5 +1,8 @@
 import logging
 
+from functools import cached_property
+
+from homeassistant.helpers.device_registry import DeviceInfo
 from pychonet.GeneralLighting import ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
 from pychonet.CeilingFan import (
     ENL_FAN_LIGHT_STATUS,
@@ -13,20 +16,18 @@ from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import _swap_dict
 
 from homeassistant.components.light import (
-    ATTR_EFFECT,
-    LightEntity,
-    ColorMode,
-    LightEntityFeature,
-)
-from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    ATTR_COLOR_TEMP,
-    COLOR_MODE_BRIGHTNESS,
-    COLOR_MODE_COLOR_TEMP,
+    ATTR_COLOR_TEMP_KELVIN,
+    ATTR_EFFECT,
+    ColorMode,
+    LightEntity,
+    LightEntityFeature,
 )
 
 from . import get_device_name
 from .const import DATA_STATE_ON, DOMAIN, CONF_FORCE_POLLING
+
+import homeassistant.util.color as color_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -113,6 +114,7 @@ class EchonetLight(LightEntity):
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
+
         if mireds_int := custom_options.get("echonet_mireds_int"):
             mireds = mireds_int.values()
             self._attr_min_mireds = min(mireds)
@@ -120,6 +122,13 @@ class EchonetLight(LightEntity):
         else:
             self._attr_min_mireds = MIN_MIREDS
             self._attr_max_mireds = MAX_MIREDS
+        self._attr_min_color_temp_kelvin = color_util.color_temperature_mired_to_kelvin(
+            self._attr_max_mireds
+        )
+        self._attr_max_color_temp_kelvin = color_util.color_temperature_mired_to_kelvin(
+            self._attr_min_mireds
+        )
+
         self._custom_options = custom_options
         if custom_options[ENL_COLOR_TEMP] in list(self._connector._setPropertyMap):
             self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
@@ -165,7 +174,7 @@ class EchonetLight(LightEntity):
         except TimeoutError:
             pass
 
-    @property
+    @cached_property
     def device_info(self):
         return {
             "identifiers": {
@@ -210,11 +219,15 @@ class EchonetLight(LightEntity):
             self._attr_brightness = kwargs[ATTR_BRIGHTNESS]
 
         if (
-            ATTR_COLOR_TEMP in kwargs
+            (ATTR_COLOR_TEMP_KELVIN in kwargs or "color_temp" in kwargs)
             and self._attr_supported_color_modes
             and self._attr_color_mode == ColorMode.COLOR_TEMP
         ):
-            attr_color_tmp = float(kwargs[ATTR_COLOR_TEMP])
+            if kwargs.get("color_temp") == None:
+                kwargs["color_temp"] = color_util.color_temperature_kelvin_to_mired(
+                    kwargs[ATTR_COLOR_TEMP_KELVIN]
+                )
+            attr_color_tmp = float(kwargs["color_temp"])
             if self._custom_options["echonet_color"]:
                 color_temp_int = 0x41
                 for i, mired in self._custom_options["echonet_mireds_int"].items():
@@ -241,6 +254,9 @@ class EchonetLight(LightEntity):
                     f"New color temp of light: {attr_color_tmp} mireds - {color_temp_int}"
                 )
                 self._attr_color_temp = int(attr_color_tmp)
+            self._attr_color_temp_kelvin = color_util.color_temperature_mired_to_kelvin(
+                self._attr_color_temp
+            )
 
             states["color_temperature"] = int(color_temp_int)
 
@@ -307,21 +323,30 @@ class EchonetLight(LightEntity):
                 color_temp = (
                     self._connector._update_data[enl_color_temp]
                     if enl_color_temp in self._connector._update_data
-                    else "white"
+                    else "daylight_color"
                 )
-                self._attr_color_temp = self._custom_options["echonet_mireds_int"].get(
-                    self._custom_options["echonet_int_color"].get(color_temp), 153
+                self._attr_color_temp = int(
+                    self._custom_options["echonet_mireds_int"].get(
+                        self._custom_options["echonet_int_color"].get(color_temp),
+                        MIN_MIREDS,
+                    )
                 )
             else:
-                self._attr_color_temp = (
-                    self._attr_max_mireds - self._attr_min_mireds
-                ) * (
-                    (
-                        self._light_color_level_max
-                        - self._connector._update_data[enl_color_temp]
+                self._attr_color_temp = int(
+                    (self._attr_max_mireds - self._attr_min_mireds)
+                    * (
+                        (
+                            self._light_color_level_max
+                            - self._connector._update_data[enl_color_temp]
+                        )
+                        / self._light_color_level_max
                     )
-                    / self._light_color_level_max
-                ) + self._attr_min_mireds
+                    + self._attr_min_mireds
+                )
+
+            self._attr_color_temp_kelvin = color_util.color_temperature_mired_to_kelvin(
+                self._attr_color_temp
+            )
 
         if hasattr(self._connector._instance, "getEffect"):
             self._attr_effect = self._connector._instance.getEffect()
@@ -364,13 +389,13 @@ class EchonetLight(LightEntity):
             self._custom_options[ENL_STATUS] not in self._connector._ntfPropertyMap
             or (
                 self._attr_supported_color_modes
-                and COLOR_MODE_BRIGHTNESS in self._attr_supported_color_modes
+                and ColorMode.BRIGHTNESS in self._attr_supported_color_modes
                 and self._custom_options[ENL_BRIGHTNESS]
                 not in self._connector._ntfPropertyMap
             )
             or (
                 self._attr_supported_color_modes
-                and COLOR_MODE_COLOR_TEMP in self._attr_supported_color_modes
+                and ColorMode.COLOR_TEMP in self._attr_supported_color_modes
                 and ENL_COLOR_TEMP not in self._connector._ntfPropertyMap
             )
         )
