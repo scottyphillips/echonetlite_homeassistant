@@ -16,7 +16,7 @@ from homeassistant.const import (
     UnitOfVolumeFlowRate,
 )
 from homeassistant.components.sensor.const import (
-    ATTR_STATE_CLASS,
+    CONF_STATE_CLASS,
     SensorStateClass,
     SensorDeviceClass,
 )
@@ -60,7 +60,6 @@ from pychonet.CeilingFan import (
 )
 
 DOMAIN = "echonetlite"
-CONF_STATE_CLASS = ATTR_STATE_CLASS
 CONF_ENSURE_ON = "ensureon"
 CONF_OTHER_MODE = "other_mode"
 CONF_FORCE_POLLING = "force_polling"
