@@ -5,6 +5,7 @@ import voluptuous as vol
 
 from homeassistant.const import (
     CONF_ICON,
+    CONF_NAME,
     CONF_SERVICE,
     CONF_TYPE,
     CONF_UNIT_OF_MEASUREMENT,
@@ -81,7 +82,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             _enl_super_codes = {
                 k: v for k, v in ENL_SUPER_CODES.items() if not k in ENL_SUPER_ENERGES
             }
-        _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {}) | _enl_super_codes
+        _enl_op_codes = entity["echonetlite"]._enl_op_codes | _enl_super_codes
         _epc_functions = (
             entity["echonetlite"]._instance.EPC_FUNCTIONS | EPC_SUPER_FUNCTIONS
         )
@@ -240,7 +241,7 @@ class EchonetSensor(SensorEntity):
         self._attr_state_class = self._sensor_attributes.get(CONF_STATE_CLASS)
 
         # Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
-        self._attr_name = f"{name} {get_name_by_epc_code(self._eojgc, self._eojcc, self._op_code, self._attr_device_class)}"
+        self._attr_name = f"{name} {get_name_by_epc_code(self._eojgc, self._eojcc, self._op_code, self._attr_device_class, self._connector._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
 
         if "dict_key" in _attr_keys:
             self._attr_unique_id += f'-{self._sensor_attributes["dict_key"]}'
