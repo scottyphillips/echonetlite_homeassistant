@@ -801,6 +801,15 @@ ENL_OP_CODES = {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL,
             },
+            0xD1: {
+                CONF_MULTIPLIER: 0.1,
+                CONF_UNIT_OF_MEASUREMENT: "Ah",
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
+            0xD2: {
+                CONF_TYPE: SensorDeviceClass.VOLTAGE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+            },
             0xD3: {
                 CONF_ICON_POSITIVE: "mdi:battery-arrow-up",
                 CONF_ICON_NEGATIVE: "mdi:battery-arrow-down",
@@ -869,6 +878,10 @@ ENL_OP_CODES = {
                     CONF_MAXIMUM: 0x3B9AC9FF,
                     CONF_BYTE_LENGTH: 0x04,
                 },
+            },
+            0xEF: {
+                CONF_TYPE: SensorDeviceClass.VOLTAGE,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },
         },
         0x80: {  # Electric energy meter
