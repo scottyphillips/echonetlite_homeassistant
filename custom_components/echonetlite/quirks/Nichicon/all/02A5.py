@@ -13,21 +13,26 @@ from pychonet.lib.epc_functions import _int, _signed_int
 from ....const import TYPE_DATA_DICT
 
 
+def _sint_4(edt):
+    res = _signed_int(edt)
+    return res if res >= -2147483647 and res <= 2147483645 else None
+
+
 def _02A5F5(edt):
     d1 = d2 = d3 = d4 = None
     try:
-        d1 = _signed_int(edt[0:4])
-        d2 = _signed_int(edt[4:8])
-        d3 = _signed_int(edt[8:12])
-        d4 = _signed_int(edt[12:16])
+        d1 = _sint_4(edt[0:4])
+        d2 = _sint_4(edt[4:8])
+        d3 = _sint_4(edt[8:12])
+        d4 = _sint_4(edt[12:16])
     except:
         pass
     finally:
         return {
-            "household_consumption": d1,
-            "from/to_grid": d2,
-            "some_a": d3,
-            "some_b": d4,
+            "From(-)/To(+) Grid": d1,
+            "Household Consumption": d2,
+            "Photovoltaic Origin": d3,
+            "Other Origin": d4,
         }
 
 
@@ -50,10 +55,10 @@ QUIRKS = {
             CONF_TYPE: SensorDeviceClass.POWER,
             CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
             TYPE_DATA_DICT: [
-                "household_consumption",
-                "from/to_grid",
-                "some_a",
-                "some_b",
+                "From(-)/To(+) Grid",
+                "Household Consumption",
+                "Photovoltaic Origin",
+                "Other Origin",
             ],
         },
     },
