@@ -1,6 +1,7 @@
 import logging
 from homeassistant.const import (
     CONF_ICON,
+    CONF_NAME,
     CONF_TYPE,
     CONF_MINIMUM,
     CONF_MAXIMUM,
@@ -14,7 +15,6 @@ from .const import (
     CONF_DISABLED_DEFAULT,
     DOMAIN,
     CONF_FORCE_POLLING,
-    ENL_OP_CODES,
     CONF_AS_ZERO,
     CONF_MAX_OPC,
     CONF_BYTE_LENGTH,
@@ -30,7 +30,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     for entity in hass.data[DOMAIN][config.entry_id]:
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
-        _enl_op_codes = ENL_OP_CODES.get(eojgc, {}).get(eojcc, {})
+        _enl_op_codes = entity["echonetlite"]._enl_op_codes
         # configure select entities by looking up full ENL_OP_CODE dict
         for op_code in list(
             set(entity["instance"]["setmap"])
@@ -62,7 +62,7 @@ class EchonetNumber(NumberEntity):
             self._connector._instance._host
         ]
         self._attr_icon = options.get(CONF_ICON, None)
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc,self._code)}"
+        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
         self._attr_unique_id = (
             f"{self._connector._uidi}-{self._code}"
             if self._connector._uidi
