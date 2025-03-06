@@ -145,6 +145,42 @@ NOTE: Selecting which specific options are suitable is a 'trial and error' proce
 
 As soon as you configure your options and save, the settings will take effect.
 
+## How to find quirks of a manufacturer or specific device
+It is known that there are manufacturers or specific devices that have data points that are not in the Echonet Lite specification. If the device you are using has these quirks, it will be more useful to find the quirks and define the behavior. Here are the steps to find the quirks as a first step.
+
+1. Enable the debug log on the ECHONETLite integration screen and restart HA.
+2. Once startup is complete, disable the debug log and download the log.
+3. Using the IP address of the target device, check the getmap and setmap data to find values ​​above 240 (0xF0).
+In the following sample log, 250 (0xFA) and 253 (0xFD) can be get/set. This device is from manufacturer "Rinnai" and has eojgc 2 (0x02) and eojcc 130 (0x82)
+```
+{'eojcc': 130, 'eojci': 1, 'eojgc': 2, 'getmap': [128, 224, 129, 241, 130, 131, 147, 243, 244, 245, 246, 247, 136, 248, 249, 138, 250, 251, 252, 157, 253, 158, 254, 159, 255], 'host': '192.168.0.49', 'host_product_code': None, 'manufacturer': 'Rinnai', 'name': None, 'ntfmap': [128, 129, 136, 250, 251, 253], 'setmap': [129, 147, 250, 253], 'uid': '0000590170500000000024cd8d4e84f4', 'uidi': '0000590170500000000024cd8d4e84f4-2-130-1'}]}
+```
+4. Create a quirks file for debugging.
+- File name: quirks/Rinnai/all/0282.py (quirks/{manufacturer}/all/xxyy.py)
+```python
+from homeassistant.const import CONF_NAME
+
+def _hex(edt):
+	return edt.hex()
+
+QUIRKS = {
+    0xFA: {
+        "EPC_FUNCTION": _hex,
+        "ENL_OP_CODE": {
+            CONF_NAME: "FA",
+        },
+    },
+    0xFD: {
+        "EPC_FUNCTION": _hex,
+        "ENL_OP_CODE": {
+            CONF_NAME: "FD",
+        },
+    },
+}
+```
+5. When you restart the HA, two new entities, FA and FD, will be configured in this example. Perform zone control and observe whether their values ​​change in a distinctive way.
+6. If a characteristic change occurs, you are lucky! Please submit a new issue, or go a step further and submit your pull request. 👍
+
 
 ## Hall of Fame
 Thanks Naoki Sawada for creating the switch entity, creating the custom service call framework, and a ton of other improvements.
