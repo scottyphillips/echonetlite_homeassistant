@@ -587,6 +587,10 @@ class ECHONETConnector:
             or self._enl_op_codes.get(ENL_CUMULATIVE_POWER)
         ):
             flags += [ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER]
+        if ((self._eojgc, self._eojcc) == (0x00, 0x02)
+         or (self._eojgc, self._eojcc) == (0x00, 0x08)
+         or (self._eojgc, self._eojcc) == (0x00, 0x0f)):
+            flags += [0xB0, 0xB1]
         # Get supported EPC_FUNCTIONS in pychonet object class
         _epc_keys = set(self._instance.EPC_FUNCTIONS.keys()) - set(EPC_SUPER.keys())
         for item in self._getPropertyMap:

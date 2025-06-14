@@ -131,6 +131,66 @@ ENL_SUPER_ENERGES = {ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER}
 
 ENL_OP_CODES = {
     0x00: {  # Sensor-related Device
+        0x02: {  # Detection threshold
+            0xB0: {
+                CONF_ICON: "mdi:eye",
+                CONF_TYPE: None,
+                TYPE_NUMBER: {
+                    CONF_AS_ZERO: 0x31,
+                    CONF_MINIMUM: 0x31,
+                    CONF_MAXIMUM: 0x38,
+                },
+            },
+            0xB1: { # Invasion occurense status
+                CONF_ICON: "mdi:eye",
+                CONF_TYPE: None,
+                TYPE_NUMBER: {
+                    CONF_AS_ZERO: 0x41,
+                    CONF_MINIMUM: 0x41,
+                    CONF_MAXIMUM: 0x42,
+                },
+            },
+        },
+        0x08: {  # Visitor detection status
+            0xB0: {
+                CONF_ICON: "mdi:eye",
+                CONF_TYPE: None,
+                TYPE_NUMBER: {
+                    CONF_AS_ZERO: 0x31,
+                    CONF_MINIMUM: 0x31,
+                    CONF_MAXIMUM: 0x38,
+                },
+            },
+            0xB1: {
+                CONF_ICON: "mdi:eye",
+                CONF_TYPE: None,
+                TYPE_NUMBER: {
+                    CONF_AS_ZERO: 0x41,
+                    CONF_MINIMUM: 0x41,
+                    CONF_MAXIMUM: 0x42,
+                },
+            },
+        },
+        0x0F: {  # Mailing detection status
+            0xB0: {
+                CONF_ICON: "mdi:eye",
+                CONF_TYPE: None,
+                TYPE_NUMBER: {
+                    CONF_AS_ZERO: 0x31,
+                    CONF_MINIMUM: 0x31,
+                    CONF_MAXIMUM: 0x38,
+                },
+            },
+            0xB1: {
+                CONF_ICON: "mdi:eye",
+                CONF_TYPE: None,
+                TYPE_NUMBER: {
+                    CONF_AS_ZERO: 0x41,
+                    CONF_MINIMUM: 0x41,
+                    CONF_MAXIMUM: 0x42,
+                },
+            },
+        },
         0x08: {  # Visitor sensor class
             0xB0: {
                 CONF_ICON: "mdi:motion-sensor",
