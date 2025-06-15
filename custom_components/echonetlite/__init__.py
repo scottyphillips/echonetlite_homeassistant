@@ -40,6 +40,8 @@ from .const import (
     TEMP_OPTIONS,
     CONF_BATCH_SIZE_MAX,
     MISC_OPTIONS,
+    THRESH_LEVELS,
+    ENL_THRESHOLD,
 )
 from .config_flow import enumerate_instances, async_discover_newhost, ErrorConnect
 from pychonet.lib.udpserver import UDPServer
@@ -484,6 +486,7 @@ class ECHONETConnector:
             "max_temp_cool": 35,
             "min_temp_auto": 15,
             "max_temp_auto": 35,
+            ENL_THRESHOLD: False,
         }
         # User selectable options for fan + swing modes for HVAC
         for option in USER_OPTIONS.keys():

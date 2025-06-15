@@ -11,6 +11,7 @@ from pychonet.HomeAirConditioner import (
 )
 from . import get_name_by_epc_code, get_device_name
 from .const import (
+    ENL_THRESHOLD,
     CONF_DISABLED_DEFAULT,
     DOMAIN,
     CONF_FORCE_POLLING,
@@ -67,6 +68,9 @@ class EchonetSelect(SelectEntity):
     _attr_translation_key = DOMAIN
 
     SELECT_USING_USER_OPTIONS = {
+        "0x0-0x2": {
+            ENL_THRESHOLD,
+        },
         "0x1-0x30": {
             ENL_FANSPEED,
             ENL_SWING_MODE,

@@ -46,7 +46,7 @@ from pychonet.HomeAirConditioner import (
 )
 from pychonet.EchonetInstance import ENL_STATUS, ENL_ON, ENL_OFF
 from pychonet.lib.const import ENL_CUMULATIVE_POWER, ENL_INSTANTANEOUS_POWER
-from pychonet.lib.epc_functions import DATA_STATE_CLOSE, DATA_STATE_OPEN
+from pychonet.lib.epc_functions import DATA_STATE_CLOSE, DATA_STATE_OPEN, DICT_31_8_LEVELS, _swap_dict
 from pychonet.CeilingFan import (
     ENL_BUZZER,
     ENL_FANSPEED_PERCENT,
@@ -58,6 +58,8 @@ from pychonet.CeilingFan import (
     ENL_FAN_LIGHT_STATUS,
     ENL_FAN_OSCILLATION,
 )
+
+ENL_THRESHOLD = 0xB0
 
 DOMAIN = "echonetlite"
 CONF_ENSURE_ON = "ensureon"
@@ -104,6 +106,9 @@ HVAC_SELECT_OP_CODES = {
     0xA5: AIRFLOW_HORIZ,
     0xA4: AIRFLOW_VERT,
 }
+THRESH_LEVELS = {
+    0xB0: _swap_dict(DICT_31_8_LEVELS)
+}
 
 FAN_SELECT_OP_CODES = {0xA0: FAN_SPEED}
 
@@ -135,10 +140,15 @@ ENL_OP_CODES = {
             0xB0: {
                 CONF_ICON: "mdi:eye",
                 CONF_TYPE: None,
-                TYPE_NUMBER: {
-                    CONF_AS_ZERO: 0x31,
-                    CONF_MINIMUM: 0x31,
-                    CONF_MAXIMUM: 0x38,
+                TYPE_SELECT: {
+                    "31": 0x31,
+                    "32": 0x32,
+                    "33": 0x33,
+                    "34": 0x34,
+                    "35": 0x35,
+                    "36": 0x36,
+                    "37": 0x37,
+                    "38": 0x38,
                 },
             },
             0xB1: { # Invasion occurense status
@@ -151,25 +161,34 @@ ENL_OP_CODES = {
                 },
             },
         },
-        0x08: {  # Visitor detection status
+        0x08: {  # Visitor sensor class
             0xB0: {
-                CONF_ICON: "mdi:eye",
+                CONF_ICON: "mdi:motion-sensor",
                 CONF_TYPE: None,
                 TYPE_NUMBER: {
                     CONF_AS_ZERO: 0x31,
                     CONF_MINIMUM: 0x31,
                     CONF_MAXIMUM: 0x38,
                 },
-            },
+            },  # Detection threshold level
             0xB1: {
-                CONF_ICON: "mdi:eye",
+                CONF_ICON: "mdi:motion-sensor",
                 CONF_TYPE: None,
                 TYPE_NUMBER: {
                     CONF_AS_ZERO: 0x41,
                     CONF_MINIMUM: 0x41,
                     CONF_MAXIMUM: 0x42,
                 },
-            },
+            },  # Visitor detection status
+            0xBE: {
+                TYPE_NUMBER: {
+                    CONF_TYPE: NumberDeviceClass.DURATION,
+                    CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
+                    CONF_MINIMUM: 0,
+                    CONF_MAXIMUM: 0xFFFD,
+                    CONF_MULTIPLIER: 10,
+                },
+            },  # Visitor detection holding time
         },
         0x0F: {  # Mailing detection status
             0xB0: {
@@ -190,23 +209,6 @@ ENL_OP_CODES = {
                     CONF_MAXIMUM: 0x42,
                 },
             },
-        },
-        0x08: {  # Visitor sensor class
-            0xB0: {
-                CONF_ICON: "mdi:motion-sensor",
-            },  # Detection threshold level
-            0xB1: {
-                CONF_ICON: "mdi:motion-sensor",
-            },  # Visitor detection status
-            0xBE: {
-                TYPE_NUMBER: {
-                    CONF_TYPE: NumberDeviceClass.DURATION,
-                    CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
-                    CONF_MINIMUM: 0,
-                    CONF_MAXIMUM: 0xFFFD,
-                    CONF_MULTIPLIER: 10,
-                },
-            },  # Visitor detection holding time
         },
         0x11: {  # Temperature sensor
             0xE0: {
@@ -1424,6 +1426,8 @@ SILENT_MODE_OPTIONS = {
 
 HVAC_MODE_OPTIONS = {"as_off": "As Off", "as_idle": "As Idle"}
 
+THRESHOLD_OPTIONS = {"disarmed1":"Disarmed2", "armed_home1":"Armed Home2", "armed_away1":"Armed Away2"}
+
 OPTION_HA_UI_SWING = "ha_ui_swing"
 
 USER_OPTIONS = {
@@ -1443,6 +1447,7 @@ USER_OPTIONS = {
         ],
     },
     OPTION_HA_UI_SWING: {"option": OPTION_HA_UI_SWING, "option_list": []},
+    ENL_THRESHOLD: {"option": "detection_threshold", "option_list": THRESHOLD_OPTIONS},
 }
 
 TEMP_OPTIONS = {
