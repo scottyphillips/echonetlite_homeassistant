@@ -55,6 +55,14 @@ ECHONETLite互換機器で使用するためのHomeAssistantカスタムコン�
   * 冷蔵庫
      * MR-WZ55H
 
+* 富士通ゼネラル OP-J03DZ WiFi アダプターでコントロールされている以下の機器：
+  * エアコン
+    * 「ノクリア」Cシリーズ
+      * AS-C224R
+      * AS-C254R
+    * 「ノクリア」Vシリーズ
+      * AS-V173N2
+
 * 'MoekadenRoom' ECHONETLite シミュレーター: https://github.com/SonyCSL/MoekadenRoom
      * エアコンオブジェクト
      * 照明オブジェクト
