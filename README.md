@@ -93,6 +93,14 @@ compatible ECHONETLite Devices:
   * Refrigerator
      * MR-WZ55H
 
+* Fujitsu General OP-J03DZ WiFi Adaptor connected to the following systems:
+  * Air Conditioner
+    * "Nocria" C Series
+      * AS-C224R
+      * AS-C254R
+    * "Nocria" V Series
+      * AS-V173N2
+
 
 ## Installation - Enable ECHONET protocol
 This Custom Component was originally designed for the Mitsubishi MAC-568IF-E WiFi
