@@ -15,6 +15,7 @@ from homeassistant.const import (
     UnitOfVolume,
     UnitOfVolumeFlowRate,
 )
+from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor.const import (
     CONF_STATE_CLASS,
     SensorStateClass,
@@ -45,7 +46,12 @@ from pychonet.HomeAirConditioner import (
     SWING_MODE,
 )
 from pychonet.EchonetInstance import ENL_STATUS, ENL_ON, ENL_OFF
-from pychonet.lib.const import ENL_CUMULATIVE_POWER, ENL_INSTANTANEOUS_POWER
+from pychonet.lib.const import (
+    ENL_CUMULATIVE_POWER,
+    ENL_FAULT_DESCRIPTION,
+    ENL_FAULT_STATUS,
+    ENL_INSTANTANEOUS_POWER,
+)
 from pychonet.lib.epc_functions import DATA_STATE_CLOSE, DATA_STATE_OPEN
 from pychonet.CeilingFan import (
     ENL_BUZZER,
@@ -111,6 +117,7 @@ COVER_SELECT_OP_CODES = {0xE0: {OPEN: 0x41, CLOSE: 0x42, STOP: 0x43}}
 
 ENL_TIMER_SETTING = 0x97
 ENL_SUPER_CODES = {
+    ENL_STATUS: {CONF_TYPE: BinarySensorDeviceClass.POWER},
     ENL_INSTANTANEOUS_POWER: {
         CONF_TYPE: SensorDeviceClass.POWER,
         CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
@@ -124,6 +131,11 @@ ENL_SUPER_CODES = {
     ENL_TIMER_SETTING: {
         CONF_ICON: "mdi:clock-outline",
         TYPE_TIME: True,
+    },
+    ENL_FAULT_STATUS: {CONF_TYPE: BinarySensorDeviceClass.PROBLEM},
+    ENL_FAULT_DESCRIPTION: {
+        CONF_TYPE: SensorDeviceClass.ENUM,
+        TYPE_DATA_DICT: ["fault classification", "error code"],
     },
 }
 

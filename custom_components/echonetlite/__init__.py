@@ -35,6 +35,8 @@ from .const import (
     DOMAIN,
     ENABLE_SUPER_ENERGY_DEFAULT,
     ENL_OP_CODES,
+    ENL_SUPER_CODES,
+    ENL_SUPER_ENERGES,
     ENL_TIMER_SETTING,
     USER_OPTIONS,
     TEMP_OPTIONS,
@@ -43,6 +45,13 @@ from .const import (
 )
 from .config_flow import enumerate_instances, async_discover_newhost, ErrorConnect
 from pychonet.lib.udpserver import UDPServer
+from pychonet.lib.epc_functions import (
+    DICT_30_ON_OFF,
+    DICT_30_OPEN_CLOSED,
+    DICT_30_TRUE_FALSE,
+    DICT_41_ON_OFF,
+    _hh_mm,
+)
 
 from pychonet import ECHONETAPIClient
 from pychonet.EchonetInstance import (
@@ -64,6 +73,7 @@ from pychonet.HomeAirConditioner import (
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [
+    Platform.BINARY_SENSOR,
     Platform.SENSOR,
     Platform.CLIMATE,
     Platform.SELECT,
@@ -173,6 +183,31 @@ def get_unit_by_devise_class(device_class: str) -> str | None:
         unit = None
 
     return unit
+
+
+def regist_as_inputs(epc_function_data):
+    if epc_function_data:
+        if type(epc_function_data) == list:
+            if type(epc_function_data[1]) == dict and len(epc_function_data[1]) > 1:
+                return True  # Switch or Select
+            if callable(epc_function_data[0]) and epc_function_data[0] == _hh_mm:
+                return True  # Time
+        elif callable(epc_function_data) and epc_function_data == _hh_mm:
+            return True  # Time
+    return False
+
+
+def regist_as_binary_sensor(epc_function_data):
+    if epc_function_data:
+        if type(epc_function_data) == list:
+            if epc_function_data[1] in (
+                DICT_41_ON_OFF,
+                DICT_30_TRUE_FALSE,
+                DICT_30_ON_OFF,
+                DICT_30_OPEN_CLOSED,
+            ):
+                return True
+    return False
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -581,12 +616,20 @@ class ECHONETConnector:
         )
         # General purpose data items
         flags = [ENL_STATUS, ENL_TIMER_SETTING]
-        if (
-            _enabled_super_energy
-            or self._enl_op_codes.get(ENL_INSTANTANEOUS_POWER)
-            or self._enl_op_codes.get(ENL_CUMULATIVE_POWER)
-        ):
-            flags += [ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER]
+        # if (
+        #     _enabled_super_energy
+        #     or self._enl_op_codes.get(ENL_INSTANTANEOUS_POWER)
+        #     or self._enl_op_codes.get(ENL_CUMULATIVE_POWER)
+        # ):
+        #     flags += [ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER]
+        if _enabled_super_energy:
+            _enl_super_codes = ENL_SUPER_CODES
+        else:
+            _enl_super_codes = {
+                k: v for k, v in ENL_SUPER_CODES.items() if not k in ENL_SUPER_ENERGES
+            }
+        flags += list(_enl_super_codes)
+
         # Get supported EPC_FUNCTIONS in pychonet object class
         _epc_keys = set(self._instance.EPC_FUNCTIONS.keys()) - set(EPC_SUPER.keys())
         for item in self._getPropertyMap:
