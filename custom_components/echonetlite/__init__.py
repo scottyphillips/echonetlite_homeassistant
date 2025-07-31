@@ -200,7 +200,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug(f"ECHONETlite platform is already started.")
-        server = hass.data[DOMAIN]["api"]
+        server = hass.data.get(DOMAIN, {}).get("api")
         hass.data[DOMAIN].update({entry.entry_id: []})
     else:  # setup API
         _LOGGER.debug(f"Starting up ECHONETlite platform..")
