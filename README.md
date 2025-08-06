@@ -79,6 +79,7 @@ compatible ECHONETLite Devices:
 * Mitsubishi MAC-588IF-E WiFi Adaptor connected to the following systems:
   * Ducted
      * PEA-M200LAA
+     * PEAD-M71JAA
 
 * Mitsubishi MAC-600IF WiFi Adaptor connected to the following systems:
   * Z Series
