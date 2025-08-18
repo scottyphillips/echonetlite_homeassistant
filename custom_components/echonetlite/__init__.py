@@ -616,12 +616,6 @@ class ECHONETConnector:
         )
         # General purpose data items
         flags = [ENL_STATUS, ENL_TIMER_SETTING]
-        # if (
-        #     _enabled_super_energy
-        #     or self._enl_op_codes.get(ENL_INSTANTANEOUS_POWER)
-        #     or self._enl_op_codes.get(ENL_CUMULATIVE_POWER)
-        # ):
-        #     flags += [ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER]
         if _enabled_super_energy:
             _enl_super_codes = ENL_SUPER_CODES
         else:
