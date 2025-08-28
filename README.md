@@ -79,6 +79,7 @@ compatible ECHONETLite Devices:
 * Mitsubishi MAC-588IF-E WiFi Adaptor connected to the following systems:
   * Ducted
      * PEA-M200LAA
+     * PEAD-M71JAA
 
 * Mitsubishi MAC-600IF WiFi Adaptor connected to the following systems:
   * Z Series
@@ -92,6 +93,14 @@ compatible ECHONETLite Devices:
 * Mitsubishi REF-WLAN001 WiFi Adaptor connected to the following systems:
   * Refrigerator
      * MR-WZ55H
+
+* Fujitsu General OP-J03DZ WiFi Adaptor connected to the following systems:
+  * Air Conditioner
+    * "Nocria" C Series
+      * AS-C224R
+      * AS-C254R
+    * "Nocria" V Series
+      * AS-V173N2
 
 
 ## Installation - Enable ECHONET protocol
