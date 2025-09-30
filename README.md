@@ -23,6 +23,7 @@ compatible ECHONETLite Devices:
 |:--------------------|:-----------------------------------------------|:-----------------------------|:---------------------------------|:--------------------------------------------------------------------------------------------------|
 | Mitsubishi Electric | MAC-568IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | MAC-578IF2-E                                   | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
+| Mitsubishi Electric | MAC-587IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | MAC-588IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | MAC-600IF                                      | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
 | Mitsubishi Electric | HM-W002-AC                                     | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
@@ -75,6 +76,10 @@ compatible ECHONETLite Devices:
      * MSZ-AP50VGD
   * Ducted
      * PEAD-RP71
+
+* Mitsubishi MAC-587IF-E WiFi Adaptor connected to the following systems:
+  * Ducted
+    * PEAD-M50JA2
 
 * Mitsubishi MAC-588IF-E WiFi Adaptor connected to the following systems:
   * Ducted
