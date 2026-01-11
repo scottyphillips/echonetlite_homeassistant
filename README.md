@@ -25,12 +25,14 @@ compatible ECHONETLite Devices:
 | Mitsubishi Electric | MAC-578IF2-E                                   | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | MAC-588IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | MAC-600IF                                      | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
+| Mitsubishi Electric | MAC-900IF                                      | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | HM-W002-AC                                     | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | Eco-Cute SRT-S466A + RMCB-H6SE-T               | ElectricWaterHeater          | Sensor, Select, Switch           |                                                                                                   |
 | Mitsubishi Electric | REF-WLAN001                                    | Refrigerator                 | Sensor                           |                                                                                                   |
 | Sharp               | AY-J22H Air Conditioner                        | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
 | Sharp               | AY-L40P Air Conditioner                        | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
 | Sharp               | KI-HS70 Air Purifier                           | HomeAirCleaner               | Fan, Sensor, Select              |                                                                                                   |
+| Sharp               | JH-RWL8 Multi Energy Monitor                   | HomeSolarPower, StorageBattery | Sensor, Select                 |                                                                                                   |
 | Panasonic           | CS-221DJ Air Conditioner                       | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
 | Panasonic           | CS-362DJ2 Air Conditioner                      | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
 | Panasonic           | HF-JA2-W                                       |                              | Sensor                           | IP/JEM-A conversion adapter.                                                                      |
@@ -84,6 +86,14 @@ compatible ECHONETLite Devices:
 * Mitsubishi MAC-600IF WiFi Adaptor connected to the following systems:
   * Z Series
      * MSZ-ZW4022S
+
+* Mitsubishi MAC-900IF WiFi Adaptor connected to the following systems:
+  * Z Series
+     * MSZ-ZW4024S
+  * XD Series
+     * MSZ-XD2225
+  * R Series
+     * MSZ-BKR2223
 
 * Mitsubishi HM-W002-AC WiFi Adaptor connected to the following systems:
   * JXV Series
