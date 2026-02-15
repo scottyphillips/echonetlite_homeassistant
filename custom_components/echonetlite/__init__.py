@@ -1,50 +1,53 @@
 """The echonetlite integration."""
 
 from __future__ import annotations
-import os
-from importlib import import_module
-import logging
+
 import asyncio
-from functools import partial
-from typing import Any
-import pychonet as echonet
-from pychonet.echonetapiclient import EchonetMaxOpcError
-from pychonet.lib.epc import EPC_SUPER, EPC_CODE
-from pychonet.lib.const import VERSION, ENL_STATMAP
+import logging
+import os
 from datetime import timedelta
+from functools import partial
+from importlib import import_module
+from typing import Any
+
+import pychonet as echonet
 from homeassistant import config_entries
+from homeassistant.components.number.const import NumberDeviceClass
+from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.util import Throttle
 from homeassistant.const import (
     CONF_NAME,
-    Platform,
     PERCENTAGE,
-    UnitOfPower,
-    UnitOfTemperature,
-    UnitOfEnergy,
-    UnitOfVolume,
+    Platform,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
+    UnitOfEnergy,
+    UnitOfPower,
+    UnitOfTemperature,
+    UnitOfVolume,
 )
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.components.sensor.const import SensorDeviceClass
-from homeassistant.components.number.const import NumberDeviceClass
-from .const import (
-    CONF_ENABLE_SUPER_ENERGY,
-    DOMAIN,
-    ENABLE_SUPER_ENERGY_DEFAULT,
-    ENL_OP_CODES,
-    ENL_SUPER_CODES,
-    ENL_SUPER_ENERGES,
-    ENL_TIMER_SETTING,
-    USER_OPTIONS,
-    TEMP_OPTIONS,
-    CONF_BATCH_SIZE_MAX,
-    MISC_OPTIONS,
+from homeassistant.util import Throttle
+from pychonet import ECHONETAPIClient
+from pychonet.echonetapiclient import EchonetMaxOpcError
+from pychonet.EchonetInstance import (
+    ENL_CUMULATIVE_POWER,
+    ENL_GETMAP,
+    ENL_INSTANTANEOUS_POWER,
+    ENL_SETMAP,
+    ENL_STATUS,
+    ENL_UID,
 )
-from .config_flow import enumerate_instances, async_discover_newhost, ErrorConnect
-from pychonet.lib.udpserver import UDPServer
+from pychonet.HomeAirConditioner import (
+    ENL_AIR_HORZ,
+    ENL_AIR_VERT,
+    ENL_AUTO_DIRECTION,
+    ENL_FANSPEED,
+    ENL_SWING_MODE,
+)
+from pychonet.lib.const import ENL_STATMAP, VERSION
+from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.epc_functions import (
     DICT_30_ON_OFF,
     DICT_30_OPEN_CLOSED,
@@ -52,24 +55,22 @@ from pychonet.lib.epc_functions import (
     DICT_41_ON_OFF,
     _hh_mm,
 )
+from pychonet.lib.udpserver import UDPServer
 
-from pychonet import ECHONETAPIClient
-from pychonet.EchonetInstance import (
-    ENL_GETMAP,
-    ENL_SETMAP,
-    ENL_UID,
-    ENL_STATUS,
-    ENL_INSTANTANEOUS_POWER,
-    ENL_CUMULATIVE_POWER,
+from .config_flow import ErrorConnect, async_discover_newhost, enumerate_instances
+from .const import (
+    CONF_BATCH_SIZE_MAX,
+    CONF_ENABLE_SUPER_ENERGY,
+    DOMAIN,
+    ENABLE_SUPER_ENERGY_DEFAULT,
+    ENL_OP_CODES,
+    ENL_SUPER_CODES,
+    ENL_SUPER_ENERGES,
+    ENL_TIMER_SETTING,
+    MISC_OPTIONS,
+    TEMP_OPTIONS,
+    USER_OPTIONS,
 )
-from pychonet.HomeAirConditioner import (
-    ENL_FANSPEED,
-    ENL_AUTO_DIRECTION,
-    ENL_SWING_MODE,
-    ENL_AIR_VERT,
-    ENL_AIR_HORZ,
-)
-
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [
@@ -129,7 +130,7 @@ def get_name_by_epc_code(
 def polling_update_debug_log(values: dict[int, Any], conn_instance: ECHONETConnector):
     eojgc = conn_instance._eojgc
     eojcc = conn_instance._eojcc
-    debug_log = f"\nECHONETlite polling update data:\n"
+    debug_log = "\nECHONETlite polling update data:\n"
     for value in list(values.keys()):
         name = conn_instance._enl_op_codes.get(value, {}).get(CONF_NAME)
         debug_log = (
@@ -234,11 +235,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(unload_config_entry)
 
     if DOMAIN in hass.data:  # maybe set up by config entry?
-        _LOGGER.debug(f"ECHONETlite platform is already started.")
+        _LOGGER.debug("ECHONETlite platform is already started.")
         server = hass.data[DOMAIN]["api"]
         hass.data[DOMAIN].update({entry.entry_id: []})
     else:  # setup API
-        _LOGGER.debug(f"Starting up ECHONETlite platform..")
+        _LOGGER.debug("Starting up ECHONETlite platform..")
         _LOGGER.debug(f"pychonet version is {VERSION}")
         hass.data.setdefault(DOMAIN, {})
         hass.data[DOMAIN].update({entry.entry_id: []})
@@ -367,7 +368,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         {"instance": instance, "echonetlite": echonetlite}
                     )
                     break
-                except TimeoutError as ex:
+                except TimeoutError:
                     _LOGGER.debug(
                         f"Setting up ECHONET Instance host {host} timed out. Retry {retry} of 3"
                     )
@@ -620,7 +621,7 @@ class ECHONETConnector:
             _enl_super_codes = ENL_SUPER_CODES
         else:
             _enl_super_codes = {
-                k: v for k, v in ENL_SUPER_CODES.items() if not k in ENL_SUPER_ENERGES
+                k: v for k, v in ENL_SUPER_CODES.items() if k not in ENL_SUPER_ENERGES
             }
         flags += list(_enl_super_codes)
 
