@@ -1,40 +1,40 @@
 import logging
-
-from pychonet.HomeAirConditioner import (
-    AIRFLOW_VERT,
-    ENL_STATUS,
-    ENL_FANSPEED,
-    ENL_AIR_VERT,
-    ENL_AUTO_DIRECTION,
-    ENL_SWING_MODE,
-    ENL_HVAC_MODE,
-    ENL_HVAC_SET_TEMP,
-    ENL_HVAC_SET_HUMIDITY,
-    ENL_HVAC_ROOM_TEMP,
-    ENL_HVAC_SILENT_MODE,
-    FAN_SPEED,
-    SILENT_MODE,
-)
-
-from pychonet.lib.eojx import EOJX_CLASS
+import math
 
 import voluptuous as vol
-
 from homeassistant.components.climate import (
     ClimateEntity,
 )
-from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.climate.const import (
+    ATTR_HVAC_MODE,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
-    ATTR_HVAC_MODE,
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
     PRECISION_WHOLE,
     UnitOfTemperature,
 )
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_platform
+from pychonet.HomeAirConditioner import (
+    AIRFLOW_VERT,
+    ENL_AIR_VERT,
+    ENL_AUTO_DIRECTION,
+    ENL_FANSPEED,
+    ENL_HVAC_MODE,
+    ENL_HVAC_ROOM_TEMP,
+    ENL_HVAC_SET_HUMIDITY,
+    ENL_HVAC_SET_TEMP,
+    ENL_HVAC_SILENT_MODE,
+    ENL_STATUS,
+    ENL_SWING_MODE,
+    FAN_SPEED,
+    SILENT_MODE,
+)
+from pychonet.lib.eojx import EOJX_CLASS
+
 from . import get_device_name
 from .const import DATA_STATE_ON, DOMAIN, OPTION_HA_UI_SWING
 
@@ -328,10 +328,9 @@ class EchonetClimate(ClimateEntity):
         if hvac_mode is not None:
             await self.async_set_hvac_mode(hvac_mode)
 
+        settemp = self._normalize_settemp(kwargs.get(ATTR_TEMPERATURE))
         if kwargs.get(ATTR_TEMPERATURE) is not None:
-            await self._connector._instance.setOperationalTemperature(
-                kwargs.get(ATTR_TEMPERATURE)
-            )
+            await self._connector._instance.setOperationalTemperature(settemp)
 
     async def async_set_humidity(self, humidity: int) -> None:
         await self._connector._instance.setOperationalTemperature(humidity)
@@ -396,3 +395,24 @@ class EchonetClimate(ClimateEntity):
         self._set_min_max_temp()
         if self.hass:
             self.async_schedule_update_ha_state()
+
+    def _normalize_settemp(self, req: float | int | None) -> int | None:
+        if req is None:
+            return None
+
+        res = None
+        if abs(req - round(req)) < 1e-9:
+            res = int(round(req))
+        else:
+            prev = self._attr_target_temperature
+            frac = req - math.floor(req)
+
+            if abs(frac - 0.5) < 1e-9 and prev is not None:
+                if req >= prev:
+                    res = math.ceil(req)
+                if req < prev:
+                    res = math.floor(req)
+            else:
+                res = int(math.floor(req + 0.5))
+
+        return res
