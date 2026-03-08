@@ -331,9 +331,7 @@ class EchonetLight(LightEntity):
                 )
                 self._attr_color_temp_kelvin = _mireds_to_kelvin(mired_val)
             else:
-                mired_val = (
-                    self._max_mireds - self._min_mireds
-                ) * (
+                mired_val = (self._max_mireds - self._min_mireds) * (
                     (
                         self._light_color_level_max
                         - self._connector._update_data[enl_color_temp]
