@@ -70,7 +70,6 @@ from pychonet.HomeAirConditioner import (
     ENL_AIR_HORZ,
 )
 
-
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [
     Platform.BINARY_SENSOR,
