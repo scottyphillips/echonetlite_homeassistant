@@ -1,8 +1,5 @@
 import logging
 
-from functools import cached_property
-
-from homeassistant.helpers.device_registry import DeviceInfo
 from pychonet.GeneralLighting import ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
 from pychonet.CeilingFan import (
     ENL_FAN_LIGHT_STATUS,
@@ -16,18 +13,18 @@ from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import _swap_dict
 
 from homeassistant.components.light import (
+    ATTR_EFFECT,
+    LightEntity,
+    ColorMode,
+    LightEntityFeature,
+)
+from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
-    ATTR_EFFECT,
-    ColorMode,
-    LightEntity,
-    LightEntityFeature,
 )
 
 from . import get_device_name
 from .const import DATA_STATE_ON, DOMAIN, CONF_FORCE_POLLING
-
-import homeassistant.util.color as color_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +32,16 @@ DEFAULT_BRIGHTNESS_SCALE = 255
 MIN_MIREDS = 153  # 6500k
 MAX_MIREDS = 500  # 2000k
 DEVICE_SCALE = 100
+
+
+def _mireds_to_kelvin(mireds):
+    """Convert mireds to kelvin."""
+    return round(1000000 / mireds) if mireds else None
+
+
+def _kelvin_to_mireds(kelvin):
+    """Convert kelvin to mireds."""
+    return round(1000000 / kelvin) if kelvin else None
 
 
 async def async_setup_entry(hass, config_entry, async_add_devices):
@@ -114,21 +121,21 @@ class EchonetLight(LightEntity):
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
-
         if mireds_int := custom_options.get("echonet_mireds_int"):
             mireds = mireds_int.values()
-            self._attr_min_mireds = min(mireds)
-            self._attr_max_mireds = max(mireds)
+            self._attr_min_color_temp_kelvin = _mireds_to_kelvin(max(mireds))
+            self._attr_max_color_temp_kelvin = _mireds_to_kelvin(min(mireds))
         else:
-            self._attr_min_mireds = MIN_MIREDS
-            self._attr_max_mireds = MAX_MIREDS
-        self._attr_min_color_temp_kelvin = color_util.color_temperature_mired_to_kelvin(
-            self._attr_max_mireds
-        )
-        self._attr_max_color_temp_kelvin = color_util.color_temperature_mired_to_kelvin(
-            self._attr_min_mireds
-        )
-
+            self._attr_min_color_temp_kelvin = _mireds_to_kelvin(MAX_MIREDS)
+            self._attr_max_color_temp_kelvin = _mireds_to_kelvin(MIN_MIREDS)
+        # Keep mired limits for internal calculations
+        if mireds_int := custom_options.get("echonet_mireds_int"):
+            mireds = mireds_int.values()
+            self._min_mireds = min(mireds)
+            self._max_mireds = max(mireds)
+        else:
+            self._min_mireds = MIN_MIREDS
+            self._max_mireds = MAX_MIREDS
         self._custom_options = custom_options
         if custom_options[ENL_COLOR_TEMP] in list(self._connector._setPropertyMap):
             self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
@@ -174,7 +181,7 @@ class EchonetLight(LightEntity):
         except TimeoutError:
             pass
 
-    @cached_property
+    @property
     def device_info(self):
         return {
             "identifiers": {
@@ -219,15 +226,12 @@ class EchonetLight(LightEntity):
             self._attr_brightness = kwargs[ATTR_BRIGHTNESS]
 
         if (
-            (ATTR_COLOR_TEMP_KELVIN in kwargs or "color_temp" in kwargs)
+            ATTR_COLOR_TEMP_KELVIN in kwargs
             and self._attr_supported_color_modes
             and self._attr_color_mode == ColorMode.COLOR_TEMP
         ):
-            if kwargs.get("color_temp") == None:
-                kwargs["color_temp"] = color_util.color_temperature_kelvin_to_mired(
-                    kwargs[ATTR_COLOR_TEMP_KELVIN]
-                )
-            attr_color_tmp = float(kwargs["color_temp"])
+            # Convert kelvin from HA to mireds for internal device logic
+            attr_color_tmp = float(_kelvin_to_mireds(kwargs[ATTR_COLOR_TEMP_KELVIN]))
             if self._custom_options["echonet_color"]:
                 color_temp_int = 0x41
                 for i, mired in self._custom_options["echonet_mireds_int"].items():
@@ -238,12 +242,12 @@ class EchonetLight(LightEntity):
                 _LOGGER.debug(
                     f"New color temp of light: {color_temp} - {color_temp_int}"
                 )
-                self._attr_color_temp = int(
-                    self._custom_options["echonet_mireds_int"].get(color_temp_int)
+                self._attr_color_temp_kelvin = _mireds_to_kelvin(
+                    int(self._custom_options["echonet_mireds_int"].get(color_temp_int))
                 )
             else:
-                color_scale = (attr_color_tmp - float(self._attr_min_mireds)) / float(
-                    self._attr_max_mireds - self._attr_min_mireds
+                color_scale = (attr_color_tmp - float(self._min_mireds)) / float(
+                    self._max_mireds - self._min_mireds
                 )
                 _LOGGER.debug(f"Set color to : {color_scale}")
                 color_temp_int = min(
@@ -253,10 +257,7 @@ class EchonetLight(LightEntity):
                 _LOGGER.debug(
                     f"New color temp of light: {attr_color_tmp} mireds - {color_temp_int}"
                 )
-                self._attr_color_temp = int(attr_color_tmp)
-            self._attr_color_temp_kelvin = color_util.color_temperature_mired_to_kelvin(
-                self._attr_color_temp
-            )
+                self._attr_color_temp_kelvin = _mireds_to_kelvin(int(attr_color_tmp))
 
             states["color_temperature"] = int(color_temp_int)
 
@@ -312,41 +313,34 @@ class EchonetLight(LightEntity):
             self._attr_supported_color_modes
             and self._attr_color_mode == ColorMode.COLOR_TEMP
         ):
-            """color temperature in mired."""
+            """color temperature in kelvin."""
             enl_color_temp = self._custom_options[ENL_COLOR_TEMP]
             _LOGGER.debug(
                 f"Current color temp of light: {self._connector._update_data[enl_color_temp]}"
             )
 
             if self._custom_options["echonet_color"]:
-                # get the current echonet mireds
+                # get the current echonet mireds and convert to kelvin
                 color_temp = (
                     self._connector._update_data[enl_color_temp]
                     if enl_color_temp in self._connector._update_data
-                    else "daylight_color"
+                    else "white"
                 )
-                self._attr_color_temp = int(
-                    self._custom_options["echonet_mireds_int"].get(
-                        self._custom_options["echonet_int_color"].get(color_temp),
-                        MIN_MIREDS,
-                    )
+                mired_val = self._custom_options["echonet_mireds_int"].get(
+                    self._custom_options["echonet_int_color"].get(color_temp), 153
                 )
+                self._attr_color_temp_kelvin = _mireds_to_kelvin(mired_val)
             else:
-                self._attr_color_temp = int(
-                    (self._attr_max_mireds - self._attr_min_mireds)
-                    * (
-                        (
-                            self._light_color_level_max
-                            - self._connector._update_data[enl_color_temp]
-                        )
-                        / self._light_color_level_max
+                mired_val = (
+                    self._max_mireds - self._min_mireds
+                ) * (
+                    (
+                        self._light_color_level_max
+                        - self._connector._update_data[enl_color_temp]
                     )
-                    + self._attr_min_mireds
-                )
-
-            self._attr_color_temp_kelvin = color_util.color_temperature_mired_to_kelvin(
-                self._attr_color_temp
-            )
+                    / self._light_color_level_max
+                ) + self._min_mireds
+                self._attr_color_temp_kelvin = _mireds_to_kelvin(mired_val)
 
         if hasattr(self._connector._instance, "getEffect"):
             self._attr_effect = self._connector._instance.getEffect()
