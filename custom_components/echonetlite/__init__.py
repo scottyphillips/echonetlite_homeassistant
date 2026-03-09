@@ -74,7 +74,6 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
 PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.SENSOR,
