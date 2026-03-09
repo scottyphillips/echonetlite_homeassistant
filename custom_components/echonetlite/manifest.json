@@ -13,6 +13,6 @@
     "@nao-pon",
     "@samqixin"
   ],
-  "version":  "3.9.0dev1",
+  "version":  "3.9.0",
   "iot_class": "local_polling"
 }
