@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time as pytime
 from datetime import timedelta
 from functools import partial
 from importlib import import_module
@@ -89,6 +90,23 @@ PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=1)
 MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
+SETUP_BUDGET = 45.0
+DISCOVERY_MAX_BUDGET = 20.0
+DISCOVERY_MIN_BUDGET = 8.0
+INSTANCE_MAX_BUDGET = 8.0
+INSTANCE_MIN_BUDGET = 4.0
+INSTANCE_RETRY_DELAY = 0.3
+
+
+def _remaining_setup_budget(started: float) -> float:
+    """Return remaining setup budget in seconds."""
+    return SETUP_BUDGET - (pytime.monotonic() - started)
+
+
+async def _run_with_timeout(coro, timeout_s: float):
+    """Run coroutine with timeout."""
+    async with asyncio.timeout(timeout_s):
+        return await coro
 
 
 def get_device_name(connector, config) -> str:
@@ -213,6 +231,7 @@ def regist_as_binary_sensor(epc_function_data):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
+    started = pytime.monotonic()
     host = None
     udp = None
     server = None
@@ -262,13 +281,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # make sure multicast is registered with the local IP used to reach this host
         server._server.register_multicast_from_host(host)
 
-        # TODO: avoid running it again if we just ran the config flow
         try:
-            instances = await enumerate_instances(hass, host)
+            remaining = _remaining_setup_budget(started)
+            if remaining < DISCOVERY_MIN_BUDGET:
+                raise ConfigEntryNotReady(
+                    f"Not enough setup time left for ECHONET Lite discovery on {host}"
+                )
+
+            discovery_budget = min(remaining, DISCOVERY_MAX_BUDGET)
+
+            instances = await _run_with_timeout(
+                enumerate_instances(hass, host),
+                discovery_budget,
+            )
+
         except ErrorConnect as ex:
             raise ConfigEntryNotReady(
                 f"Connection error while connecting to {host}: {ex}"
             ) from ex
+        except (TimeoutError, asyncio.TimeoutError) as ex:
+            raise ConfigEntryNotReady(
+                f"ECHONET Lite discovery timed out for {host}"
+            ) from ex
+        except asyncio.CancelledError:
+            raise
 
         # Maintain old entity configuration types to avoid duplicate creation of new entities
         _registed_instances = {}
@@ -359,27 +395,46 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         echonetlite = ECHONETConnector(instance, hass, entry)
         await echonetlite.startup()
         try:
-            # Since there is a small chance of failure, perform a few retry for each instance
-            # (otherwise, assuming 50 instances and 1% failure rate, setup would suceed in (1-0.01)^50 = 60% cases only)
+            # Since there is a small chance of failure, perform a few retries for each instance.
             for retry in range(1, 4):
+                remaining = _remaining_setup_budget(started)
+                if remaining < INSTANCE_MIN_BUDGET:
+                    raise ConfigEntryNotReady(
+                        f"Not enough setup time left to initialize ECHONET Lite instances for {host}"
+                    )
+
+                per_try_budget = min(remaining, INSTANCE_MAX_BUDGET)
+
                 try:
-                    await echonetlite.async_update()
+                    await _run_with_timeout(
+                        echonetlite.async_update(),
+                        per_try_budget,
+                    )
                     hass.data[DOMAIN][entry.entry_id].append(
                         {"instance": instance, "echonetlite": echonetlite}
                     )
                     break
-                except TimeoutError:
+
+                except (TimeoutError, asyncio.TimeoutError) as ex:
                     _LOGGER.debug(
-                        f"Setting up ECHONET Instance host {host} timed out. Retry {retry} of 3"
+                        "Setting up ECHONET instance %s-%s-%s on %s timed out "
+                        "(retry %s/3, remaining %.1fs)",
+                        eojgc,
+                        eojcc,
+                        eojci,
+                        host,
+                        retry,
+                        _remaining_setup_budget(started),
                     )
-                    # if multiple error in a row, forward exception to outer loop
                     if retry == 3:
-                        raise
-        except (TimeoutError, asyncio.CancelledError) as ex:
-            _LOGGER.debug(f"Connection error while connecting to {host}: {ex}")
-            raise ConfigEntryNotReady(
-                f"Connection error while connecting to {host}: {ex}"
-            ) from ex
+                        raise ConfigEntryNotReady(
+                            f"Initial update timed out for {host}"
+                        ) from ex
+
+                    await asyncio.sleep(INSTANCE_RETRY_DELAY)
+
+        except asyncio.CancelledError:
+            raise
         except KeyError as ex:
             raise ConfigEntryNotReady(
                 f"IP address change was detected during setup of {host}"
