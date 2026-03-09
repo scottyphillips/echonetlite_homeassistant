@@ -397,6 +397,18 @@ class EchonetClimate(ClimateEntity):
             self.async_schedule_update_ha_state()
 
     def _normalize_settemp(self, req: float | int | None) -> int | None:
+        """
+        Normalize a requested temperature to the 1°C resolution supported by
+        ECHONET Lite HVAC devices.
+
+        Matter controllers may send fractional values (e.g., 22.5°C). Since most
+        ECHONET air conditioners accept only integer setpoints, this function
+        converts the request to a valid value while preserving user intent:
+        - Integer values are used as-is.
+        - `.5` values are rounded directionally based on the previous target
+          temperature (up when increasing, down when decreasing).
+        - Other fractions are rounded to the nearest integer.
+        """
         if req is None:
             return None
 
