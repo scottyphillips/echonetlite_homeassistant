@@ -1,50 +1,54 @@
 """The echonetlite integration."""
 
 from __future__ import annotations
-import os
-from importlib import import_module
-import logging
+
 import asyncio
-from functools import partial
-from typing import Any
-import pychonet as echonet
-from pychonet.echonetapiclient import EchonetMaxOpcError
-from pychonet.lib.epc import EPC_SUPER, EPC_CODE
-from pychonet.lib.const import VERSION, ENL_STATMAP
+import logging
+import os
+import time as pytime
 from datetime import timedelta
+from functools import partial
+from importlib import import_module
+from typing import Any
+
+import pychonet as echonet
 from homeassistant import config_entries
+from homeassistant.components.number.const import NumberDeviceClass
+from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.util import Throttle
 from homeassistant.const import (
     CONF_NAME,
-    Platform,
     PERCENTAGE,
-    UnitOfPower,
-    UnitOfTemperature,
-    UnitOfEnergy,
-    UnitOfVolume,
+    Platform,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
+    UnitOfEnergy,
+    UnitOfPower,
+    UnitOfTemperature,
+    UnitOfVolume,
 )
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.components.sensor.const import SensorDeviceClass
-from homeassistant.components.number.const import NumberDeviceClass
-from .const import (
-    CONF_ENABLE_SUPER_ENERGY,
-    DOMAIN,
-    ENABLE_SUPER_ENERGY_DEFAULT,
-    ENL_OP_CODES,
-    ENL_SUPER_CODES,
-    ENL_SUPER_ENERGES,
-    ENL_TIMER_SETTING,
-    USER_OPTIONS,
-    TEMP_OPTIONS,
-    CONF_BATCH_SIZE_MAX,
-    MISC_OPTIONS,
+from homeassistant.util import Throttle
+from pychonet import ECHONETAPIClient
+from pychonet.echonetapiclient import EchonetMaxOpcError
+from pychonet.EchonetInstance import (
+    ENL_CUMULATIVE_POWER,
+    ENL_GETMAP,
+    ENL_INSTANTANEOUS_POWER,
+    ENL_SETMAP,
+    ENL_STATUS,
+    ENL_UID,
 )
-from .config_flow import enumerate_instances, async_discover_newhost, ErrorConnect
-from pychonet.lib.udpserver import UDPServer
+from pychonet.HomeAirConditioner import (
+    ENL_AIR_HORZ,
+    ENL_AIR_VERT,
+    ENL_AUTO_DIRECTION,
+    ENL_FANSPEED,
+    ENL_SWING_MODE,
+)
+from pychonet.lib.const import ENL_STATMAP, VERSION
+from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.epc_functions import (
     DICT_30_ON_OFF,
     DICT_30_OPEN_CLOSED,
@@ -52,22 +56,21 @@ from pychonet.lib.epc_functions import (
     DICT_41_ON_OFF,
     _hh_mm,
 )
+from pychonet.lib.udpserver import UDPServer
 
-from pychonet import ECHONETAPIClient
-from pychonet.EchonetInstance import (
-    ENL_GETMAP,
-    ENL_SETMAP,
-    ENL_UID,
-    ENL_STATUS,
-    ENL_INSTANTANEOUS_POWER,
-    ENL_CUMULATIVE_POWER,
-)
-from pychonet.HomeAirConditioner import (
-    ENL_FANSPEED,
-    ENL_AUTO_DIRECTION,
-    ENL_SWING_MODE,
-    ENL_AIR_VERT,
-    ENL_AIR_HORZ,
+from .config_flow import ErrorConnect, async_discover_newhost, enumerate_instances
+from .const import (
+    CONF_BATCH_SIZE_MAX,
+    CONF_ENABLE_SUPER_ENERGY,
+    DOMAIN,
+    ENABLE_SUPER_ENERGY_DEFAULT,
+    ENL_OP_CODES,
+    ENL_SUPER_CODES,
+    ENL_SUPER_ENERGES,
+    ENL_TIMER_SETTING,
+    MISC_OPTIONS,
+    TEMP_OPTIONS,
+    USER_OPTIONS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -87,6 +90,23 @@ PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=1)
 MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
+SETUP_BUDGET = 45.0
+DISCOVERY_MAX_BUDGET = 20.0
+DISCOVERY_MIN_BUDGET = 8.0
+INSTANCE_MAX_BUDGET = 8.0
+INSTANCE_MIN_BUDGET = 4.0
+INSTANCE_RETRY_DELAY = 0.3
+
+
+def _remaining_setup_budget(started: float) -> float:
+    """Return remaining setup budget in seconds."""
+    return SETUP_BUDGET - (pytime.monotonic() - started)
+
+
+async def _run_with_timeout(coro, timeout_s: float):
+    """Run coroutine with timeout."""
+    async with asyncio.timeout(timeout_s):
+        return await coro
 
 
 def get_device_name(connector, config) -> str:
@@ -128,7 +148,7 @@ def get_name_by_epc_code(
 def polling_update_debug_log(values: dict[int, Any], conn_instance: ECHONETConnector):
     eojgc = conn_instance._eojgc
     eojcc = conn_instance._eojcc
-    debug_log = f"\nECHONETlite polling update data:\n"
+    debug_log = "\nECHONETlite polling update data:\n"
     for value in list(values.keys()):
         name = conn_instance._enl_op_codes.get(value, {}).get(CONF_NAME)
         debug_log = (
@@ -211,6 +231,7 @@ def regist_as_binary_sensor(epc_function_data):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
+    started = pytime.monotonic()
     host = None
     udp = None
     server = None
@@ -233,11 +254,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(unload_config_entry)
 
     if DOMAIN in hass.data:  # maybe set up by config entry?
-        _LOGGER.debug(f"ECHONETlite platform is already started.")
+        _LOGGER.debug("ECHONETlite platform is already started.")
         server = hass.data[DOMAIN]["api"]
         hass.data[DOMAIN].update({entry.entry_id: []})
     else:  # setup API
-        _LOGGER.debug(f"Starting up ECHONETlite platform..")
+        _LOGGER.debug("Starting up ECHONETlite platform..")
         _LOGGER.debug(f"pychonet version is {VERSION}")
         hass.data.setdefault(DOMAIN, {})
         hass.data[DOMAIN].update({entry.entry_id: []})
@@ -260,13 +281,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # make sure multicast is registered with the local IP used to reach this host
         server._server.register_multicast_from_host(host)
 
-        # TODO: avoid running it again if we just ran the config flow
         try:
-            instances = await enumerate_instances(hass, host)
+            remaining = _remaining_setup_budget(started)
+            if remaining < DISCOVERY_MIN_BUDGET:
+                raise ConfigEntryNotReady(
+                    f"Not enough setup time left for ECHONET Lite discovery on {host}"
+                )
+
+            discovery_budget = min(remaining, DISCOVERY_MAX_BUDGET)
+
+            instances = await _run_with_timeout(
+                enumerate_instances(hass, host),
+                discovery_budget,
+            )
+
         except ErrorConnect as ex:
             raise ConfigEntryNotReady(
                 f"Connection error while connecting to {host}: {ex}"
             ) from ex
+        except (TimeoutError, asyncio.TimeoutError) as ex:
+            raise ConfigEntryNotReady(
+                f"ECHONET Lite discovery timed out for {host}"
+            ) from ex
+        except asyncio.CancelledError:
+            raise
 
         # Maintain old entity configuration types to avoid duplicate creation of new entities
         _registed_instances = {}
@@ -357,27 +395,46 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         echonetlite = ECHONETConnector(instance, hass, entry)
         await echonetlite.startup()
         try:
-            # Since there is a small chance of failure, perform a few retry for each instance
-            # (otherwise, assuming 50 instances and 1% failure rate, setup would suceed in (1-0.01)^50 = 60% cases only)
+            # Since there is a small chance of failure, perform a few retries for each instance.
             for retry in range(1, 4):
+                remaining = _remaining_setup_budget(started)
+                if remaining < INSTANCE_MIN_BUDGET:
+                    raise ConfigEntryNotReady(
+                        f"Not enough setup time left to initialize ECHONET Lite instances for {host}"
+                    )
+
+                per_try_budget = min(remaining, INSTANCE_MAX_BUDGET)
+
                 try:
-                    await echonetlite.async_update()
+                    await _run_with_timeout(
+                        echonetlite.async_update(),
+                        per_try_budget,
+                    )
                     hass.data[DOMAIN][entry.entry_id].append(
                         {"instance": instance, "echonetlite": echonetlite}
                     )
                     break
-                except TimeoutError as ex:
+
+                except (TimeoutError, asyncio.TimeoutError) as ex:
                     _LOGGER.debug(
-                        f"Setting up ECHONET Instance host {host} timed out. Retry {retry} of 3"
+                        "Setting up ECHONET instance %s-%s-%s on %s timed out "
+                        "(retry %s/3, remaining %.1fs)",
+                        eojgc,
+                        eojcc,
+                        eojci,
+                        host,
+                        retry,
+                        _remaining_setup_budget(started),
                     )
-                    # if multiple error in a row, forward exception to outer loop
                     if retry == 3:
-                        raise
-        except (TimeoutError, asyncio.CancelledError) as ex:
-            _LOGGER.debug(f"Connection error while connecting to {host}: {ex}")
-            raise ConfigEntryNotReady(
-                f"Connection error while connecting to {host}: {ex}"
-            ) from ex
+                        raise ConfigEntryNotReady(
+                            f"Initial update timed out for {host}"
+                        ) from ex
+
+                    await asyncio.sleep(INSTANCE_RETRY_DELAY)
+
+        except asyncio.CancelledError:
+            raise
         except KeyError as ex:
             raise ConfigEntryNotReady(
                 f"IP address change was detected during setup of {host}"
@@ -619,7 +676,7 @@ class ECHONETConnector:
             _enl_super_codes = ENL_SUPER_CODES
         else:
             _enl_super_codes = {
-                k: v for k, v in ENL_SUPER_CODES.items() if not k in ENL_SUPER_ENERGES
+                k: v for k, v in ENL_SUPER_CODES.items() if k not in ENL_SUPER_ENERGES
             }
         flags += list(_enl_super_codes)
 
