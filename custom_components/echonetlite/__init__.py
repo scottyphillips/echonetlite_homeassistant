@@ -74,6 +74,8 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+_LOGGER.warning(">>> pychonet version: %s; imported from: %s", PYE_VERSION, getattr(echonet, "__file__", "unknown"))
+
 PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.SENSOR,
