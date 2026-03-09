@@ -22,15 +22,20 @@ compatible ECHONETLite Devices:
 | **Manufacturer**    | **Device**                                     | **ECHONETLite Object Class** | **Home Assistant Entities**      | **Notes**                                                                                         |
 |:--------------------|:-----------------------------------------------|:-----------------------------|:---------------------------------|:--------------------------------------------------------------------------------------------------|
 | Mitsubishi Electric | MAC-568IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
+| Mitsubishi Electric | MAC-577IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
+| Mitsubishi Electric | MAC-577IF2-E                                   | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | MAC-578IF2-E                                   | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
+| Mitsubishi Electric | MAC-587IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | MAC-588IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | MAC-600IF                                      | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
+| Mitsubishi Electric | MAC-900IF                                      | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | HM-W002-AC                                     | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
 | Mitsubishi Electric | Eco-Cute SRT-S466A + RMCB-H6SE-T               | ElectricWaterHeater          | Sensor, Select, Switch           |                                                                                                   |
 | Mitsubishi Electric | REF-WLAN001                                    | Refrigerator                 | Sensor                           |                                                                                                   |
 | Sharp               | AY-J22H Air Conditioner                        | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
 | Sharp               | AY-L40P Air Conditioner                        | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
 | Sharp               | KI-HS70 Air Purifier                           | HomeAirCleaner               | Fan, Sensor, Select              |                                                                                                   |
+| Sharp               | JH-RWL8 Multi Energy Monitor                   | HomeSolarPower, StorageBattery | Sensor, Select                 |                                                                                                   |
 | Panasonic           | CS-221DJ Air Conditioner                       | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
 | Panasonic           | CS-362DJ2 Air Conditioner                      | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
 | Panasonic           | HF-JA2-W                                       |                              | Sensor                           | IP/JEM-A conversion adapter.                                                                      |
@@ -76,6 +81,10 @@ compatible ECHONETLite Devices:
   * Ducted
      * PEAD-RP71
 
+* Mitsubishi MAC-587IF-E WiFi Adaptor connected to the following systems:
+  * Ducted
+    * PEAD-M50JA2
+
 * Mitsubishi MAC-588IF-E WiFi Adaptor connected to the following systems:
   * Ducted
      * PEA-M200LAA
@@ -84,6 +93,14 @@ compatible ECHONETLite Devices:
 * Mitsubishi MAC-600IF WiFi Adaptor connected to the following systems:
   * Z Series
      * MSZ-ZW4022S
+
+* Mitsubishi MAC-900IF WiFi Adaptor connected to the following systems:
+  * Z Series
+     * MSZ-ZW4024S
+  * XD Series
+     * MSZ-XD2225
+  * R Series
+     * MSZ-BKR2223
 
 * Mitsubishi HM-W002-AC WiFi Adaptor connected to the following systems:
   * JXV Series
@@ -142,6 +159,27 @@ If you have a firewall, ensure port 3610 is unblocked
 2. Select the 'ECHONET Lite' integration. Enter the IP address of the HVAC unit in the host field, and give the platform a name.
 3. Platform will automatically configure any supported platforms e.g. climate, sensor, switch, fan, select.
 4. If you have additional devices to configure then repeat step 1.
+
+## Enabling support for additional Mitsubishi interfaces
+
+Some Mitsubishi WiFi adaptors have hidden support for the ECHONET Lite protocol, which can be enabled by calling the `/smart` endpoint.
+
+For more information, please see [this issue](https://github.com/scottyphillips/echonetlite_homeassistant/issues/226).
+
+TLDR: Run the following command:
+
+```bash
+curl -H 'Content-Type: text/xml' -d '<?xml version="1.0" encoding="UTF-8"?><ESV>7WVvmfhMYzGVi70nyFhmKEy9Jo3Hg3994vi9y1kEgDFWd/1ch9RWDUgY4HgsvMHFvP93fQ30AvEJCNcd0GTwPID0F8V5eyMVj/qAQCXFqYrRtJh8MIpm2/h7jZ2SsPj0</ESV>' "http://${ip}/smart"
+
+```
+
+Replace `${ip}` with the IP of your adaptor.
+
+If successful, your should see a response like this:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?><ESV>[encrypted content]</ESV>
+```
 
 ## Configuring Options for Fan and swing mode settings for supported HVAC and Air Purifiers.
 Once you have added the integration, you can go back to configuration -> integrations.
