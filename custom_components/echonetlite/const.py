@@ -1027,6 +1027,37 @@ ENL_OP_CODES = {
             0xD3: {CONF_DISABLED_DEFAULT: True},
             0xE1: {CONF_DISABLED_DEFAULT: True},
         },
+        0x8E: {  # Distributed Generator Electric Energy Meter
+            0xD4: { # Unit for cumulative amount of electric energy *kWh
+                    CONF_DISABLED_DEFAULT: True 
+            }, 
+            0xE0: {  
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
+                CONF_MULTIPLIER_OPCODE: 0xD4,
+            },
+            0xE2: {  
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
+                CONF_MULTIPLIER_OPCODE: 0xD4,
+            },
+            0xE4: {  
+                CONF_TYPE: SensorDeviceClass.ENERGY,
+                CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
+                CONF_MULTIPLIER_OPCODE: 0xD4,
+            },
+            0xE9: {
+                    CONF_TYPE: SensorDeviceClass.POWER,
+                    CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,                
+            },
+            0xEA: {
+                    CONF_TYPE: SensorDeviceClass.POWER,
+                    CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,                
+            },
+        },
         0xA3: {  # Lighting system
             0xC0: {  # Set scene
                 CONF_ICON: "mdi:palette",
