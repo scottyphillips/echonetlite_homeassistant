@@ -686,8 +686,10 @@ class ECHONETConnector:
             if item in _epc_keys:
                 flags.append(item)
 
+        seen = set()
         for value in flags:
-            if value in self._getPropertyMap:
+            if value in self._getPropertyMap and value not in seen:
+                seen.add(value)
                 self._update_flags_full_list.append(value)
                 self._update_data[value] = None
 
