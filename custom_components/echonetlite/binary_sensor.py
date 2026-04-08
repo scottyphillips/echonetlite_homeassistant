@@ -1,4 +1,5 @@
 """Support for ECHONETLite binary sensors."""
+
 import logging
 import voluptuous as vol
 
@@ -8,7 +9,10 @@ from homeassistant.const import (
     CONF_TYPE,
 )
 from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
+from homeassistant.components.binary_sensor import (
+    BinarySensorEntity,
+    BinarySensorDeviceClass,
+)
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from pychonet.lib.eojx import EOJX_CLASS
@@ -38,6 +42,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # ... (async_setup_entry remains largely the same, just ensure it passes the coordinator) ...
 
+
 class EchonetBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Representation of an ECHONETLite Binary Sensor."""
 
@@ -46,8 +51,8 @@ class EchonetBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
         """Initialize the sensor."""
         # Note: connector here should be your DataUpdateCoordinator instance
-        super().__init__(connector) 
-        
+        super().__init__(connector)
+
         name = get_device_name(connector, config)
         self._connector = connector
         self._op_code = op_code
@@ -55,7 +60,7 @@ class EchonetBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._eojgc = self._connector._eojgc
         self._eojcc = self._connector._eojcc
         self._eojci = self._connector._eojci
-        
+
         self._attr_unique_id = (
             f"{self._connector._uidi}-{self._op_code}"
             if self._connector._uidi
@@ -63,13 +68,15 @@ class EchonetBinarySensor(CoordinatorEntity, BinarySensorEntity):
         )
         self._device_name = name
         self._state_value = None
-        
+
         # Use the coordinator's built-in state references
-        self._server_state = self._connector._api._state[self._connector._instance._host]
+        self._server_state = self._connector._api._state[
+            self._connector._instance._host
+        ]
 
         self._attr_icon = self._sensor_attributes.get(CONF_ICON)
         self._attr_device_class = self._sensor_attributes.get(CONF_TYPE)
-        
+
         self._attr_name = f"{name} {get_name_by_epc_code(self._eojgc, self._eojcc, self._op_code, self._attr_device_class, self._connector._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
 
         if "dict_key" in self._sensor_attributes:
@@ -94,7 +101,7 @@ class EchonetBinarySensor(CoordinatorEntity, BinarySensorEntity):
             return None
 
         new_val = self._connector._update_data[self._op_code]
-        
+
         # Data extraction logic
         if "dict_key" in self._sensor_attributes:
             if hasattr(new_val, "get"):
@@ -113,8 +120,16 @@ class EchonetBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
         # Mapping ECHONET values to Boolean
         _results = {
-            True: True, "1": True, DATA_STATE_ON: True, DATA_STATE_OPEN: True, "yes": True,
-            False: False, "0": False, DATA_STATE_OFF: False, DATA_STATE_CLOSE: False, "no": False,
+            True: True,
+            "1": True,
+            DATA_STATE_ON: True,
+            DATA_STATE_OPEN: True,
+            "yes": True,
+            False: False,
+            "0": False,
+            DATA_STATE_OFF: False,
+            DATA_STATE_CLOSE: False,
+            "no": False,
         }
 
         return _results.get(val)
@@ -135,7 +150,9 @@ class EchonetBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def device_info(self):
         return {
-            "identifiers": {(DOMAIN, self._connector._uid, self._eojgc, self._eojcc, self._eojci)},
+            "identifiers": {
+                (DOMAIN, self._connector._uid, self._eojgc, self._eojcc, self._eojci)
+            },
             "name": self._device_name,
             "manufacturer": self._connector._manufacturer,
             "model": EOJX_CLASS[self._eojgc][self._eojcc],

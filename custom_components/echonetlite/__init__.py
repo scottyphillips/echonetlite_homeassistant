@@ -98,6 +98,7 @@ INSTANCE_MAX_BUDGET = 8.0
 INSTANCE_MIN_BUDGET = 4.0
 INSTANCE_RETRY_DELAY = 0.3
 
+
 class EchonetLiteCoordinator(DataUpdateCoordinator):
     """Mapping the Coordinator to the ECHONETConnector."""
 
@@ -107,7 +108,7 @@ class EchonetLiteCoordinator(DataUpdateCoordinator):
             _LOGGER,
             name=f"ECHONETLite {echonet_connector._name or echonet_connector._host}",
             # This interval replaces the old Throttle logic
-            update_interval=timedelta(seconds=60), 
+            update_interval=timedelta(seconds=60),
         )
         self.connector = echonet_connector
 
@@ -437,17 +438,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
                     # 1. Create the coordinator, passing in the 'echonetlite' instance
                     coordinator = EchonetLiteCoordinator(hass, echonetlite)
-                    
-                    # 2. Since we just ran 'async_update' above, tell the coordinator 
+
+                    # 2. Since we just ran 'async_update' above, tell the coordinator
                     # it already has fresh data so it doesn't poll again immediately.
                     coordinator.async_set_updated_data(echonetlite._update_data)
 
                     # 3. Store both in hass.data so platforms (sensor.py) can find them
                     hass.data[DOMAIN][entry.entry_id].append(
                         {
-                            "instance": instance, 
+                            "instance": instance,
                             "echonetlite": echonetlite,
-                            "coordinator": coordinator  # Now available for sensors!
+                            "coordinator": coordinator,  # Now available for sensors!
                         }
                     )
                     break
@@ -708,7 +709,7 @@ class ECHONETConnector:
             ENABLE_SUPER_ENERGY_DEFAULT.get(self._eojgc, {}).get(self._eojcc, True),
         )
         # General purpose data items
-        flags = [] # PR 246
+        flags = []  # PR 246
         if _enabled_super_energy:
             _enl_super_codes = ENL_SUPER_CODES
         else:

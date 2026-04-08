@@ -26,6 +26,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
@@ -38,28 +39,41 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         for op_code in list(set(entity["instance"]["setmap"]) - _non_setup_entities):
             epc_func = connector._instance.EPC_FUNCTIONS.get(op_code)
             _by_epc_func = (
-                isinstance(epc_func, list) 
-                and len(epc_func) > 1 
-                and isinstance(epc_func[1], dict) 
+                isinstance(epc_func, list)
+                and len(epc_func) > 1
+                and isinstance(epc_func[1], dict)
                 and len(epc_func[1]) > 2
             )
-            
+
             op_code_dict = _enl_op_codes.get(op_code, {})
             if _by_epc_func or TYPE_SELECT in op_code_dict:
-                entities.append(
-                    EchonetSelect(connector, config, op_code, op_code_dict)
-                )
+                entities.append(EchonetSelect(connector, config, op_code, op_code_dict))
 
     async_add_entities(entities, True)
 
+
 class EchonetSelect(CoordinatorEntity, SelectEntity):
     """Representation of an ECHONETLite select entity."""
+
     _attr_translation_key = DOMAIN
 
     # Mapping for EPCs that support user-defined option filtering
     SELECT_USING_USER_OPTIONS = {
-        "0x1-0x30": {ENL_FANSPEED, ENL_SWING_MODE, ENL_AUTO_DIRECTION, ENL_AIR_HORZ, ENL_AIR_VERT, ENL_HVAC_MODE},
-        "0x1-0x35": {ENL_FANSPEED, ENL_SWING_MODE, ENL_AUTO_DIRECTION, ENL_AIR_HORZ, ENL_AIR_VERT},
+        "0x1-0x30": {
+            ENL_FANSPEED,
+            ENL_SWING_MODE,
+            ENL_AUTO_DIRECTION,
+            ENL_AIR_HORZ,
+            ENL_AIR_VERT,
+            ENL_HVAC_MODE,
+        },
+        "0x1-0x35": {
+            ENL_FANSPEED,
+            ENL_SWING_MODE,
+            ENL_AUTO_DIRECTION,
+            ENL_AIR_HORZ,
+            ENL_AIR_VERT,
+        },
     }
 
     def __init__(self, connector, config, code, options):
@@ -67,7 +81,7 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
         self._connector = connector
         self._code = code
         self._device_name = get_device_name(connector, config)
-        
+
         # Resolve Option Mapping
         if isinstance(options.get(TYPE_SELECT), dict):
             self._options_map = options[TYPE_SELECT]
@@ -77,15 +91,19 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
 
         self._icons = options.get(CONF_ICONS, {})
         self._default_icon = options.get(CONF_ICON)
-        
+
         # Entity Identification
         self._attr_name = f"{config.title} {get_name_by_epc_code(connector._eojgc, connector._eojcc, code, None, options.get(CONF_NAME))}"
         self._attr_unique_id = f"{connector._uidi or connector._uid}-{code}"
-        self._attr_entity_registry_enabled_default = not bool(options.get(CONF_DISABLED_DEFAULT))
+        self._attr_entity_registry_enabled_default = not bool(
+            options.get(CONF_DISABLED_DEFAULT)
+        )
 
         # Check for user-overridden option lists
         key = f"{hex(connector._instance._eojgc)}-{hex(connector._instance._eojcc)}"
-        self._user_option_epcs = self.SELECT_USING_USER_OPTIONS.get(key, set()).intersection(set(connector._user_options.keys()))
+        self._user_option_epcs = self.SELECT_USING_USER_OPTIONS.get(
+            key, set()
+        ).intersection(set(connector._user_options.keys()))
 
     @property
     def options(self) -> list[str]:
@@ -102,11 +120,11 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
         raw_value = self._connector._update_data.get(self._code)
         if raw_value is None:
             return None
-        
+
         # If the raw value is a string (already mapped), return it
         if isinstance(raw_value, str) and raw_value in self._options_map:
             return raw_value
-        
+
         # Otherwise, lookup the string key by the integer value
         for k, v in self._options_map.items():
             if v == raw_value:
@@ -120,7 +138,9 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
-        if await self._connector._instance.setMessage(self._code, self._options_map[option]):
+        if await self._connector._instance.setMessage(
+            self._code, self._options_map[option]
+        ):
             # Optimistically update the coordinator's data
             self._connector._update_data[self._code] = self._options_map[option]
             self.async_write_ha_state()
@@ -130,11 +150,20 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
     @property
     def device_info(self):
         return {
-            "identifiers": {(DOMAIN, self._connector._uid, self._connector._instance._eojgc, 
-                             self._connector._instance._eojcc, self._connector._instance._eojci)},
+            "identifiers": {
+                (
+                    DOMAIN,
+                    self._connector._uid,
+                    self._connector._instance._eojgc,
+                    self._connector._instance._eojcc,
+                    self._connector._instance._eojci,
+                )
+            },
             "name": self._device_name,
             "manufacturer": f"{self._connector._manufacturer} {self._connector._host_product_code or ''}".strip(),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc],
+            "model": EOJX_CLASS[self._connector._instance._eojgc][
+                self._connector._instance._eojcc
+            ],
         }
 
     @property

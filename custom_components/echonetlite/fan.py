@@ -36,23 +36,25 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         ):  # Home Air Cleaner or Ceiling Fan
             # PASS THE COORDINATOR INSTEAD OF ECHONETLITE
             entities.append(EchonetFan(entity["coordinator"], config_entry))
-    
-    # Change True to False because the coordinator has already 
+
+    # Change True to False because the coordinator has already
     # fetched the data during the integration startup.
     async_add_devices(entities, False)
 
+
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-class EchonetFan(CoordinatorEntity, FanEntity): # Inherit from CoordinatorEntity
+
+class EchonetFan(CoordinatorEntity, FanEntity):  # Inherit from CoordinatorEntity
     """Representation of an ECHONETLite Fan device (eg Air purifier)."""
 
     def __init__(self, coordinator, config):
         """Initialize the fan device."""
-        super().__init__(coordinator) # Link the entity to the coordinator
-        
+        super().__init__(coordinator)  # Link the entity to the coordinator
+
         # Extract the connector for your existing logic
         connector = coordinator.connector
-        
+
         name = get_device_name(connector, config)
         self._attr_name = name
         self._connector = connector

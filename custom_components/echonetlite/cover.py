@@ -35,13 +35,18 @@ from .const import DOMAIN
 TILT_RANGE = (1, 180)
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass, config_entry, async_add_devices):
     entities = []
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         # Filter for cover-class devices (0x02, 0x60-0x66)
-        if entity["instance"]["eojgc"] == 0x02 and 0x60 <= entity["instance"]["eojcc"] <= 0x66:
+        if (
+            entity["instance"]["eojgc"] == 0x02
+            and 0x60 <= entity["instance"]["eojcc"] <= 0x66
+        ):
             entities.append(EchonetCover(entity["echonetlite"], config_entry))
     async_add_devices(entities, True)
+
 
 class EchonetCover(CoordinatorEntity, CoverEntity):
     """Representation of an ECHONETLite cover device."""
@@ -53,8 +58,10 @@ class EchonetCover(CoordinatorEntity, CoverEntity):
         self._attr_name = name
         self._device_name = name
         self._connector = connector
-        self._attr_unique_id = self._connector._uidi if self._connector._uidi else self._connector._uid
-        
+        self._attr_unique_id = (
+            self._connector._uidi if self._connector._uidi else self._connector._uid
+        )
+
         # Supported Features
         self._attr_supported_features = (
             CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
@@ -63,7 +70,9 @@ class EchonetCover(CoordinatorEntity, CoverEntity):
             self._attr_supported_features |= CoverEntityFeature.SET_POSITION
         if ENL_BLIND_ANGLE in self._connector._setPropertyMap:
             self._attr_supported_features |= (
-                CoverEntityFeature.OPEN_TILT | CoverEntityFeature.CLOSE_TILT | CoverEntityFeature.SET_TILT_POSITION
+                CoverEntityFeature.OPEN_TILT
+                | CoverEntityFeature.CLOSE_TILT
+                | CoverEntityFeature.SET_TILT_POSITION
             )
 
     @property
@@ -81,11 +90,15 @@ class EchonetCover(CoordinatorEntity, CoverEntity):
 
     @property
     def is_opening(self):
-        return self._connector._update_data.get(ENL_OPENCLOSE_STATUS) == DATA_STATE_OPENING
+        return (
+            self._connector._update_data.get(ENL_OPENCLOSE_STATUS) == DATA_STATE_OPENING
+        )
 
     @property
     def is_closing(self):
-        return self._connector._update_data.get(ENL_OPENCLOSE_STATUS) == DATA_STATE_CLOSING
+        return (
+            self._connector._update_data.get(ENL_OPENCLOSE_STATUS) == DATA_STATE_CLOSING
+        )
 
     @property
     def current_cover_tilt_position(self):
@@ -117,7 +130,9 @@ class EchonetCover(CoordinatorEntity, CoverEntity):
             self.async_write_ha_state()
 
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
-        tilt = math.ceil(percentage_to_ranged_value(TILT_RANGE, kwargs[ATTR_TILT_POSITION]))
+        tilt = math.ceil(
+            percentage_to_ranged_value(TILT_RANGE, kwargs[ATTR_TILT_POSITION])
+        )
         if await self._connector._instance.setMessage(ENL_BLIND_ANGLE, tilt):
             self._connector._update_data[ENL_BLIND_ANGLE] = tilt
             self.async_write_ha_state()
@@ -125,9 +140,18 @@ class EchonetCover(CoordinatorEntity, CoverEntity):
     @property
     def device_info(self):
         return {
-            "identifiers": {(DOMAIN, self._connector._uid, self._connector._instance._eojgc, 
-                             self._connector._instance._eojcc, self._connector._instance._eojci)},
+            "identifiers": {
+                (
+                    DOMAIN,
+                    self._connector._uid,
+                    self._connector._instance._eojgc,
+                    self._connector._instance._eojcc,
+                    self._connector._instance._eojci,
+                )
+            },
             "name": self._device_name,
             "manufacturer": self._connector._manufacturer,
-            "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc],
+            "model": EOJX_CLASS[self._connector._instance._eojgc][
+                self._connector._instance._eojcc
+            ],
         }
