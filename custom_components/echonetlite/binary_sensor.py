@@ -1,19 +1,10 @@
-"""Support for ECHONETLite binary sensors."""
-
 import logging
-import voluptuous as vol
-
-from homeassistant.const import (
-    CONF_ICON,
-    CONF_NAME,
-    CONF_TYPE,
-)
-from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorDeviceClass,
 )
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.const import CONF_ICON, CONF_NAME, CONF_TYPE
 
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import (
@@ -27,133 +18,155 @@ from pychonet.lib.epc_functions import (
 from . import (
     get_name_by_epc_code,
     get_device_name,
+    regist_as_binary_sensor,
 )
 from .const import (
     DOMAIN,
-    ENL_OP_CODES,
-    CONF_STATE_CLASS,
     CONF_FORCE_POLLING,
     TYPE_DATA_DICT,
     TYPE_DATA_ARRAY_WITH_SIZE_OPCODE,
     CONF_DISABLED_DEFAULT,
+    NON_SETUP_SINGLE_ENYITY,
+    ENL_SUPER_CODES,
+    ENL_SUPER_ENERGES,
+    CONF_ENABLE_SUPER_ENERGY,
+    ENABLE_SUPER_ENERGY_DEFAULT,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-# ... (async_setup_entry remains largely the same, just ensure it passes the coordinator) ...
+async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
+    """Set up ECHONETLite binary sensors."""
+    entities = []
+    for entity in hass.data[DOMAIN][config.entry_id]:
+        coordinator = entity["coordinator"]
+        connector = entity["echonetlite"]
+        eojgc = entity["instance"]["eojgc"]
+        eojcc = entity["instance"]["eojcc"]
 
+        # Handle Super Energy codes based on user options
+        enable_super = connector._user_options.get(
+            CONF_ENABLE_SUPER_ENERGY,
+            ENABLE_SUPER_ENERGY_DEFAULT.get(eojgc, {}).get(eojcc, True),
+        )
+        
+        _enl_super_codes = ENL_SUPER_CODES if enable_super else {
+            k: v for k, v in ENL_SUPER_CODES.items() if k not in ENL_SUPER_ENERGES
+        }
+        
+        _enl_op_codes = connector._enl_op_codes | _enl_super_codes
+        _epc_functions = connector._instance.EPC_FUNCTIONS | EPC_SUPER_FUNCTIONS
+
+        # Filter properties that should be binary sensors
+        for op_code in list(set(connector._update_flags_full_list) - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())):
+            
+            op_config = _enl_op_codes.get(op_code, {})
+            # Determine if this is a binary sensor (via DeviceClass or the helper function)
+            is_binary = isinstance(op_config.get(CONF_TYPE), BinarySensorDeviceClass) or \
+                        regist_as_binary_sensor(_epc_functions.get(op_code))
+            
+            if not is_binary:
+                continue
+
+            # Handle Dictionary types (e.g. status flags grouped in one EPC)
+            if TYPE_DATA_DICT in op_config:
+                for attr_key in op_config[TYPE_DATA_DICT]:
+                    entities.append(EchonetBinarySensor(coordinator, config, op_code, op_config | {"dict_key": attr_key}))
+                continue
+
+            # Handle Array types (e.g. multiple circuit breakers or zones)
+            if TYPE_DATA_ARRAY_WITH_SIZE_OPCODE in op_config:
+                array_size_op = op_config[TYPE_DATA_ARRAY_WITH_SIZE_OPCODE]
+                array_max_size = await connector._instance.update(array_size_op)
+                for x in range(array_max_size):
+                    attr = op_config.copy()
+                    attr.update({
+                        "accessor_index": x, 
+                        "accessor_lambda": lambda v, i: v["values"][i] if i < v["range"] else None
+                    })
+                    entities.append(EchonetBinarySensor(coordinator, config, op_code, attr))
+                continue
+
+            entities.append(EchonetBinarySensor(coordinator, config, op_code, op_config))
+
+    async_add_entities(entities, True)
 
 class EchonetBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Representation of an ECHONETLite Binary Sensor."""
-
     _attr_translation_key = DOMAIN
 
-    def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
-        """Initialize the sensor."""
-        # Note: connector here should be your DataUpdateCoordinator instance
-        super().__init__(connector)
-
-        name = get_device_name(connector, config)
-        self._connector = connector
+    def __init__(self, coordinator, config, op_code, attributes) -> None:
+        super().__init__(coordinator)
+        self._connector = coordinator.connector
         self._op_code = op_code
         self._sensor_attributes = attributes
-        self._eojgc = self._connector._eojgc
-        self._eojcc = self._connector._eojcc
-        self._eojci = self._connector._eojci
+        self._device_name = get_device_name(self._connector, config)
 
-        self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._op_code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}"
+        # Unique ID Construction
+        uid_base = self._connector._uidi or self._connector._uid
+        self._attr_unique_id = f"{uid_base}-{self._connector._eojgc}-{self._connector._eojcc}-{self._op_code}"
+        
+        if "dict_key" in attributes:
+            self._attr_unique_id += f"-{attributes['dict_key']}"
+        if "accessor_index" in attributes:
+            self._attr_unique_id += f"-{attributes['accessor_index']}"
+
+        self._attr_device_class = attributes.get(CONF_TYPE)
+        self._attr_icon = attributes.get(CONF_ICON)
+        self._attr_entity_registry_enabled_default = not bool(attributes.get(CONF_DISABLED_DEFAULT))
+
+        # Naming Logic
+        base_name = get_name_by_epc_code(
+            self._connector._eojgc, 
+            self._connector._eojcc, 
+            self._op_code, 
+            self._attr_device_class, 
+            attributes.get(CONF_NAME)
         )
-        self._device_name = name
-        self._state_value = None
-
-        # Use the coordinator's built-in state references
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-
-        self._attr_icon = self._sensor_attributes.get(CONF_ICON)
-        self._attr_device_class = self._sensor_attributes.get(CONF_TYPE)
-
-        self._attr_name = f"{name} {get_name_by_epc_code(self._eojgc, self._eojcc, self._op_code, self._attr_device_class, self._connector._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
-
-        if "dict_key" in self._sensor_attributes:
-            self._attr_unique_id += f'-{self._sensor_attributes["dict_key"]}'
-            self._attr_name += f' {self._sensor_attributes["dict_key"]}'
-
-        if "accessor_index" in self._sensor_attributes:
-            self._attr_unique_id += f'-{self._sensor_attributes["accessor_index"]}'
-            self._attr_name += f' {str(self._sensor_attributes["accessor_index"] + 1)}'
-
-        self._attr_entity_registry_enabled_default = not bool(
-            self._sensor_attributes.get(CONF_DISABLED_DEFAULT)
-        )
-
-        # Initialize polling/attribute state
-        self.update_option_listener()
+        self._attr_name = f"{self._device_name} {base_name}"
+        
+        if "dict_key" in attributes:
+            self._attr_name += f" {attributes['dict_key']}"
+        if "accessor_index" in attributes:
+            self._attr_name += f" {attributes['accessor_index'] + 1}"
 
     @property
-    def is_on(self):
-        """Return the state of the binary sensor."""
-        if self._op_code not in self._connector._update_data:
+    def is_on(self) -> bool | None:
+        """Return the state of the binary sensor by parsing raw ECHONET data."""
+        raw_val = self._connector._update_data.get(self._op_code)
+        if raw_val is None:
             return None
 
-        new_val = self._connector._update_data[self._op_code]
-
-        # Data extraction logic
+        # Extract value based on type (Dict, Array, or Scalar)
         if "dict_key" in self._sensor_attributes:
-            if hasattr(new_val, "get"):
-                val = new_val.get(self._sensor_attributes["dict_key"])
-            else:
-                val = None
+            val = raw_val.get(self._sensor_attributes["dict_key"]) if hasattr(raw_val, "get") else None
         elif "accessor_lambda" in self._sensor_attributes:
-            val = self._sensor_attributes["accessor_lambda"](
-                new_val, self._sensor_attributes["accessor_index"]
-            )
+            val = self._sensor_attributes["accessor_lambda"](raw_val, self._sensor_attributes.get("accessor_index"))
         else:
-            val = new_val
+            val = raw_val
 
         if val is None:
             return None
 
-        # Mapping ECHONET values to Boolean
-        _results = {
-            True: True,
-            "1": True,
-            DATA_STATE_ON: True,
-            DATA_STATE_OPEN: True,
-            "yes": True,
-            False: False,
-            "0": False,
-            DATA_STATE_OFF: False,
-            DATA_STATE_CLOSE: False,
-            "no": False,
-        }
-
-        return _results.get(val)
+        # Mapping truthy ECHONET values
+        return val in [True, "1", 1, 0x30, DATA_STATE_ON, DATA_STATE_OPEN, "yes"]
 
     @property
     def available(self) -> bool:
-        """Return True if entity is available."""
-        return self._server_state.get("available", True)
+        """Check availability via the coordinator's API state."""
+        return self._connector._api._state[self._connector._instance._host].get("available", True)
 
-    def update_option_listener(self):
-        """Update polling and extra attributes."""
-        _should_poll = self._op_code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
+    @property
+    def extra_state_attributes(self):
+        """Standard extra attributes for debugging notification status."""
+        should_poll = self._op_code not in self._connector._ntfPropertyMap
+        return {"notify": "No" if should_poll else "Yes"}
 
     @property
     def device_info(self):
         return {
-            "identifiers": {
-                (DOMAIN, self._connector._uid, self._eojgc, self._eojcc, self._eojci)
-            },
+            "identifiers": {(DOMAIN, self._connector._uid, self._connector._eojgc, self._connector._eojcc, self._connector._eojci)},
             "name": self._device_name,
             "manufacturer": self._connector._manufacturer,
-            "model": EOJX_CLASS[self._eojgc][self._eojcc],
+            "model": EOJX_CLASS[self._connector._eojgc][self._connector._eojcc],
         }
