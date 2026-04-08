@@ -1,9 +1,13 @@
 import logging
 import datetime
 from datetime import time
-from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.components.time import TimeEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.exceptions import InvalidStateError
+
+from pychonet.lib.eojx import EOJX_CLASS
+from pychonet.lib.epc_functions import _hh_mm
 from . import get_name_by_epc_code, get_device_name
 from .const import (
     CONF_DISABLED_DEFAULT,
@@ -13,34 +17,32 @@ from .const import (
     NON_SETUP_SINGLE_ENYITY,
     TYPE_TIME,
 )
-from pychonet.lib.eojx import EOJX_CLASS
-from pychonet.lib.epc_functions import _hh_mm
 
 _LOGGER = logging.getLogger(__name__)
-
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
+        connector = entity["echonetlite"]
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
-        _enl_op_codes = entity["echonetlite"]._enl_op_codes | ENL_SUPER_CODES
-        # configure select entities by looking up full ENL_OP_CODE dict
+        _enl_op_codes = connector._enl_op_codes | ENL_SUPER_CODES
+        
+        # Filter and create Time entities
         for op_code in list(
             set(entity["instance"]["setmap"])
             - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
         ):
-            epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
-                op_code, None
-            )
+            epc_func = connector._instance.EPC_FUNCTIONS.get(op_code)
             _by_epc_func = (
-                type(epc_function_data) == list and epc_function_data[0] == _hh_mm
-            ) or (callable(epc_function_data) and epc_function_data == _hh_mm)
-            if _by_epc_func or TYPE_TIME in _enl_op_codes.get(op_code, {}).keys():
+                (isinstance(epc_func, list) and epc_func[0] == _hh_mm) or 
+                (callable(epc_func) and epc_func == _hh_mm)
+            )
+            
+            if _by_epc_func or TYPE_TIME in _enl_op_codes.get(op_code, {}):
                 entities.append(
                     EchonetTime(
-                        hass,
-                        entity["echonetlite"],
+                        connector,
                         config,
                         op_code,
                         _enl_op_codes.get(op_code, {}),
@@ -49,118 +51,60 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 
     async_add_entities(entities, True)
 
-
-class EchonetTime(TimeEntity):
+class EchonetTime(CoordinatorEntity, TimeEntity):
+    """Representation of an ECHONETLite time entity."""
     _attr_translation_key = DOMAIN
 
-    def __init__(self, hass, connector, config, code, options, device_name=None):
-        """Initialize the time."""
+    def __init__(self, connector, config, code, options):
+        super().__init__(connector)
         self._connector = connector
-        self._config = config
         self._code = code
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-        self._attr_icon = options.get(CONF_ICON, None)
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
-        self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._code}"
-        )
-
         self._device_name = get_device_name(connector, config)
-        self._attr_native_value = self.get_time()
-        self._attr_should_poll = True
-        self._attr_available = True
+        
+        # Entity Metadata
+        self._attr_icon = options.get(CONF_ICON)
+        self._attr_name = f"{config.title} {get_name_by_epc_code(connector._eojgc, connector._eojcc, code, None, options.get(CONF_NAME))}"
+        self._attr_unique_id = f"{connector._uidi or connector._uid}-{code}"
+        self._attr_entity_registry_enabled_default = not bool(options.get(CONF_DISABLED_DEFAULT))
 
-        self._attr_entity_registry_enabled_default = not bool(
-            options.get(CONF_DISABLED_DEFAULT)
-        )
+    @property
+    def native_value(self) -> time | None:
+        """Return the value reported by the time entity."""
+        hh_mm = self._connector._update_data.get(self._code)
+        if hh_mm is not None and ":" in hh_mm:
+            try:
+                h, m = map(int, hh_mm.split(":"))
+                return datetime.time(h, m)
+            except (ValueError, IndexError):
+                _LOGGER.warning(f"Invalid time format received for {self.name}: {hh_mm}")
+        return None
 
-        self.update_option_listener()
+    async def async_set_value(self, value: time) -> None:
+        """Update the current value."""
+        # Convert time object to ECHONETLite EDT format (H*256 + M)
+        edt = (value.hour << 8) + value.minute
+        mes = {"EPC": self._code, "PDC": 0x02, "EDT": edt}
+        
+        if await self._connector._instance.setMessages([mes]):
+            # Optimistically update the local state
+            self._connector._update_data[self._code] = f"{value.hour:02d}:{value.minute:02d}"
+            self.async_write_ha_state()
+        else:
+            raise InvalidStateError(
+                f"Failed to set time for {self.name}. The device rejected the value."
+            )
 
     @property
     def device_info(self):
         return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
-                )
-            },
+            "identifiers": {(DOMAIN, self._connector._uid, self._connector._instance._eojgc, 
+                             self._connector._instance._eojcc, self._connector._instance._eojci)},
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
-            ],
-            # "sw_version": "",
+            "manufacturer": f"{self._connector._manufacturer} {self._connector._host_product_code or ''}".strip(),
+            "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc],
         }
 
-    def get_time(self):
-        hh_mm = self._connector._update_data.get(self._code)
-        if hh_mm != None:
-            val = hh_mm.split(":")
-            time_obj = datetime.time(int(val[0]), int(val[1]))
-        else:
-            time_obj = None
-        return time_obj
-
-    async def async_set_value(self, value: time) -> None:
-        """Update the current value."""
-        h = int(value.hour)
-        m = int(value.minute)
-        mes = {"EPC": self._code, "PDC": 0x02, "EDT": h * 256 + m}
-        if await self._connector._instance.setMessages([mes]):
-            pass
-        else:
-            raise InvalidStateError(
-                "The state setting is not supported or is an invalid value."
-            )
-
-    async def async_update(self):
-        """Retrieve latest state."""
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
-
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
-
-    async def async_update_callback(self, isPush: bool = False):
-        new_val = self.get_time()
-        changed = (
-            self._attr_native_value != new_val
-            or self._attr_available != self._server_state["available"]
-        )
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._attr_native_value = new_val
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.async_schedule_update_ha_state(_force)
-
-    def update_option_listener(self):
-        _should_poll = self._code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(
-            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
-        )
+    @property
+    def extra_state_attributes(self):
+        should_poll = self._code not in self._connector._ntfPropertyMap
+        return {"notify": "No" if should_poll else "Yes"}

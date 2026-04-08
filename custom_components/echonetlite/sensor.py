@@ -1,6 +1,7 @@
 """Support for ECHONETLite sensors."""
 
 import logging
+from logging import config
 import voluptuous as vol
 
 from homeassistant.const import (
@@ -57,9 +58,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
+    """Set up entry."""
     entities = []
     platform = entity_platform.async_get_current_platform()
     for entity in hass.data[DOMAIN][config.entry_id]:
+        # Reference the wrapper objects
+        coordinator = entity["coordinator"]
+        connector = entity["echonetlite"]
         _LOGGER.debug(f"Configuring ECHONETLite sensor {entity}")
         _LOGGER.debug(
             f"Update flags for this sensor are {entity['echonetlite']._update_flags_full_list}"
@@ -149,7 +154,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         for attr_key in type_data:
                             entities.append(
                                 EchonetSensor(
-                                    entity["echonetlite"],
+                                    coordinator,
                                     config,
                                     op_code,
                                     _enl_op_codes.get(op_code) | {"dict_key": attr_key},
@@ -174,7 +179,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         )
                         entities.append(
                             EchonetSensor(
-                                entity["echonetlite"],
+                                coordinator,
                                 config,
                                 op_code,
                                 attr,
@@ -184,7 +189,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                 else:
                     entities.append(
                         EchonetSensor(
-                            entity["echonetlite"],
+                            coordinator,
                             config,
                             op_code,
                             _enl_op_codes.get(
@@ -197,27 +202,32 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                 continue
             entities.append(
                 EchonetSensor(
-                    entity["echonetlite"],
+                    coordinator,
                     config,
                     op_code,
                     ENL_OP_CODES["default"],
                     hass,
                 )
             )
-    async_add_entities(entities, True)
+    async_add_entities(entities, False)
 
 
-class EchonetSensor(SensorEntity):
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+class EchonetSensor(CoordinatorEntity, SensorEntity):
     """Representation of an ECHONETLite Temperature Sensor."""
-
     _attr_translation_key = DOMAIN
 
-    def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
+    def __init__(self, coordinator, config, op_code, attributes, hass=None) -> None:
         """Initialize the sensor."""
-        name = get_device_name(connector, config)
+        super().__init__(coordinator) # Link to coordinator
+        
+        connector = coordinator.connector
         self._connector = connector
         self._op_code = op_code
         self._sensor_attributes = attributes
+
+        name = get_device_name(connector, config)
         self._eojgc = self._connector._eojgc
         self._eojcc = self._connector._eojcc
         self._eojci = self._connector._eojci
@@ -292,103 +302,94 @@ class EchonetSensor(SensorEntity):
             "model": EOJX_CLASS[self._eojgc][self._eojcc],
             # "sw_version": "",
         }
-
-    def get_attr_native_value(self):
-        """Return the state of the sensor."""
-        if self._op_code in self._connector._update_data:
-            new_val = self._connector._update_data[self._op_code]
-            if "dict_key" in self._sensor_attributes:
-                if hasattr(new_val, "get"):
-                    self._state_value = new_val.get(self._sensor_attributes["dict_key"])
-                else:
-                    self._state_value = None
-            elif "accessor_lambda" in self._sensor_attributes:
-                self._state_value = self._sensor_attributes["accessor_lambda"](
-                    new_val, self._sensor_attributes["accessor_index"]
-                )
+    @property
+    def native_value(self):
+        """Return the state of the sensor using the standard HA property name."""
+        # 1. Access the data from the connector/coordinator
+        if self._op_code not in self._connector._update_data:
+            return None
+            
+        new_val = self._connector._update_data[self._op_code]
+        
+        # 2. Extract specific value (Dict or Lambda)
+        if "dict_key" in self._sensor_attributes:
+            if hasattr(new_val, "get"):
+                self._state_value = new_val.get(self._sensor_attributes["dict_key"])
             else:
-                self._state_value = new_val
+                self._state_value = None
+        elif "accessor_lambda" in self._sensor_attributes:
+            self._state_value = self._sensor_attributes["accessor_lambda"](
+                new_val, self._sensor_attributes["accessor_index"]
+            )
+        else:
+            self._state_value = new_val
 
-            if self._state_value is None:
+        if self._state_value is None:
+            return None
+
+        # 3. FIXED: Interactive icon logic
+        # Changed 'is None' to 'is not None' so the comparison actually works
+        if CONF_ICON_POSITIVE in self._sensor_attributes:
+            if self._state_value is not None and self._state_value > 0:
+                self._attr_icon = self._sensor_attributes[CONF_ICON_POSITIVE]
+            elif self._state_value is not None and self._state_value < 0:
+                self._attr_icon = self._sensor_attributes[CONF_ICON_NEGATIVE]
+            else:
+                self._attr_icon = self._sensor_attributes[CONF_ICON_ZERO]
+
+        # 4. Apply coefficients / Multipliers
+        if (
+            CONF_MULTIPLIER in self._sensor_attributes
+            or CONF_MULTIPLIER_OPCODE in self._sensor_attributes
+            or CONF_MULTIPLIER_OPTIONAL_OPCODE in self._sensor_attributes
+        ):
+            calc_val = self._state_value
+            if CONF_MULTIPLIER in self._sensor_attributes:
+                calc_val = calc_val * self._sensor_attributes[CONF_MULTIPLIER]
+            
+            # Opcode Multiplier
+            if CONF_MULTIPLIER_OPCODE in self._sensor_attributes:
+                m_op = self._sensor_attributes[CONF_MULTIPLIER_OPCODE]
+                m_data = self._connector._update_data.get(m_op)
+                if m_data is not None:
+                    calc_val = calc_val * m_data
+                else:
+                    return None # Still 'unknown' until multiplier arrives
+            
+            # Optional Opcode Multiplier
+            if CONF_MULTIPLIER_OPTIONAL_OPCODE in self._sensor_attributes:
+                m_opt = self._sensor_attributes[CONF_MULTIPLIER_OPTIONAL_OPCODE]
+                m_data = self._connector._update_data.get(m_opt)
+                if m_data is not None:
+                    calc_val = calc_val * m_data
+            return calc_val
+
+        # 5. Device Class Overrides
+        if self._attr_device_class in [SensorDeviceClass.TEMPERATURE, SensorDeviceClass.HUMIDITY]:
+            if self._state_value in [126, 253]:
                 return None
+            return self._state_value
 
-            # interactive icon
-            if CONF_ICON_POSITIVE in self._sensor_attributes:
-                if self._state_value is None and self._state_value > 0:
-                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
-                        CONF_ICON_POSITIVE
-                    ]
-                elif self._state_value is None and self._state_value < 0:
-                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
-                        CONF_ICON_NEGATIVE
-                    ]
-                else:
-                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
-                        CONF_ICON_ZERO
-                    ]
+        if self._attr_device_class == SensorDeviceClass.POWER:
+            return 1 if self._state_value == 65534 else self._state_value
 
-            # apply coefficients
-            if (
-                CONF_MULTIPLIER in self._sensor_attributes
-                or CONF_MULTIPLIER_OPCODE in self._sensor_attributes
-                or CONF_MULTIPLIER_OPTIONAL_OPCODE in self._sensor_attributes
-            ):
-                new_val = self._state_value
-                if CONF_MULTIPLIER in self._sensor_attributes:
-                    new_val = new_val * self._sensor_attributes[CONF_MULTIPLIER]
-                if CONF_MULTIPLIER_OPCODE in self._sensor_attributes:
-                    multiplier_opcode = self._sensor_attributes[CONF_MULTIPLIER_OPCODE]
-                    if (
-                        multiplier_opcode in self._connector._update_data
-                        and self._connector._update_data[multiplier_opcode] is not None
-                    ):
-                        new_val = (
-                            new_val * self._connector._update_data[multiplier_opcode]
-                        )
-                    else:
-                        return None
-                if CONF_MULTIPLIER_OPTIONAL_OPCODE in self._sensor_attributes:
-                    multiplier_opcode = self._sensor_attributes[
-                        CONF_MULTIPLIER_OPTIONAL_OPCODE
-                    ]
-                    if (
-                        multiplier_opcode in self._connector._update_data
-                        and self._connector._update_data[multiplier_opcode] is not None
-                    ):
-                        new_val = (
-                            new_val * self._connector._update_data[multiplier_opcode]
-                        )
-                return new_val
-            elif self._attr_device_class in [
-                SensorDeviceClass.TEMPERATURE,
-                SensorDeviceClass.HUMIDITY,
-            ]:
-                if self._state_value in [126, 253]:
-                    return None
-                else:
-                    return self._state_value
-            elif self._attr_device_class == SensorDeviceClass.POWER:
-                # Underflow (less than 1 W)
-                if self._state_value == 65534:
-                    return 1
-                else:
-                    return self._state_value
-            elif self._op_code in self._connector._update_data:
-                if isinstance(self._state_value, (int, float)):
-                    return self._state_value
-                if len(self._state_value) < 255:
-                    return self._state_value
-                else:
-                    return None
-        return None
+        # 6. Final Type Check (FIXED: added check for non-iterable types)
+        if isinstance(self._state_value, (int, float)):
+            return self._state_value
+        
+        # Only call len() if it's a string/bytes/list
+        if hasattr(self._state_value, "__len__"):
+            return self._state_value if len(self._state_value) < 255 else None
+            
+        return self._state_value
 
-    async def async_update(self):
-        """Retrieve latest state."""
-        try:
-            await self._connector.async_update()
-            self._attr_native_value = self.get_attr_native_value()
-        except TimeoutError:
-            pass
+    # async def async_update(self):
+    #     """Retrieve latest state."""
+    #     try:
+    #         await self._connector.async_update()
+    #         self._attr_native_value = self.get_attr_native_value()
+    #     except TimeoutError:
+    #         pass
 
     async def async_set_on_timer_time(self, timer_time):
         val = str(timer_time).split(":")
@@ -414,36 +415,36 @@ class EchonetSensor(SensorEntity):
                 "The required parameter EPC has not been specified."
             )
 
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
+    # async def async_added_to_hass(self):
+    #     """Register callbacks."""
+    #     self._connector.add_update_option_listener(self.update_option_listener)
+    #     self._connector.register_async_update_callbacks(self.async_update_callback)
 
-    async def async_update_callback(self, isPush: bool = False):
-        new_val = self._connector._update_data.get(self._op_code)
-        if "dict_key" in self._sensor_attributes:
-            if hasattr(new_val, "get"):
-                new_val = new_val.get(self._sensor_attributes["dict_key"])
-            else:
-                new_val = None
-        if "accessor_lambda" in self._sensor_attributes:
-            new_val = self._sensor_attributes["accessor_lambda"](
-                new_val, self._sensor_attributes["accessor_index"]
-            )
-        changed = (
-            new_val is not None and self._state_value != new_val
-        ) or self._attr_available != self._server_state["available"]
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._state_value = new_val
-            self._attr_native_value = self.get_attr_native_value()
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.async_schedule_update_ha_state(_force)
+    # async def async_update_callback(self, isPush: bool = False):
+    #     new_val = self._connector._update_data.get(self._op_code)
+    #     if "dict_key" in self._sensor_attributes:
+    #         if hasattr(new_val, "get"):
+    #             new_val = new_val.get(self._sensor_attributes["dict_key"])
+    #         else:
+    #             new_val = None
+    #     if "accessor_lambda" in self._sensor_attributes:
+    #         new_val = self._sensor_attributes["accessor_lambda"](
+    #             new_val, self._sensor_attributes["accessor_index"]
+    #         )
+    #     changed = (
+    #         new_val is not None and self._state_value != new_val
+    #     ) or self._attr_available != self._server_state["available"]
+    #     if changed:
+    #         _force = bool(not self._attr_available and self._server_state["available"])
+    #         self._state_value = new_val
+    #         self._attr_native_value = self.get_attr_native_value()
+    #         if self._attr_available != self._server_state["available"]:
+    #             if self._server_state["available"]:
+    #                 self.update_option_listener()
+    #             else:
+    #                 self._attr_should_poll = True
+    #         self._attr_available = self._server_state["available"]
+    #         self.async_schedule_update_ha_state(_force)
 
     def update_option_listener(self):
         _should_poll = self._op_code not in self._connector._ntfPropertyMap

@@ -33,20 +33,29 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         if entity["instance"]["eojgc"] == 0x01 and (
             entity["instance"]["eojcc"] == 0x35 or entity["instance"]["eojcc"] == 0x3A
-        ):  # Home Air Cleaner or Celing Fan
-            entities.append(EchonetFan(entity["echonetlite"], config_entry))
-    async_add_devices(entities, True)
+        ):  # Home Air Cleaner or Ceiling Fan
+            # PASS THE COORDINATOR INSTEAD OF ECHONETLITE
+            entities.append(EchonetFan(entity["coordinator"], config_entry))
+    
+    # Change True to False because the coordinator has already 
+    # fetched the data during the integration startup.
+    async_add_devices(entities, False)
 
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-class EchonetFan(FanEntity):
+class EchonetFan(CoordinatorEntity, FanEntity): # Inherit from CoordinatorEntity
     """Representation of an ECHONETLite Fan device (eg Air purifier)."""
 
-    def __init__(self, connector, config):
-        """Initialize the climate device."""
+    def __init__(self, coordinator, config):
+        """Initialize the fan device."""
+        super().__init__(coordinator) # Link the entity to the coordinator
+        
+        # Extract the connector for your existing logic
+        connector = coordinator.connector
+        
         name = get_device_name(connector, config)
         self._attr_name = name
-        self._device_name = name
-        self._connector = connector  # new line
+        self._connector = connector
         self._attr_unique_id = (
             self._connector._uidi if self._connector._uidi else self._connector._uid
         )
@@ -70,7 +79,7 @@ class EchonetFan(FanEntity):
             self._attr_supported_features |= FanEntityFeature.OSCILLATE
         self._olddata = {}
 
-        self._attr_should_poll = True
+        self._attr_should_poll = False
         self._attr_available = True
 
         self._attr_speed_count = getattr(self._connector._instance, "SPEED_COUNT", 100)
@@ -81,11 +90,11 @@ class EchonetFan(FanEntity):
         # see, https://developers.home-assistant.io/blog/2024/07/19/fan-fanentityfeatures-turn-on_off/
         self._enable_turn_on_off_backwards_compatibility = False
 
-    async def async_update(self):
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
+    # async def async_update(self):
+    #     try:
+    #         await self._connector.async_update()
+    #     except TimeoutError:
+    #         pass
 
     @property
     def device_info(self):
@@ -198,27 +207,27 @@ class EchonetFan(FanEntity):
         """Set new fan mode."""
         await self._connector._instance.setFanSpeed(preset_mode)
 
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        self._connector.register_async_update_callbacks(self.async_update_callback)
-        self._connector.add_update_option_listener(self.update_option_listener)
+    # async def async_added_to_hass(self):
+    #     """Register callbacks."""
+    #     self._connector.register_async_update_callbacks(self.async_update_callback)
+    #     self._connector.add_update_option_listener(self.update_option_listener)
 
-    async def async_update_callback(self, isPush: bool = False):
-        changed = (
-            self._olddata != self._connector._update_data
-            or self._attr_available != self._server_state["available"]
-        )
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._olddata = self._connector._update_data.copy()
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self._set_attrs()
-            self.async_schedule_update_ha_state(_force | isPush)
+    # async def async_update_callback(self, isPush: bool = False):
+    #     changed = (
+    #         self._olddata != self._connector._update_data
+    #         or self._attr_available != self._server_state["available"]
+    #     )
+    #     if changed:
+    #         _force = bool(not self._attr_available and self._server_state["available"])
+    #         self._olddata = self._connector._update_data.copy()
+    #         if self._attr_available != self._server_state["available"]:
+    #             if self._server_state["available"]:
+    #                 self.update_option_listener()
+    #             else:
+    #                 self._attr_should_poll = True
+    #         self._attr_available = self._server_state["available"]
+    #         self._set_attrs()
+    #         self.async_schedule_update_ha_state(_force | isPush)
 
     def update_option_listener(self):
         _should_poll = (

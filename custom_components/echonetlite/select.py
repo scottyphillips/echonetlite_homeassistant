@@ -1,6 +1,8 @@
 import logging
-from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.components.select import SelectEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.const import CONF_ICON, CONF_NAME
+
 from pychonet.HomeAirConditioner import (
     ENL_AIR_HORZ,
     ENL_AIR_VERT,
@@ -9,6 +11,9 @@ from pychonet.HomeAirConditioner import (
     ENL_HVAC_MODE,
     ENL_SWING_MODE,
 )
+from pychonet.lib.eojx import EOJX_CLASS
+from pychonet.lib.epc_functions import _swap_dict
+
 from . import get_name_by_epc_code, get_device_name
 from .const import (
     CONF_DISABLED_DEFAULT,
@@ -18,206 +23,121 @@ from .const import (
     TYPE_SELECT,
     NON_SETUP_SINGLE_ENYITY,
 )
-from pychonet.lib.eojx import EOJX_CLASS
-from pychonet.lib.epc_functions import _swap_dict
 
 _LOGGER = logging.getLogger(__name__)
-
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
+        connector = entity["echonetlite"]
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
-        _enl_op_codes = entity["echonetlite"]._enl_op_codes
-        _non_setup_single_entity = NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(
-            eojcc, set()
-        )
-        # configure select entities by looking up full ENL_OP_CODE dict
-        for op_code in list(
-            set(entity["instance"]["setmap"])
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
-        ):
-            epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
-                op_code, None
-            )
-            if op_code in _non_setup_single_entity:
-                continue
+        _enl_op_codes = connector._enl_op_codes
+        _non_setup_entities = NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
+
+        for op_code in list(set(entity["instance"]["setmap"]) - _non_setup_entities):
+            epc_func = connector._instance.EPC_FUNCTIONS.get(op_code)
             _by_epc_func = (
-                type(epc_function_data) == list
-                and type(epc_function_data[1]) == dict
-                and len(epc_function_data[1]) > 2
+                isinstance(epc_func, list) 
+                and len(epc_func) > 1 
+                and isinstance(epc_func[1], dict) 
+                and len(epc_func[1]) > 2
             )
-            _enl_op_code_dict = _enl_op_codes.get(op_code, {})
-            if _by_epc_func or TYPE_SELECT in _enl_op_code_dict.keys():
+            
+            op_code_dict = _enl_op_codes.get(op_code, {})
+            if _by_epc_func or TYPE_SELECT in op_code_dict:
                 entities.append(
-                    EchonetSelect(
-                        hass,
-                        entity["echonetlite"],
-                        config,
-                        op_code,
-                        _enl_op_code_dict,
-                    )
+                    EchonetSelect(connector, config, op_code, op_code_dict)
                 )
 
     async_add_entities(entities, True)
 
-
-class EchonetSelect(SelectEntity):
+class EchonetSelect(CoordinatorEntity, SelectEntity):
+    """Representation of an ECHONETLite select entity."""
     _attr_translation_key = DOMAIN
 
+    # Mapping for EPCs that support user-defined option filtering
     SELECT_USING_USER_OPTIONS = {
-        "0x1-0x30": {
-            ENL_FANSPEED,
-            ENL_SWING_MODE,
-            ENL_AUTO_DIRECTION,
-            ENL_AIR_HORZ,
-            ENL_AIR_VERT,
-            ENL_HVAC_MODE,
-        },
-        "0x1-0x35": {
-            ENL_FANSPEED,
-            ENL_SWING_MODE,
-            ENL_AUTO_DIRECTION,
-            ENL_AIR_HORZ,
-            ENL_AIR_VERT,
-        },
+        "0x1-0x30": {ENL_FANSPEED, ENL_SWING_MODE, ENL_AUTO_DIRECTION, ENL_AIR_HORZ, ENL_AIR_VERT, ENL_HVAC_MODE},
+        "0x1-0x35": {ENL_FANSPEED, ENL_SWING_MODE, ENL_AUTO_DIRECTION, ENL_AIR_HORZ, ENL_AIR_VERT},
     }
 
-    def __init__(self, hass, connector, config, code, options):
-        """Initialize the select."""
-        name = get_device_name(connector, config)
+    def __init__(self, connector, config, code, options):
+        super().__init__(connector)
         self._connector = connector
-        self._config = config
         self._code = code
-        self._optimistic = False
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-        self._sub_state = None
-        if type(options.get(TYPE_SELECT)) == dict:
-            self._options = options[TYPE_SELECT]
+        self._device_name = get_device_name(connector, config)
+        
+        # Resolve Option Mapping
+        if isinstance(options.get(TYPE_SELECT), dict):
+            self._options_map = options[TYPE_SELECT]
         else:
-            # Read from _instance.EPC FUNCTIONS definition
-            # Swap key, value of _instance.EPC_FUNCTIONS[opc][1]
-            self._options = _swap_dict(connector._instance.EPC_FUNCTIONS[code][1])
+            # Fallback to internal library EPC_FUNCTIONS
+            self._options_map = _swap_dict(connector._instance.EPC_FUNCTIONS[code][1])
+
         self._icons = options.get(CONF_ICONS, {})
-        self._attr_icon = options.get(CONF_ICON, None)
-        self._icon_default = self._attr_icon
-        self._attr_options = list(self._options.keys())
+        self._default_icon = options.get(CONF_ICON)
+        
+        # Entity Identification
+        self._attr_name = f"{config.title} {get_name_by_epc_code(connector._eojgc, connector._eojcc, code, None, options.get(CONF_NAME))}"
+        self._attr_unique_id = f"{connector._uidi or connector._uid}-{code}"
+        self._attr_entity_registry_enabled_default = not bool(options.get(CONF_DISABLED_DEFAULT))
 
-        self._user_option_epcs = self.SELECT_USING_USER_OPTIONS.get(
-            hex(self._connector._instance._eojgc)
-            + "-"
-            + hex(self._connector._instance._eojcc),
-            set(),
-        ).intersection(set(self._connector._user_options.keys()))
+        # Check for user-overridden option lists
+        key = f"{hex(connector._instance._eojgc)}-{hex(connector._instance._eojcc)}"
+        self._user_option_epcs = self.SELECT_USING_USER_OPTIONS.get(key, set()).intersection(set(connector._user_options.keys()))
 
+    @property
+    def options(self) -> list[str]:
+        """Return a list of available options."""
         if self._code in self._user_option_epcs:
-            if self._connector._user_options[code] is not False:
-                self._attr_options = self._connector._user_options[code]
-        self._attr_current_option = self._connector._update_data.get(self._code)
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
-        self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._code}"
-        )
-        self._device_name = name
-        self._attr_should_poll = True
-        self._attr_available = True
-        self._attr_force_update = False
+            user_opts = self._connector._user_options.get(self._code)
+            if user_opts is not False:
+                return user_opts
+        return list(self._options_map.keys())
 
-        self._attr_entity_registry_enabled_default = not bool(
-            options.get(CONF_DISABLED_DEFAULT)
-        )
+    @property
+    def current_option(self) -> str | None:
+        """Return the current selected option."""
+        raw_value = self._connector._update_data.get(self._code)
+        if raw_value is None:
+            return None
+        
+        # If the raw value is a string (already mapped), return it
+        if isinstance(raw_value, str) and raw_value in self._options_map:
+            return raw_value
+        
+        # Otherwise, lookup the string key by the integer value
+        for k, v in self._options_map.items():
+            if v == raw_value:
+                return k
+        return None
 
-        self.update_option_listener()
+    @property
+    def icon(self):
+        """Return the icon based on the current selection."""
+        return self._icons.get(self.current_option, self._default_icon)
+
+    async def async_select_option(self, option: str) -> None:
+        """Change the selected option."""
+        if await self._connector._instance.setMessage(self._code, self._options_map[option]):
+            # Optimistically update the coordinator's data
+            self._connector._update_data[self._code] = self._options_map[option]
+            self.async_write_ha_state()
+        else:
+            _LOGGER.error(f"Failed to set {self.name} to {option}")
 
     @property
     def device_info(self):
         return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
-                )
-            },
+            "identifiers": {(DOMAIN, self._connector._uid, self._connector._instance._eojgc, 
+                             self._connector._instance._eojcc, self._connector._instance._eojci)},
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
-            ],
-            # "sw_version": "",
+            "manufacturer": f"{self._connector._manufacturer} {self._connector._host_product_code or ''}".strip(),
+            "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc],
         }
 
-    async def async_select_option(self, option: str):
-        self._attr_current_option = option
-        self.async_schedule_update_ha_state()
-        if not await self._connector._instance.setMessage(
-            self._code, self._options[option]
-        ):
-            # Restore previous state
-            self._attr_current_option = self._connector._update_data.get(self._code)
-            self.async_schedule_update_ha_state()
-
-    async def async_update(self):
-        """Retrieve latest state."""
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
-
-    def update_attr(self):
-        self._attr_options = list(self._options.keys())
-        if self._attr_current_option not in self._attr_options:
-            # maybe data value is raw(int)
-            keys = [
-                k for k, v in self._options.items() if v == self._attr_current_option
-            ]
-            if keys:
-                self._attr_current_option = keys[0]
-        self._attr_icon = self._icons.get(self._attr_current_option, self._icon_default)
-        if self._code in self._user_option_epcs:
-            if self._connector._user_options[self._code] is not False:
-                self._attr_options = self._connector._user_options[self._code]
-
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
-
-    async def async_update_callback(self, isPush: bool = False):
-        new_val = self._connector._update_data.get(self._code)
-        changed = (
-            new_val is not None and self._attr_current_option != new_val
-        ) or self._attr_available != self._server_state["available"]
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._attr_current_option = new_val
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.update_attr()
-            self.async_schedule_update_ha_state(_force)
-
-    def update_option_listener(self):
-        _should_poll = self._code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(
-            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
-        )
+    @property
+    def extra_state_attributes(self):
+        should_poll = self._code not in self._connector._ntfPropertyMap
+        return {"notify": "No" if should_poll else "Yes"}

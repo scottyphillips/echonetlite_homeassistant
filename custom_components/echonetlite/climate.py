@@ -18,6 +18,7 @@ from homeassistant.const import (
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_platform
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from pychonet.HomeAirConditioner import (
     AIRFLOW_VERT,
     ENL_AIR_VERT,
@@ -68,8 +69,12 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         if (
             entity["instance"]["eojgc"] == 0x01 and entity["instance"]["eojcc"] == 0x30
         ):  # Home Air Conditioner
-            entities.append(EchonetClimate(entity["echonetlite"], config_entry))
-    async_add_devices(entities, True)
+            # Pass the coordinator here
+            entities.append(EchonetClimate(entity["coordinator"], config_entry))
+            
+    # Note: We change 'True' to 'False' because the Coordinator already 
+    # performed the first refresh during __init__.py startup.
+    async_add_devices(entities, False)
 
     platform = entity_platform.async_get_current_platform()
 
@@ -82,13 +87,15 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         "async_set_humidifier_during_heater",
     )
 
-
-class EchonetClimate(ClimateEntity):
+class EchonetClimate(CoordinatorEntity, ClimateEntity): # Added CoordinatorEntity
     """Representation of an ECHONETLite climate device."""
-
     _attr_translation_key = DOMAIN
-
-    def __init__(self, connector, config):
+    def __init__(self, coordinator, config):
+        """Initialize the climate device."""
+        super().__init__(coordinator) # This registers the entity with the coordinator
+        
+        # We extract the connector from the coordinator wrapper
+        connector = coordinator.connector
         """Initialize the climate device."""
         name = get_device_name(connector, config)
         self._attr_name = name
@@ -143,7 +150,7 @@ class EchonetClimate(ClimateEntity):
         # self._should_poll = True
         self._last_mode = HVACMode.OFF
         # self._available = True
-        self._attr_should_poll = True
+        self._attr_should_poll = False
         self._attr_available = True
 
         self.update_option_listener()
@@ -152,12 +159,12 @@ class EchonetClimate(ClimateEntity):
         # see, https://developers.home-assistant.io/blog/2024/01/24/climate-climateentityfeatures-expanded
         self._enable_turn_on_off_backwards_compatibility = False
 
-    async def async_update(self):
-        """Get the latest state from the HVAC."""
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
+    # async def async_update(self):
+    #     """Get the latest state from the HVAC."""
+    #     try:
+    #         await self._connector.async_update()
+    #     except TimeoutError:
+    #         pass
 
     @property
     def device_info(self):

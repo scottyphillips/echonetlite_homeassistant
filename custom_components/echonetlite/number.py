@@ -1,4 +1,7 @@
 import logging
+from homeassistant.components.number import NumberEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.exceptions import InvalidStateError
 from homeassistant.const import (
     CONF_ICON,
     CONF_NAME,
@@ -7,8 +10,6 @@ from homeassistant.const import (
     CONF_MAXIMUM,
     CONF_UNIT_OF_MEASUREMENT,
 )
-from homeassistant.exceptions import InvalidStateError
-from homeassistant.components.number import NumberEntity
 from pychonet.lib.eojx import EOJX_CLASS
 from . import get_name_by_epc_code, get_unit_by_devise_class, get_device_name
 from .const import (
@@ -24,14 +25,14 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
         _enl_op_codes = entity["echonetlite"]._enl_op_codes
-        # configure select entities by looking up full ENL_OP_CODE dict
+        
+        # Filter and create Number entities
         for op_code in list(
             set(entity["instance"]["setmap"])
             - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
@@ -39,7 +40,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             if TYPE_NUMBER in _enl_op_codes.get(op_code, {}).keys():
                 entities.append(
                     EchonetNumber(
-                        hass,
                         entity["echonetlite"],
                         config,
                         op_code,
@@ -49,156 +49,85 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 
     async_add_entities(entities, True)
 
-
-class EchonetNumber(NumberEntity):
+class EchonetNumber(CoordinatorEntity, NumberEntity):
+    """Representation of an ECHONETLite number entity."""
     _attr_translation_key = DOMAIN
 
-    def __init__(self, hass, connector, config, code, options):
-        """Initialize the number."""
+    def __init__(self, connector, config, code, options):
+        super().__init__(connector)
         self._connector = connector
-        self._config = config
         self._code = code
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-        self._attr_icon = options.get(CONF_ICON, None)
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
-        self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._code}"
-        )
-
         self._options = options[TYPE_NUMBER]
-        self._as_zero = int(options[TYPE_NUMBER].get(CONF_AS_ZERO, 0))
-        self._conf_max = int(options[TYPE_NUMBER][CONF_MAXIMUM])
-        self._byte_length = int(options[TYPE_NUMBER].get(CONF_BYTE_LENGTH, 1))
-
+        
+        # Configuration settings
+        self._as_zero = int(self._options.get(CONF_AS_ZERO, 0))
+        self._conf_max = int(self._options[CONF_MAXIMUM])
+        self._byte_length = int(self._options.get(CONF_BYTE_LENGTH, 1))
+        
+        # Entity Metadata
         self._device_name = get_device_name(connector, config)
-        self._attr_device_class = self._options.get(
-            CONF_TYPE, options.get(CONF_TYPE, None)
-        )
-        self._attr_native_value = self.get_value()
-        self._attr_native_max_value = self.get_max_value()
+        self._attr_name = f"{config.title} {get_name_by_epc_code(connector._eojgc, connector._eojcc, code, None, options.get(CONF_NAME))}"
+        self._attr_unique_id = f"{connector._uidi if connector._uidi else connector._uid}-{code}"
+        self._attr_icon = options.get(CONF_ICON)
+        self._attr_device_class = self._options.get(CONF_TYPE, options.get(CONF_TYPE))
         self._attr_native_min_value = self._options.get(CONF_MINIMUM, 0) - self._as_zero
+        self._attr_entity_registry_enabled_default = not bool(options.get(CONF_DISABLED_DEFAULT))
+        
+        # Unit of Measurement
         self._attr_native_unit_of_measurement = self._options.get(
-            CONF_UNIT_OF_MEASUREMENT, options.get(CONF_UNIT_OF_MEASUREMENT, None)
+            CONF_UNIT_OF_MEASUREMENT, options.get(CONF_UNIT_OF_MEASUREMENT)
         )
         if not self._attr_native_unit_of_measurement:
-            self._attr_native_unit_of_measurement = get_unit_by_devise_class(
-                self._attr_device_class
-            )
-        self._attr_should_poll = True
-        self._attr_available = True
+            self._attr_native_unit_of_measurement = get_unit_by_devise_class(self._attr_device_class)
 
-        self._attr_entity_registry_enabled_default = not bool(
-            options.get(CONF_DISABLED_DEFAULT)
-        )
+    @property
+    def native_value(self) -> float | None:
+        """Return the state of the entity."""
+        value = self._connector._update_data.get(self._code)
+        if value is not None:
+            return float(int(value) - self._as_zero)
+        return None
 
-        self.update_option_listener()
+    @property
+    def native_max_value(self) -> float:
+        """Return the maximum value."""
+        max_opc = self._options.get(CONF_MAX_OPC)
+        max_value = self._conf_max
+        
+        if max_opc:
+            if isinstance(max_opc, list):
+                # Handle nested dictionary lookup if applicable
+                data = self._connector._update_data.get(max_opc[0])
+                if isinstance(data, dict):
+                    max_value = data.get(max_opc[1], self._conf_max)
+            else:
+                max_value = self._connector._update_data.get(max_opc, self._conf_max)
+                
+        return float(int(max_value) - self._as_zero)
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Update the current value on the device."""
+        if await self._connector._instance.setMessage(
+            self._code, int(value + self._as_zero), self._byte_length
+        ):
+            # Optimistically update the local cache and the UI
+            self._connector._update_data[self._code] = int(value + self._as_zero)
+            self.async_write_ha_state()
+        else:
+            raise InvalidStateError("The value setting is not supported by the device.")
 
     @property
     def device_info(self):
         return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
-                )
-            },
+            "identifiers": {(DOMAIN, self._connector._uid, self._connector._instance._eojgc, 
+                             self._connector._instance._eojcc, self._connector._instance._eojci)},
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
-            ],
-            # "sw_version": "",
+            "manufacturer": f"{self._connector._manufacturer} {self._connector._host_product_code or ''}".strip(),
+            "model": EOJX_CLASS[self._connector._instance._eojgc][self._connector._instance._eojcc],
         }
 
-    def get_value(self):
-        value = self._connector._update_data.get(self._code)
-        if value != None:
-            return int(self._connector._update_data.get(self._code)) - self._as_zero
-        else:
-            return None
-
-    def get_max_value(self):
-        max_value = self.get_max_opc_value()
-        if max_value == None:
-            max_value = self._conf_max
-        return max_value - self._as_zero
-
-    def get_max_opc_value(self):
-        max_opc_value = None
-        max_opc = self._options.get(CONF_MAX_OPC)
-        if max_opc:
-            if isinstance(max_opc, list):
-                max_opc_value = self._connector._update_data.get(max_opc[0]).get(
-                    max_opc[1]
-                )
-            else:
-                max_opc_value = self._connector._update_data.get(max_opc)
-            if max_opc_value != None:
-                max_opc_value = int(max_opc_value)
-        return max_opc_value
-
-    async def async_set_native_value(self, value: float) -> None:
-        """Update the current value."""
-        if await self._connector._instance.setMessage(
-            self._code, int(value + self._as_zero), self._byte_length
-        ):
-            # self._connector._update_data[epc] = value
-            # self.async_write_ha_state()
-            pass
-        else:
-            raise InvalidStateError(
-                "The state setting is not supported or is an invalid value."
-            )
-
-    async def async_update(self):
-        """Retrieve latest state."""
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
-
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
-
-    async def async_update_callback(self, isPush: bool = False):
-        new_val = self.get_value()
-        changed = (
-            self._attr_native_value != new_val
-            or self._attr_available != self._server_state["available"]
-            or self._attr_native_max_value != self.get_max_value()
-        )
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._attr_native_value = new_val
-            self._attr_native_max_value = self.get_max_value()
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.async_schedule_update_ha_state(_force)
-
-    def update_option_listener(self):
-        _should_poll = self._code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(
-            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
-        )
+    @property
+    def extra_state_attributes(self):
+        """Return entity specific state attributes."""
+        should_poll = self._code not in self._connector._ntfPropertyMap
+        return {"notify": "No" if should_poll else "Yes"}

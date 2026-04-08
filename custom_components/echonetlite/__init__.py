@@ -16,6 +16,7 @@ from homeassistant import config_entries
 from homeassistant.components.number.const import NumberDeviceClass
 from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.const import (
     CONF_NAME,
     PERCENTAGE,
@@ -96,6 +97,29 @@ DISCOVERY_MIN_BUDGET = 8.0
 INSTANCE_MAX_BUDGET = 8.0
 INSTANCE_MIN_BUDGET = 4.0
 INSTANCE_RETRY_DELAY = 0.3
+
+class EchonetLiteCoordinator(DataUpdateCoordinator):
+    """Mapping the Coordinator to the ECHONETConnector."""
+
+    def __init__(self, hass, echonet_connector):
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"ECHONETLite {echonet_connector._name or echonet_connector._host}",
+            # This interval replaces the old Throttle logic
+            update_interval=timedelta(seconds=60), 
+        )
+        self.connector = echonet_connector
+
+    async def _async_update_data(self):
+        """This is the 'Wrap': It calls the connector's internal update logic."""
+        try:
+            # We call your existing function that handles the 100ms sleeps and batches
+            await self.connector.async_update()
+            # We return the data dictionary the connector just populated
+            return self.connector._update_data
+        except Exception as err:
+            raise UpdateFailed(f"Error communicating with ECHONET: {err}")
 
 
 def _remaining_setup_budget(started: float) -> float:
@@ -410,8 +434,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         echonetlite.async_update(),
                         per_try_budget,
                     )
+
+                    # 1. Create the coordinator, passing in the 'echonetlite' instance
+                    coordinator = EchonetLiteCoordinator(hass, echonetlite)
+                    
+                    # 2. Since we just ran 'async_update' above, tell the coordinator 
+                    # it already has fresh data so it doesn't poll again immediately.
+                    coordinator.async_set_updated_data(echonetlite._update_data)
+
+                    # 3. Store both in hass.data so platforms (sensor.py) can find them
                     hass.data[DOMAIN][entry.entry_id].append(
-                        {"instance": instance, "echonetlite": echonetlite}
+                        {
+                            "instance": instance, 
+                            "echonetlite": echonetlite,
+                            "coordinator": coordinator  # Now available for sensors!
+                        }
                     )
                     break
 
