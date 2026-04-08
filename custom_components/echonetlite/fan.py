@@ -1,247 +1,201 @@
+"""Support for ECHONETLite Fan."""
+
 import logging
-from pychonet.HomeAirCleaner import FAN_SPEED
-from pychonet.lib.const import ENL_STATUS
+
+from homeassistant.components.fan import (
+    FanEntity,
+    FanEntityFeature,
+)
+from homeassistant.const import UnitOfTemperature
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
 from pychonet.lib.eojx import EOJX_CLASS
-from pychonet.CeilingFan import (
-    ENL_FANSPEED_PERCENT,
-    ENL_FAN_DIRECTION,
-    ENL_FAN_OSCILLATION,
-)
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.const import (
-    PRECISION_WHOLE,
-)
 from . import get_device_name
-from .const import (
-    CONF_FORCE_POLLING,
-    DATA_STATE_ON,
-    DOMAIN,
-    ENL_FANSPEED,
-)
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_FAN_MODES = list(
-    FAN_SPEED.keys()
-)  # ["auto","minimum","low","medium-low","medium","medium-high","high","very-high","max"]
 
-
-async def async_setup_entry(hass, config_entry, async_add_devices):
-    """Set up entry."""
+async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
+    """Set up the ECHONETLite fan platform."""
     entities = []
-    for entity in hass.data[DOMAIN][config_entry.entry_id]:
-        if entity["instance"]["eojgc"] == 0x01 and (
-            entity["instance"]["eojcc"] == 0x35 or entity["instance"]["eojcc"] == 0x3A
-        ):  # Home Air Cleaner or Celing Fan
-            entities.append(EchonetFan(entity["echonetlite"], config_entry))
-    async_add_devices(entities, True)
+    for entity in hass.data[DOMAIN][config.entry_id]:
+        eojgc = entity["instance"]["eojgc"]
+        eojcc = entity["instance"]["eojcc"]
 
-
-class EchonetFan(FanEntity):
-    """Representation of an ECHONETLite Fan device (eg Air purifier)."""
-
-    def __init__(self, connector, config):
-        """Initialize the climate device."""
-        name = get_device_name(connector, config)
-        self._attr_name = name
-        self._device_name = name
-        self._connector = connector  # new line
-        self._attr_unique_id = (
-            self._connector._uidi if self._connector._uidi else self._connector._uid
+        # Check if this device is a fan (EPC 0x81 - ON/OFF, 0x83 - Speed)
+        _enl_op_codes = entity["echonetlite"]._enl_op_codes
+        
+        has_fan_support = any(
+            code in entity["instance"]["setmap"] for code in [0x80, 0x81, 0x83]
         )
-        self._precision = 1.0
-        self._target_temperature_step = 1
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-        self._attr_supported_features = FanEntityFeature(0)
-        if hasattr(FanEntityFeature, "TURN_ON"):  # v2024.8
-            self._attr_supported_features |= FanEntityFeature.TURN_ON
-        if hasattr(FanEntityFeature, "TURN_OFF"):
-            self._attr_supported_features |= FanEntityFeature.TURN_OFF
-        if ENL_FANSPEED in list(self._connector._setPropertyMap):
-            self._attr_supported_features |= FanEntityFeature.PRESET_MODE
-        if ENL_FANSPEED_PERCENT in list(self._connector._setPropertyMap):
-            self._attr_supported_features |= FanEntityFeature.SET_SPEED
-        if ENL_FAN_DIRECTION in list(self._connector._setPropertyMap):
-            self._attr_supported_features |= FanEntityFeature.DIRECTION
-        if ENL_FAN_OSCILLATION in list(self._connector._setPropertyMap):
-            self._attr_supported_features |= FanEntityFeature.OSCILLATE
-        self._olddata = {}
 
-        self._attr_should_poll = True
-        self._attr_available = True
+        if has_fan_support:
+            entities.append(
+                EchonetFan(
+                    entity["echonetlite"],
+                    config,
+                    _enl_op_codes,
+                    hass,
+                )
+            )
 
-        self._attr_speed_count = getattr(self._connector._instance, "SPEED_COUNT", 100)
+    async_add_entities(entities, True)
 
-        self._set_attrs()
-        self.update_option_listener()
 
-        # see, https://developers.home-assistant.io/blog/2024/07/19/fan-fanentityfeatures-turn-on_off/
-        self._enable_turn_on_off_backwards_compatibility = False
+class EchonetFan(CoordinatorEntity, FanEntity):
+    """Representation of an ECHONETLite Fan."""
 
-    async def async_update(self):
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
+    _attr_translation_key = DOMAIN
+    coordinator: DataUpdateCoordinator | None
+
+    def __init__(self, connector, config, enl_op_codes, hass=None) -> None:
+        """Initialize the fan entity."""
+        super().__init__(connector.coordinator) if connector.coordinator else None
+        
+        self._connector = connector
+        self._config = config
+        self._enl_op_codes = enl_op_codes
+        self._device_name = get_device_name(connector, config)
+
+        self._attr_unique_id = (
+            f"{self._connector._uidi}" if self._connector._uidi else self._connector._uid
+        )
+        self._attr_name = self._device_name
+        
+        # Fan supports speed control via EPC 0x83
+        self._attr_supported_features = (
+            FanEntity.SET_SPEED | FanEntity.OMNI_DIRECTIONAL
+        )
+        
+        # Fan speeds - typically 1-5 or 1-6 in ECHONET
+        _fan_speeds = ["low", "medium_low", "medium", "medium_high", "high"]
+        self._attr_percentage_steps = len(_fan_speeds) + 1
+        self._attr_speed_count = 3
+        
+        # Initialize state from connector data
+        self._is_on = False
+        self._percentage = None
+        
+        update_data = getattr(self.coordinator, 'data', None) or getattr(connector, '_update_data', {})
+        
+        if 0x81 in update_data:
+            self._is_on = (update_data[0x81] != 0x02)  # Not OFF
+        if 0x83 in update_data:
+            # EPC 0x83: Fan speed - typically 1-5 or similar scale
+            speed_value = int(update_data[0x83])
+            self._percentage = min(max(speed_value * 20, 20), 100)
 
     @property
     def device_info(self):
         return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
-                )
-            },
+            "identifiers": {(DOMAIN, self._connector._uid)},
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
-            ],
-            # "sw_version": "",
+            "manufacturer": self._connector._manufacturer,
+            "model": EOJX_CLASS[self._connector._eojgc][self._connector._eojcc],
         }
 
     @property
-    def precision(self) -> float:
-        return PRECISION_WHOLE
+    def is_on(self):
+        """Return if the fan is on."""
+        return self._is_on
 
     @property
-    def is_on(self):
-        """Return true if the device is on."""
-        return (
-            True if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON else False
-        )
+    def percentage(self):
+        """Return the current speed percentage."""
+        return self._percentage
 
-    def _set_attrs(self):
-        # @property
-        # def preset_mode(self):
-        """Return the fan setting."""
-        self._attr_preset_mode = (
-            self._connector._update_data[ENL_FANSPEED]
-            if ENL_FANSPEED in self._connector._update_data
-            else None
-        )
+    @property
+    def oscillating(self):
+        """Return if the fan is oscillating."""
+        # Check EPC 0x94 (oscillation) if available
+        update_data = getattr(self.coordinator, 'data', None) or getattr(self._connector, '_update_data', {})
+        return bool(update_data.get(0x94)) if update_data else False
 
-        # @property
-        # def percentage(self):
-        """Return the fan setting."""
-        self._attr_percentage = (
-            self._connector._update_data[ENL_FANSPEED_PERCENT]
-            if ENL_FANSPEED_PERCENT in self._connector._update_data
-            else None
-        )
+    @property
+    def preset_mode(self):
+        """Return the current preset mode."""
+        # Check for turbo/sleep modes (EPC 0x3A or similar)
+        update_data = getattr(self.coordinator, 'data', None) or getattr(self._connector, '_update_data', {})
+        if self.coordinator and 0x3A in self.coordinator.data:
+            epc_3a = self.coordinator.data[0x3A]
+            if epc_3a == 0xC1:
+                return "sleep"
+            elif epc_3a == 0xD1:
+                return "turbo"
+        return None
 
-        # @property
-        # def current_direction(self):
-        """Return the fan direction."""
-        self._attr_current_direction = (
-            self._connector._update_data[ENL_FAN_DIRECTION]
-            if ENL_FAN_DIRECTION in self._connector._update_data
-            else None
-        )
+    async def async_turn_on(self, percentage: int = None, **kwargs) -> None:
+        """Turn the fan on."""
+        if percentage is not None:
+            await self.async_set_percentage(percentage)
+        
+        # Turn on (EPC 0x81 = 0x01 for operation start)
+        await self._connector._instance.setMessage(0x81, 0x01)
+        self._is_on = True
+        self.async_write_ha_state()
 
-        # @property
-        # def oscillating(self):
-        """Return the fan oscillating."""
-        self._attr_oscillating = (
-            self._connector._update_data[ENL_FAN_OSCILLATION]
-            if ENL_FAN_OSCILLATION in self._connector._update_data
-            else None
-        )
+    async def async_turn_off(self, **kwargs) -> None:
+        """Turn the fan off."""
+        # Turn off (EPC 0x81 = 0x02 for stop)
+        await self._connector._instance.setMessage(0x81, 0x02)
+        self._is_on = False
+        self.async_write_ha_state()
 
-        # @property
-        # def preset_modes(self):
-        """Return the list of available fan modes."""
-        if (
-            ENL_FANSPEED in list(self._connector._user_options.keys())
-            and self._connector._user_options[ENL_FANSPEED] is not False
-        ):
-            self._attr_preset_modes = self._connector._user_options[ENL_FANSPEED]
+    async def async_toggle(self, **kwargs) -> None:
+        """Toggle the fan."""
+        if self.is_on:
+            await self.async_turn_off(**kwargs)
         else:
-            self._attr_preset_modes = DEFAULT_FAN_MODES
-
-    async def async_set_direction(self, direction: str) -> None:
-        await self._connector._instance.setFanDirection(direction)
-
-    async def async_turn_on(
-        self,
-        percentage: int | None = None,
-        preset_mode: str | None = None,
-        **kwargs,
-    ) -> None:
-        """Turn on."""
-        await self._connector._instance.on()
-
-    async def async_turn_off(self, **kwargs):
-        """Turn off."""
-        await self._connector._instance.off()
-
-    async def async_oscillate(self, oscillating: bool) -> None:
-        await self._connector._instance.setFanOscillation(oscillating)
+            await self.async_turn_on(**kwargs)
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed percentage of the fan."""
-        await self._connector._instance.setFanSpeedPercent(percentage)
+        # Convert HA percentage (0-100) to ECHONET scale
+        epc_value = max(1, round(percentage / 20))
+        await self._connector._instance.setMessage(0x83, epc_value)
+        self._percentage = percentage
+        self.async_write_ha_state()
 
-    async def async_set_preset_mode(self, preset_mode: str):
-        """Set new fan mode."""
-        await self._connector._instance.setFanSpeed(preset_mode)
+    async def async_oscillate(self, oscillating: bool) -> None:
+        """Set oscillation of the fan."""
+        # EPC 0x94 controls horizontal swing/oscillation
+        await self._connector._instance.setMessage(0x94, 0x01 if oscillating else 0x02)
+
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        """Set the preset mode of the fan."""
+        # EPC 0x3A for special modes
+        mode_map = {
+            "turbo": 0xD1,
+            "sleep": 0xC1,
+        }
+        
+        if preset_mode in mode_map:
+            await self._connector._instance.setMessage(0x3A, mode_map[preset_mode])
 
     async def async_added_to_hass(self):
         """Register callbacks."""
-        self._connector.register_async_update_callbacks(self.async_update_callback)
         self._connector.add_update_option_listener(self.update_option_listener)
+        self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush: bool = False):
-        changed = (
-            self._olddata != self._connector._update_data
-            or self._attr_available != self._server_state["available"]
-        )
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._olddata = self._connector._update_data.copy()
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self._set_attrs()
-            self.async_schedule_update_ha_state(_force | isPush)
+        """Handle coordinator updates."""
+        if self.coordinator and not self.coordinator.last_update_success:
+            return
+            
+        update_data = self.coordinator.data
+        
+        if 0x81 in update_data:
+            # EPC 0x81: Operation status - 0x01=ON, 0x02=OFF
+            self._is_on = (update_data[0x81] != 0x02)
+        
+        if 0x83 in update_data:
+            # EPC 0x83: Fan speed
+            speed_value = int(update_data[0x83])
+            self._percentage = min(max(speed_value * 20, 20), 100)
+
+        self.async_write_ha_state()
 
     def update_option_listener(self):
-        _should_poll = (
-            ENL_STATUS not in self._connector._ntfPropertyMap
-            or (
-                FanEntityFeature.PRESET_MODE in self._attr_supported_features
-                and ENL_FANSPEED not in self._connector._ntfPropertyMap
-            )
-            or (
-                FanEntityFeature.SET_SPEED in self._attr_supported_features
-                and ENL_FANSPEED_PERCENT not in self._connector._ntfPropertyMap
-            )
-            or (
-                FanEntityFeature.DIRECTION in self._attr_supported_features
-                and ENL_FAN_DIRECTION not in self._connector._ntfPropertyMap
-            )
-            or (
-                FanEntityFeature.OSCILLATE in self._attr_supported_features
-                and ENL_FAN_OSCILLATION not in self._connector._ntfPropertyMap
-            )
-        )
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(f"{self._attr_name}: _should_poll is {_should_poll}")
+        """Update listener for option changes."""
+        pass

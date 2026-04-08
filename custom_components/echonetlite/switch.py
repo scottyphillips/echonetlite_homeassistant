@@ -1,215 +1,108 @@
-import asyncio
+"""Support for ECHONETLite Switch."""
+
 import logging
-from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA, CONF_NAME
-from homeassistant.components.switch import SwitchEntity
-from . import get_name_by_epc_code, get_device_name
-from .const import (
-    CONF_DISABLED_DEFAULT,
-    DOMAIN,
-    CONF_ON_VALUE,
-    CONF_OFF_VALUE,
-    DATA_STATE_ON,
-    DATA_STATE_OFF,
-    NON_SETUP_SINGLE_ENYITY,
-    SWITCH_POWER,
-    CONF_ENSURE_ON,
-    TYPE_SWITCH,
-    TYPE_NUMBER,
-    ENL_STATUS,
-    CONF_FORCE_POLLING,
+
+from homeassistant.components.switch import (
+    SwitchEntity,
 )
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
+
 from pychonet.lib.eojx import EOJX_CLASS
+from . import get_device_name
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
+    """Set up the ECHONETLite switch platform."""
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
-        set_enl_status = False
+
+        # Check if this device is a switch (EPC 0x81 - ON/OFF)
         _enl_op_codes = entity["echonetlite"]._enl_op_codes
-        # configure switch entities by looking up full ENL_OP_CODE dict
-        for op_code in list(
-            set(entity["instance"]["setmap"])
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
-        ):
-            epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
-                op_code, None
-            )
-            _by_epc_func = (
-                type(epc_function_data) == list
-                and type(epc_function_data[1]) == dict
-                and len(epc_function_data[1]) == 2
-            )
-            _enl_op_code_dict = _enl_op_codes.get(op_code, {})
-            if _by_epc_func or TYPE_SWITCH in _enl_op_code_dict.keys():
-                entities.append(
-                    EchonetSwitch(
-                        hass,
-                        entity["echonetlite"],
-                        config,
-                        op_code,
-                        _enl_op_code_dict,
-                    )
-                )
-                if op_code == ENL_STATUS:
-                    set_enl_status = True
-            if (
-                switch_conf := _enl_op_codes.get(op_code, {})
-                .get(TYPE_NUMBER, {})
-                .get(TYPE_SWITCH)
-            ):
-                switch_conf.update(_enl_op_codes[op_code].copy())
-                entities.append(
-                    EchonetSwitch(
-                        hass,
-                        entity["echonetlite"],
-                        config,
-                        op_code,
-                        switch_conf,
-                    )
-                )
-        # Auto configure of the power switch
-        if (eojgc == 0x01 and eojcc in (0x30, 0x35)) or (
-            eojgc == 0x02 and eojcc in (0x90, 0x91)
-        ):
-            # Home air conditioner, Air cleaner, General Lighting, Single Function Lighting
-            continue
-        if not set_enl_status and ENL_STATUS in entity["instance"]["setmap"]:
+        
+        has_switch_support = any(
+            code in entity["instance"]["setmap"] for code in [0x80, 0x81]
+        )
+
+        if has_switch_support:
             entities.append(
                 EchonetSwitch(
-                    hass,
                     entity["echonetlite"],
                     config,
-                    ENL_STATUS,
-                    {
-                        CONF_ICON: "mdi:power-settings",
-                        CONF_SERVICE_DATA: SWITCH_POWER,
-                    },
+                    _enl_op_codes,
+                    hass,
                 )
             )
+
     async_add_entities(entities, True)
 
 
-class EchonetSwitch(SwitchEntity):
-    def __init__(self, hass, connector, config, code, options):
-        """Initialize the switch."""
-        name = get_device_name(connector, config)
+class EchonetSwitch(CoordinatorEntity, SwitchEntity):
+    """Representation of an ECHONETLite Switch."""
+
+    _attr_translation_key = DOMAIN
+    coordinator: DataUpdateCoordinator | None
+
+    def __init__(self, connector, config, enl_op_codes, hass=None) -> None:
+        """Initialize the switch entity."""
+        super().__init__(connector.coordinator) if connector.coordinator else None
+        
         self._connector = connector
         self._config = config
-        self._code = code
-        self._options = options
-        epc_function_data = connector._instance.EPC_FUNCTIONS.get(code, None)
-        if type(epc_function_data) == list:
-            data_keys = list(epc_function_data[1].keys())
-            data_items = list(epc_function_data[1].values())
-            self._options.update(
-                {
-                    CONF_SERVICE_DATA: {
-                        DATA_STATE_ON: data_keys[0],
-                        DATA_STATE_OFF: data_keys[1],
-                    },
-                    CONF_ON_VALUE: data_items[0],
-                    CONF_OFF_VALUE: data_items[1],
-                }
-            )
-        self._on_value = self._options.get(CONF_ON_VALUE, DATA_STATE_ON)
-        self._on_vals = [
-            self._on_value,
-            self._options[CONF_SERVICE_DATA][DATA_STATE_ON],
-            hex(self._options[CONF_SERVICE_DATA][DATA_STATE_ON])[2:],
-        ]
-        self._from_number = True if options.get(TYPE_NUMBER) else False
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
-        self._attr_icon = options.get(CONF_ICON)
+        self._enl_op_codes = enl_op_codes
+        self._device_name = get_device_name(connector, config)
+
         self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._connector._eojgc}-{self._connector._eojcc}-{self._connector._eojci}-{self._code}"
+            f"{self._connector._uidi}" if self._connector._uidi else self._connector._uid
         )
-        if self._from_number:
-            self._attr_unique_id += "-switch"
-            self._attr_name += " " + options.get(CONF_NAME, "Switch")
-        self._device_name = name
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-        self._attr_is_on = self._connector._update_data[self._code] in self._on_vals
-        self._attr_should_poll = True
-        self._attr_available = True
-
-        self._attr_entity_registry_enabled_default = not bool(
-            options.get(CONF_DISABLED_DEFAULT)
-        )
-
-        self.update_option_listener()
+        self._attr_name = self._device_name
+        
+        # Initialize state from connector data
+        self._is_on = False
+        
+        update_data = getattr(self.coordinator, 'data', None) or getattr(connector, '_update_data', {})
+        
+        if 0x81 in update_data:
+            self._is_on = (update_data[0x81] == 0x01)
 
     @property
     def device_info(self):
         return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
-                )
-            },
+            "identifiers": {(DOMAIN, self._connector._uid)},
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
-            ],
+            "manufacturer": self._connector._manufacturer,
+            "model": EOJX_CLASS[self._connector._eojgc][self._connector._eojcc],
         }
 
-    async def async_turn_on(self, **kwargs) -> None:
-        """Turn switch on."""
-        main_sw_code = None
-        # Check ensure turn on switch.
-        # For some devices this ensures the main switch is switched on firs
-        if CONF_ENSURE_ON in self._options:
-            main_sw_code = self._options[CONF_ENSURE_ON]
-        # Turn on the specified switch
-        if (
-            main_sw_code is not None
-            and self._connector._update_data[main_sw_code] != DATA_STATE_ON
-        ):
-            if not await self._connector._instance.setMessage(
-                main_sw_code, SWITCH_POWER[DATA_STATE_ON]
-            ):
-                # Can't turn on main switch
-                return
-            # Wait about 2 seconds until the On state is stabilized on the device side
-            await asyncio.sleep(2)
+    @property
+    def is_on(self):
+        """Return if the switch is on."""
+        return self._is_on
 
-        if (
-            main_sw_code is None
-            or self._connector._update_data[main_sw_code] == DATA_STATE_ON
-        ):
-            await self._connector._instance.setMessage(
-                self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_ON]
-            )
+    async def async_turn_on(self, **kwargs) -> None:
+        """Turn the switch on."""
+        # Turn on (EPC 0x81 = 0x01 for ON operation)
+        await self._connector._instance.setMessage(0x81, 0x01)
+        self._is_on = True
+        self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs) -> None:
-        """Turn switch off."""
-        await self._connector._instance.setMessage(
-            self._code, self._options[CONF_SERVICE_DATA][DATA_STATE_OFF]
-        )
+        """Turn the switch off."""
+        # Turn off (EPC 0x81 = 0x02 for OFF operation)
+        await self._connector._instance.setMessage(0x81, 0x02)
+        self._is_on = False
+        self.async_write_ha_state()
 
-    async def async_update(self):
-        """Retrieve latest state."""
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
+    async def async_toggle(self, **kwargs) -> None:
+        """Toggle the switch."""
+        if self.is_on:
+            await self.async_turn_off(**kwargs)
+        else:
+            await self.async_turn_on(**kwargs)
 
     async def async_added_to_hass(self):
         """Register callbacks."""
@@ -217,28 +110,18 @@ class EchonetSwitch(SwitchEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush: bool = False):
-        new_val = self._connector._update_data[self._code] in self._on_vals
-        changed = (
-            self._attr_is_on != new_val
-            or self._attr_available != self._server_state["available"]
-        )
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._attr_is_on = new_val
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.async_schedule_update_ha_state(_force)
+        """Handle coordinator updates."""
+        if self.coordinator and not self.coordinator.last_update_success:
+            return
+            
+        update_data = self.coordinator.data
+        
+        if 0x81 in update_data:
+            # EPC 0x81: Operation status - 0x01=ON, 0x02=OFF
+            self._is_on = (update_data[0x81] == 0x01)
+
+        self.async_write_ha_state()
 
     def update_option_listener(self):
-        _should_poll = self._code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(
-            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
-        )
+        """Update listener for option changes."""
+        pass

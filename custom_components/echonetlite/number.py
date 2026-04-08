@@ -1,173 +1,119 @@
+"""Support for ECHONETLite Number entities."""
+
 import logging
-from homeassistant.const import (
-    CONF_ICON,
-    CONF_NAME,
-    CONF_TYPE,
-    CONF_MINIMUM,
-    CONF_MAXIMUM,
-    CONF_UNIT_OF_MEASUREMENT,
+
+from homeassistant.components.number import (
+    NumberEntity,
+    NumberDeviceClass,
+    NumberMode,
 )
-from homeassistant.exceptions import InvalidStateError
-from homeassistant.components.number import NumberEntity
+from homeassistant.const import UnitOfTemperature
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
+
 from pychonet.lib.eojx import EOJX_CLASS
-from . import get_name_by_epc_code, get_unit_by_devise_class, get_device_name
-from .const import (
-    CONF_DISABLED_DEFAULT,
-    DOMAIN,
-    CONF_FORCE_POLLING,
-    CONF_AS_ZERO,
-    CONF_MAX_OPC,
-    CONF_BYTE_LENGTH,
-    NON_SETUP_SINGLE_ENYITY,
-    TYPE_NUMBER,
-)
+from . import get_device_name
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
+    """Set up the ECHONETLite number platform."""
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
+
         _enl_op_codes = entity["echonetlite"]._enl_op_codes
-        # configure select entities by looking up full ENL_OP_CODE dict
-        for op_code in list(
-            set(entity["instance"]["setmap"])
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
-        ):
-            if TYPE_NUMBER in _enl_op_codes.get(op_code, {}).keys():
-                entities.append(
-                    EchonetNumber(
-                        hass,
-                        entity["echonetlite"],
-                        config,
-                        op_code,
-                        _enl_op_codes[op_code],
-                    )
+        
+        # Check if this device has number capabilities (settable numeric values)
+        has_number_support = any(
+            code in entity["instance"]["setmap"] for code in [0x91, 0x92, 0x93]
+        )
+
+        if has_number_support:
+            entities.append(
+                EchonetNumber(
+                    entity["echonetlite"],
+                    config,
+                    _enl_op_codes,
+                    hass,
                 )
+            )
 
     async_add_entities(entities, True)
 
 
-class EchonetNumber(NumberEntity):
-    _attr_translation_key = DOMAIN
+class EchonetNumber(CoordinatorEntity, NumberEntity):
+    """Representation of an ECHONETLite Number."""
 
-    def __init__(self, hass, connector, config, code, options):
-        """Initialize the number."""
+    _attr_translation_key = DOMAIN
+    coordinator: DataUpdateCoordinator | None
+
+    def __init__(self, connector, config, enl_op_codes, hass=None) -> None:
+        """Initialize the number entity."""
+        super().__init__(connector.coordinator) if connector.coordinator else None
+        
         self._connector = connector
         self._config = config
-        self._code = code
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-        self._attr_icon = options.get(CONF_ICON, None)
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
-        self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._code}"
-        )
-
-        self._options = options[TYPE_NUMBER]
-        self._as_zero = int(options[TYPE_NUMBER].get(CONF_AS_ZERO, 0))
-        self._conf_max = int(options[TYPE_NUMBER][CONF_MAXIMUM])
-        self._byte_length = int(options[TYPE_NUMBER].get(CONF_BYTE_LENGTH, 1))
-
+        self._enl_op_codes = enl_op_codes
         self._device_name = get_device_name(connector, config)
-        self._attr_device_class = self._options.get(
-            CONF_TYPE, options.get(CONF_TYPE, None)
-        )
-        self._attr_native_value = self.get_value()
-        self._attr_native_max_value = self.get_max_value()
-        self._attr_native_min_value = self._options.get(CONF_MINIMUM, 0) - self._as_zero
-        self._attr_native_unit_of_measurement = self._options.get(
-            CONF_UNIT_OF_MEASUREMENT, options.get(CONF_UNIT_OF_MEASUREMENT, None)
-        )
-        if not self._attr_native_unit_of_measurement:
-            self._attr_native_unit_of_measurement = get_unit_by_devise_class(
-                self._attr_device_class
-            )
-        self._attr_should_poll = True
-        self._attr_available = True
 
-        self._attr_entity_registry_enabled_default = not bool(
-            options.get(CONF_DISABLED_DEFAULT)
+        # Determine the EPC code for this number entity (0x91=temperature, etc.)
+        self._epc_code = 0x91  # Default to temperature
+        
+        self._attr_unique_id = (
+            f"{self._connector._uidi}-{self._epc_code}" if self._connector._uidi 
+            else f"{self._connector._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._epc_code}"
         )
-
-        self.update_option_listener()
+        self._attr_name = f"{self._device_name} {get_epc_description(self._epc_code)}"
+        
+        # Temperature range (default for Japanese market)
+        self._attr_device_class = NumberDeviceClass.TEMPERATURE
+        self._attr_mode = NumberMode.SLIDER
+        
+        if self._epc_code == 0x91:  # Temperature setpoint
+            self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+            self._attr_native_min_value = 15.0
+            self._attr_native_max_value = 30.0
+            self._attr_step = 0.5
+        
+        # Initialize state from connector data
+        self._native_value = None
+        
+        update_data = getattr(self.coordinator, 'data', None) or getattr(connector, '_update_data', {})
+        
+        if self._epc_code in update_data:
+            value = update_data[self._epc_code]
+            # Convert from ECHONET scale (0.5°C steps for temperature)
+            if self._attr_device_class == NumberDeviceClass.TEMPERATURE:
+                self._native_value = round(value * 0.5, 1) if value else None
 
     @property
     def device_info(self):
         return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
-                )
-            },
+            "identifiers": {(DOMAIN, self._connector._uid)},
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
-            ],
-            # "sw_version": "",
+            "manufacturer": self._connector._manufacturer,
+            "model": EOJX_CLASS[self._connector._eojgc][self._connector._eojcc],
         }
 
-    def get_value(self):
-        value = self._connector._update_data.get(self._code)
-        if value != None:
-            return int(self._connector._update_data.get(self._code)) - self._as_zero
-        else:
-            return None
-
-    def get_max_value(self):
-        max_value = self.get_max_opc_value()
-        if max_value == None:
-            max_value = self._conf_max
-        return max_value - self._as_zero
-
-    def get_max_opc_value(self):
-        max_opc_value = None
-        max_opc = self._options.get(CONF_MAX_OPC)
-        if max_opc:
-            if isinstance(max_opc, list):
-                max_opc_value = self._connector._update_data.get(max_opc[0]).get(
-                    max_opc[1]
-                )
-            else:
-                max_opc_value = self._connector._update_data.get(max_opc)
-            if max_opc_value != None:
-                max_opc_value = int(max_opc_value)
-        return max_opc_value
+    @property
+    def native_value(self):
+        """Return the current value."""
+        return self._native_value
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
-        if await self._connector._instance.setMessage(
-            self._code, int(value + self._as_zero), self._byte_length
-        ):
-            # self._connector._update_data[epc] = value
-            # self.async_write_ha_state()
-            pass
+        # Convert HA value to ECHONET scale
+        if self._attr_device_class == NumberDeviceClass.TEMPERATURE:
+            epc_value = int(value / 0.5)
         else:
-            raise InvalidStateError(
-                "The state setting is not supported or is an invalid value."
-            )
-
-    async def async_update(self):
-        """Retrieve latest state."""
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
+            epc_value = int(value)
+        
+        await self._connector._instance.setMessage(self._epc_code, epc_value)
+        self._native_value = value
+        self.async_write_ha_state()
 
     async def async_added_to_hass(self):
         """Register callbacks."""
@@ -175,30 +121,29 @@ class EchonetNumber(NumberEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush: bool = False):
-        new_val = self.get_value()
-        changed = (
-            self._attr_native_value != new_val
-            or self._attr_available != self._server_state["available"]
-            or self._attr_native_max_value != self.get_max_value()
-        )
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._attr_native_value = new_val
-            self._attr_native_max_value = self.get_max_value()
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.async_schedule_update_ha_state(_force)
+        """Handle coordinator updates."""
+        if self.coordinator and not self.coordinator.last_update_success:
+            return
+            
+        update_data = self.coordinator.data
+        
+        if self._epc_code in update_data:
+            value = update_data[self._epc_code]
+            if self._attr_device_class == NumberDeviceClass.TEMPERATURE:
+                self._native_value = round(value * 0.5, 1) if value else None
+
+        self.async_write_ha_state()
 
     def update_option_listener(self):
-        _should_poll = self._code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(
-            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
-        )
+        """Update listener for option changes."""
+        pass
+
+
+def get_epc_description(epc_code: int) -> str:
+    """Get description for EPC code."""
+    descriptions = {
+        0x91: "Temperature Setpoint",
+        0x92: "Outdoor Temperature",
+        0x93: "Indoor Target Temperature",
+    }
+    return descriptions.get(epc_code, f"EPC {hex(epc_code)}")

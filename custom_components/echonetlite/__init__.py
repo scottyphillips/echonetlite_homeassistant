@@ -29,7 +29,11 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.util import Throttle
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+    DataUpdateCoordinator,
+    UpdateFailed,
+)
 from pychonet import ECHONETAPIClient
 from pychonet.echonetapiclient import EchonetMaxOpcError
 from pychonet.EchonetInstance import (
@@ -394,6 +398,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         echonetlite = ECHONETConnector(instance, hass, entry)
         await echonetlite.startup()
+        # Initialize the coordinator for this connector
+        await echonetlite.setup_coordinator()
         try:
             # Since there is a small chance of failure, perform a few retries for each instance.
             for retry in range(1, 4):
@@ -440,7 +446,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 f"IP address change was detected during setup of {host}"
             ) from ex
 
-    _LOGGER.debug(f"Plaform entry data - {entry.data}")
+    _LOGGER.debug(f"Platform entry data - {entry.data}")
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
@@ -448,6 +454,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    # Close coordinators for all instances
+    for instance in hass.data[DOMAIN].get(entry.entry_id, []):
+        if hasattr(instance["echonetlite"], "coordinator") and instance["echonetlite"].coordinator:
+            await instance["echonetlite"].coordinator.async_close()
+    
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
@@ -551,6 +562,9 @@ class ECHONETConnector:
         self._instance = echonet.Factory(
             self._host, self._api, self._eojgc, self._eojcc, self._eojci
         )
+        
+        # Coordinator setup
+        self.coordinator: DataUpdateCoordinator | None = None
 
     async def startup(self):
         entry = self._entry
@@ -610,7 +624,32 @@ class ECHONETConnector:
         if self._uid is None:
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
 
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    async def setup_coordinator(self):
+        """Initialize the update coordinator for this connector."""
+        if self.coordinator is not None:
+            return  # Already initialized
+        
+        self.coordinator = DataUpdateCoordinator(
+            self.hass,
+            _LOGGER,
+            name=f"echonetlite-{self._uid}",
+            update_interval=MIN_TIME_BETWEEN_UPDATES,
+            update_method=self.async_update_data,
+            always_update=False,  # Only update when called explicitly
+        )
+
+    async def async_refresh_coordinator(self):
+        """Refresh the coordinator data."""
+        if self.coordinator:
+            await self.coordinator.async_request_refresh()
+
+    @property
+    def update_data(self) -> dict:
+        """Return the current update data from coordinator or direct access."""
+        if self.coordinator and self.coordinator.data:
+            return self.coordinator.data
+        return self._update_data.copy()
+
     async def async_update(self, **kwargs):
         try:
             await self.async_update_data(kwargs)

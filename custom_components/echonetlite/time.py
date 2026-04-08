@@ -1,137 +1,111 @@
+"""Support for ECHONETLite Time entities."""
+
 import logging
-import datetime
-from datetime import time
-from homeassistant.const import CONF_ICON, CONF_NAME
-from homeassistant.components.time import TimeEntity
-from homeassistant.exceptions import InvalidStateError
-from . import get_name_by_epc_code, get_device_name
-from .const import (
-    CONF_DISABLED_DEFAULT,
-    DOMAIN,
-    CONF_FORCE_POLLING,
-    ENL_SUPER_CODES,
-    NON_SETUP_SINGLE_ENYITY,
-    TYPE_TIME,
+
+from homeassistant.components.time import (
+    TimeEntity,
 )
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
+
 from pychonet.lib.eojx import EOJX_CLASS
-from pychonet.lib.epc_functions import _hh_mm
+from . import get_device_name
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
+    """Set up the ECHONETLite time platform."""
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
-        _enl_op_codes = entity["echonetlite"]._enl_op_codes | ENL_SUPER_CODES
-        # configure select entities by looking up full ENL_OP_CODE dict
-        for op_code in list(
-            set(entity["instance"]["setmap"])
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
-        ):
-            epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
-                op_code, None
-            )
-            _by_epc_func = (
-                type(epc_function_data) == list and epc_function_data[0] == _hh_mm
-            ) or (callable(epc_function_data) and epc_function_data == _hh_mm)
-            if _by_epc_func or TYPE_TIME in _enl_op_codes.get(op_code, {}).keys():
-                entities.append(
-                    EchonetTime(
-                        hass,
-                        entity["echonetlite"],
-                        config,
-                        op_code,
-                        _enl_op_codes.get(op_code, {}),
-                    )
+
+        _enl_op_codes = entity["echonetlite"]._enl_op_codes
+        
+        # Check if this device has time capabilities (timer settings)
+        has_time_support = any(
+            code in entity["instance"]["setmap"] for code in [0x91, 0x3E]
+        )
+
+        if has_time_support:
+            entities.append(
+                EchonetTime(
+                    entity["echonetlite"],
+                    config,
+                    _enl_op_codes,
+                    hass,
                 )
+            )
 
     async_add_entities(entities, True)
 
 
-class EchonetTime(TimeEntity):
-    _attr_translation_key = DOMAIN
+class EchonetTime(CoordinatorEntity, TimeEntity):
+    """Representation of an ECHONETLite Time (e.g., timer settings)."""
 
-    def __init__(self, hass, connector, config, code, options, device_name=None):
-        """Initialize the time."""
+    _attr_translation_key = DOMAIN
+    coordinator: DataUpdateCoordinator | None
+
+    def __init__(self, connector, config, enl_op_codes, hass=None) -> None:
+        """Initialize the time entity."""
+        super().__init__(connector.coordinator) if connector.coordinator else None
+        
         self._connector = connector
         self._config = config
-        self._code = code
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-        self._attr_icon = options.get(CONF_ICON, None)
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
-        self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._code}"
-        )
-
+        self._enl_op_codes = enl_op_codes
         self._device_name = get_device_name(connector, config)
-        self._attr_native_value = self.get_time()
-        self._attr_should_poll = True
-        self._attr_available = True
 
-        self._attr_entity_registry_enabled_default = not bool(
-            options.get(CONF_DISABLED_DEFAULT)
+        # Determine the EPC code for this time entity (0x91=on timer, 0x3E=sleep timer, etc.)
+        self._epc_code = 0x91  # Default to on timer
+        
+        self._attr_unique_id = (
+            f"{self._connector._uidi}-{self._epc_code}" if self._connector._uidi 
+            else f"{self._connector._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._epc_code}"
         )
+        self._attr_name = f"{self._device_name} {get_timer_description(self._epc_code)}"
 
-        self.update_option_listener()
+        # Initialize state from connector data
+        self._time_value = None
+        
+        update_data = getattr(self.coordinator, 'data', None) or getattr(connector, '_update_data', {})
+        
+        if self._epc_code in update_data:
+            value = update_data[self._epc_code]
+            # Convert from ECHONET format (HH*256 + MM) to time string "HH:MM"
+            if isinstance(value, int):
+                hours = value // 256
+                minutes = value % 256
+                self._time_value = f"{hours:02d}:{minutes:02d}"
 
     @property
     def device_info(self):
         return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
-                )
-            },
+            "identifiers": {(DOMAIN, self._connector._uid)},
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
-            ],
-            # "sw_version": "",
+            "manufacturer": self._connector._manufacturer,
+            "model": EOJX_CLASS[self._connector._eojgc][self._connector._eojcc],
         }
 
-    def get_time(self):
-        hh_mm = self._connector._update_data.get(self._code)
-        if hh_mm != None:
-            val = hh_mm.split(":")
-            time_obj = datetime.time(int(val[0]), int(val[1]))
-        else:
-            time_obj = None
-        return time_obj
+    @property
+    def time(self):
+        """Return the current time value."""
+        return self._time_value
 
-    async def async_set_value(self, value: time) -> None:
-        """Update the current value."""
-        h = int(value.hour)
-        m = int(value.minute)
-        mes = {"EPC": self._code, "PDC": 0x02, "EDT": h * 256 + m}
-        if await self._connector._instance.setMessages([mes]):
-            pass
-        else:
-            raise InvalidStateError(
-                "The state setting is not supported or is an invalid value."
-            )
-
-    async def async_update(self):
-        """Retrieve latest state."""
+    async def async_set_time(self, value: str) -> None:
+        """Set new time value."""
+        # Parse "HH:MM" format to ECHONET format (HH*256 + MM)
         try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
+            parts = value.split(":")
+            hours = int(parts[0])
+            minutes = int(parts[1])
+            epc_value = hours * 256 + minutes
+            
+            await self._connector._instance.setMessage(self._epc_code, epc_value)
+            self._time_value = value
+            self.async_write_ha_state()
+        except (ValueError, IndexError):
+            _LOGGER.error(f"Invalid time format: {value}")
 
     async def async_added_to_hass(self):
         """Register callbacks."""
@@ -139,28 +113,32 @@ class EchonetTime(TimeEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush: bool = False):
-        new_val = self.get_time()
-        changed = (
-            self._attr_native_value != new_val
-            or self._attr_available != self._server_state["available"]
-        )
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._attr_native_value = new_val
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.async_schedule_update_ha_state(_force)
+        """Handle coordinator updates."""
+        if self.coordinator and not self.coordinator.last_update_success:
+            return
+            
+        update_data = self.coordinator.data
+        
+        if self._epc_code in update_data:
+            value = update_data[self._epc_code]
+            # Convert from ECHONET format (HH*256 + MM) to time string "HH:MM"
+            if isinstance(value, int):
+                hours = value // 256
+                minutes = value % 256
+                self._time_value = f"{hours:02d}:{minutes:02d}"
+
+        self.async_write_ha_state()
 
     def update_option_listener(self):
-        _should_poll = self._code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(
-            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
-        )
+        """Update listener for option changes."""
+        pass
+
+
+def get_timer_description(epc_code: int) -> str:
+    """Get description for timer EPC code."""
+    descriptions = {
+        0x91: "On Timer",
+        0x3E: "Sleep Timer",
+        0x92: "Timer Setting Time",
+    }
+    return descriptions.get(epc_code, f"Timer {hex(epc_code)}")

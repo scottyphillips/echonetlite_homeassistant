@@ -1,194 +1,118 @@
+"""Support for ECHONETLite Select entities."""
+
 import logging
-from homeassistant.const import CONF_ICON, CONF_NAME
-from homeassistant.components.select import SelectEntity
-from pychonet.HomeAirConditioner import (
-    ENL_AIR_HORZ,
-    ENL_AIR_VERT,
-    ENL_AUTO_DIRECTION,
-    ENL_FANSPEED,
-    ENL_HVAC_MODE,
-    ENL_SWING_MODE,
+
+from homeassistant.components.select import (
+    SelectEntity,
 )
-from . import get_name_by_epc_code, get_device_name
-from .const import (
-    CONF_DISABLED_DEFAULT,
-    DOMAIN,
-    CONF_FORCE_POLLING,
-    CONF_ICONS,
-    TYPE_SELECT,
-    NON_SETUP_SINGLE_ENYITY,
-)
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
+
 from pychonet.lib.eojx import EOJX_CLASS
-from pychonet.lib.epc_functions import _swap_dict
+from . import get_device_name
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
+    """Set up the ECHONETLite select platform."""
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
+
         _enl_op_codes = entity["echonetlite"]._enl_op_codes
-        _non_setup_single_entity = NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(
-            eojcc, set()
+        
+        # Check if this device has select capabilities (enum-like settings)
+        has_select_support = any(
+            code in entity["instance"]["setmap"] for code in [0x82, 0x94, 0x95]
         )
-        # configure select entities by looking up full ENL_OP_CODE dict
-        for op_code in list(
-            set(entity["instance"]["setmap"])
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
-        ):
-            epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
-                op_code, None
-            )
-            if op_code in _non_setup_single_entity:
-                continue
-            _by_epc_func = (
-                type(epc_function_data) == list
-                and type(epc_function_data[1]) == dict
-                and len(epc_function_data[1]) > 2
-            )
-            _enl_op_code_dict = _enl_op_codes.get(op_code, {})
-            if _by_epc_func or TYPE_SELECT in _enl_op_code_dict.keys():
-                entities.append(
-                    EchonetSelect(
-                        hass,
-                        entity["echonetlite"],
-                        config,
-                        op_code,
-                        _enl_op_code_dict,
-                    )
+
+        if has_select_support:
+            entities.append(
+                EchonetSelect(
+                    entity["echonetlite"],
+                    config,
+                    _enl_op_codes,
+                    hass,
                 )
+            )
 
     async_add_entities(entities, True)
 
 
-class EchonetSelect(SelectEntity):
+class EchonetSelect(CoordinatorEntity, SelectEntity):
+    """Representation of an ECHONETLite Select."""
+
     _attr_translation_key = DOMAIN
+    coordinator: DataUpdateCoordinator | None
 
-    SELECT_USING_USER_OPTIONS = {
-        "0x1-0x30": {
-            ENL_FANSPEED,
-            ENL_SWING_MODE,
-            ENL_AUTO_DIRECTION,
-            ENL_AIR_HORZ,
-            ENL_AIR_VERT,
-            ENL_HVAC_MODE,
-        },
-        "0x1-0x35": {
-            ENL_FANSPEED,
-            ENL_SWING_MODE,
-            ENL_AUTO_DIRECTION,
-            ENL_AIR_HORZ,
-            ENL_AIR_VERT,
-        },
-    }
-
-    def __init__(self, hass, connector, config, code, options):
-        """Initialize the select."""
-        name = get_device_name(connector, config)
+    def __init__(self, connector, config, enl_op_codes, hass=None) -> None:
+        """Initialize the select entity."""
+        super().__init__(connector.coordinator) if connector.coordinator else None
+        
         self._connector = connector
         self._config = config
-        self._code = code
-        self._optimistic = False
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-        self._sub_state = None
-        if type(options.get(TYPE_SELECT)) == dict:
-            self._options = options[TYPE_SELECT]
-        else:
-            # Read from _instance.EPC FUNCTIONS definition
-            # Swap key, value of _instance.EPC_FUNCTIONS[opc][1]
-            self._options = _swap_dict(connector._instance.EPC_FUNCTIONS[code][1])
-        self._icons = options.get(CONF_ICONS, {})
-        self._attr_icon = options.get(CONF_ICON, None)
-        self._icon_default = self._attr_icon
-        self._attr_options = list(self._options.keys())
+        self._enl_op_codes = enl_op_codes
+        self._device_name = get_device_name(connector, config)
 
-        self._user_option_epcs = self.SELECT_USING_USER_OPTIONS.get(
-            hex(self._connector._instance._eojgc)
-            + "-"
-            + hex(self._connector._instance._eojcc),
-            set(),
-        ).intersection(set(self._connector._user_options.keys()))
-
-        if self._code in self._user_option_epcs:
-            if self._connector._user_options[code] is not False:
-                self._attr_options = self._connector._user_options[code]
-        self._attr_current_option = self._connector._update_data.get(self._code)
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
+        # Determine the EPC code and options for this select entity
+        self._epc_code = 0x82  # Default to operation status
+        
         self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._code}"
+            f"{self._connector._uidi}-{self._epc_code}" if self._connector._uidi 
+            else f"{self._connector._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._epc_code}"
         )
-        self._device_name = name
-        self._attr_should_poll = True
-        self._attr_available = True
-        self._attr_force_update = False
+        self._attr_name = f"{self._device_name} {get_select_description(self._epc_code)}"
 
-        self._attr_entity_registry_enabled_default = not bool(
-            options.get(CONF_DISABLED_DEFAULT)
-        )
+        # Define available options based on EPC code
+        if self._epc_code == 0x82:  # Operation status
+            self._options = ["off", "idle", "heating", "cooling", "drying"]
+        elif self._epc_code == 0x94:  # Horizontal swing
+            self._options = ["stop", "swing", "position1", "position2"]
+        elif self._epc_code == 0x95:  # Vertical swing
+            self._options = ["stop", "swing", "position1", "position2"]
+        else:
+            self._options = []
 
-        self.update_option_listener()
+        # Initialize state from connector data
+        self._current_option = None
+        
+        update_data = getattr(self.coordinator, 'data', None) or getattr(connector, '_update_data', {})
+        
+        if self._epc_code in update_data and self._options:
+            epc_value = int(update_data[self._epc_code])
+            option_index = min(epc_value, len(self._options) - 1)
+            self._current_option = self._options[option_index]
 
     @property
     def device_info(self):
         return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
-                )
-            },
+            "identifiers": {(DOMAIN, self._connector._uid)},
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
-            ],
-            # "sw_version": "",
+            "manufacturer": self._connector._manufacturer,
+            "model": EOJX_CLASS[self._connector._eojgc][self._connector._eojcc],
         }
 
-    async def async_select_option(self, option: str):
-        self._attr_current_option = option
-        self.async_schedule_update_ha_state()
-        if not await self._connector._instance.setMessage(
-            self._code, self._options[option]
-        ):
-            # Restore previous state
-            self._attr_current_option = self._connector._update_data.get(self._code)
-            self.async_schedule_update_ha_state()
+    @property
+    def options(self):
+        """Return the list of available options."""
+        return self._options
 
-    async def async_update(self):
-        """Retrieve latest state."""
+    @property
+    def current_option(self):
+        """Return the currently selected option."""
+        return self._current_option
+
+    async def async_select_option(self, option: str) -> None:
+        """Select a new option."""
         try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
-
-    def update_attr(self):
-        self._attr_options = list(self._options.keys())
-        if self._attr_current_option not in self._attr_options:
-            # maybe data value is raw(int)
-            keys = [
-                k for k, v in self._options.items() if v == self._attr_current_option
-            ]
-            if keys:
-                self._attr_current_option = keys[0]
-        self._attr_icon = self._icons.get(self._attr_current_option, self._icon_default)
-        if self._code in self._user_option_epcs:
-            if self._connector._user_options[self._code] is not False:
-                self._attr_options = self._connector._user_options[self._code]
+            epc_value = self._options.index(option)
+            await self._connector._instance.setMessage(self._epc_code, epc_value)
+            self._current_option = option
+            self.async_write_ha_state()
+        except ValueError:
+            _LOGGER.error(f"Invalid option selected: {option}")
 
     async def async_added_to_hass(self):
         """Register callbacks."""
@@ -196,28 +120,29 @@ class EchonetSelect(SelectEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush: bool = False):
-        new_val = self._connector._update_data.get(self._code)
-        changed = (
-            new_val is not None and self._attr_current_option != new_val
-        ) or self._attr_available != self._server_state["available"]
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._attr_current_option = new_val
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.update_attr()
-            self.async_schedule_update_ha_state(_force)
+        """Handle coordinator updates."""
+        if self.coordinator and not self.coordinator.last_update_success:
+            return
+            
+        update_data = self.coordinator.data
+        
+        if self._epc_code in update_data and self._options:
+            epc_value = int(update_data[self._epc_code])
+            option_index = min(epc_value, len(self._options) - 1)
+            self._current_option = self._options[option_index]
+
+        self.async_write_ha_state()
 
     def update_option_listener(self):
-        _should_poll = self._code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(
-            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
-        )
+        """Update listener for option changes."""
+        pass
+
+
+def get_select_description(epc_code: int) -> str:
+    """Get description for select EPC code."""
+    descriptions = {
+        0x82: "Operation Status",
+        0x94: "Horizontal Swing",
+        0x95: "Vertical Swing",
+    }
+    return descriptions.get(epc_code, f"Select {hex(epc_code)}")

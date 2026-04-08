@@ -11,6 +11,7 @@ from homeassistant.const import (
     CONF_UNIT_OF_MEASUREMENT,
 )
 from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
@@ -207,13 +208,16 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     async_add_entities(entities, True)
 
 
-class EchonetSensor(SensorEntity):
+class EchonetSensor(CoordinatorEntity, SensorEntity):
     """Representation of an ECHONETLite Temperature Sensor."""
 
     _attr_translation_key = DOMAIN
+    coordinator: DataUpdateCoordinator | None
 
     def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
         """Initialize the sensor."""
+        super().__init__(connector.coordinator) if connector.coordinator else None
+        
         name = get_device_name(connector, config)
         self._connector = connector
         self._op_code = op_code
@@ -228,10 +232,6 @@ class EchonetSensor(SensorEntity):
         )
         self._device_name = name
         self._state_value = None
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-        self._hass = hass
 
         _attr_keys = self._sensor_attributes.keys()
 
@@ -265,9 +265,6 @@ class EchonetSensor(SensorEntity):
             self._sensor_attributes.get(CONF_DISABLED_DEFAULT)
         )
 
-        self._attr_should_poll = True
-        self._attr_available = True
-
         self.update_option_listener()
 
     @property
@@ -290,13 +287,24 @@ class EchonetSensor(SensorEntity):
                 else ""
             ),
             "model": EOJX_CLASS[self._eojgc][self._eojcc],
-            # "sw_version": "",
         }
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        return self.get_attr_native_value()
 
     def get_attr_native_value(self):
         """Return the state of the sensor."""
-        if self._op_code in self._connector._update_data:
-            new_val = self._connector._update_data[self._op_code]
+        # Use coordinator data if available, otherwise use connector's update_data
+        update_data = self.coordinator.data if self.coordinator else None
+        
+        if not update_data:
+            # Fallback to direct access from connector
+            update_data = getattr(self._connector, '_update_data', {})
+
+        if self._op_code in update_data:
+            new_val = update_data[self._op_code]
             if "dict_key" in self._sensor_attributes:
                 if hasattr(new_val, "get"):
                     self._state_value = new_val.get(self._sensor_attributes["dict_key"])
@@ -312,21 +320,6 @@ class EchonetSensor(SensorEntity):
             if self._state_value is None:
                 return None
 
-            # interactive icon
-            if CONF_ICON_POSITIVE in self._sensor_attributes:
-                if self._state_value is None and self._state_value > 0:
-                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
-                        CONF_ICON_POSITIVE
-                    ]
-                elif self._state_value is None and self._state_value < 0:
-                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
-                        CONF_ICON_NEGATIVE
-                    ]
-                else:
-                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
-                        CONF_ICON_ZERO
-                    ]
-
             # apply coefficients
             if (
                 CONF_MULTIPLIER in self._sensor_attributes
@@ -339,25 +332,19 @@ class EchonetSensor(SensorEntity):
                 if CONF_MULTIPLIER_OPCODE in self._sensor_attributes:
                     multiplier_opcode = self._sensor_attributes[CONF_MULTIPLIER_OPCODE]
                     if (
-                        multiplier_opcode in self._connector._update_data
-                        and self._connector._update_data[multiplier_opcode] is not None
+                        multiplier_opcode in update_data
+                        and update_data[multiplier_opcode] is not None
                     ):
-                        new_val = (
-                            new_val * self._connector._update_data[multiplier_opcode]
-                        )
+                        new_val = new_val * update_data[multiplier_opcode]
                     else:
                         return None
                 if CONF_MULTIPLIER_OPTIONAL_OPCODE in self._sensor_attributes:
-                    multiplier_opcode = self._sensor_attributes[
-                        CONF_MULTIPLIER_OPTIONAL_OPCODE
-                    ]
+                    multiplier_opcode = self._sensor_attributes[CONF_MULTIPLIER_OPTIONAL_OPCODE]
                     if (
-                        multiplier_opcode in self._connector._update_data
-                        and self._connector._update_data[multiplier_opcode] is not None
+                        multiplier_opcode in update_data
+                        and update_data[multiplier_opcode] is not None
                     ):
-                        new_val = (
-                            new_val * self._connector._update_data[multiplier_opcode]
-                        )
+                        new_val = new_val * update_data[multiplier_opcode]
                 return new_val
             elif self._attr_device_class in [
                 SensorDeviceClass.TEMPERATURE,
@@ -373,22 +360,33 @@ class EchonetSensor(SensorEntity):
                     return 1
                 else:
                     return self._state_value
-            elif self._op_code in self._connector._update_data:
-                if isinstance(self._state_value, (int, float)):
-                    return self._state_value
-                if len(self._state_value) < 255:
-                    return self._state_value
-                else:
-                    return None
+            elif isinstance(self._state_value, (int, float)):
+                return self._state_value
         return None
 
-    async def async_update(self):
-        """Retrieve latest state."""
-        try:
-            await self._connector.async_update()
-            self._attr_native_value = self.get_attr_native_value()
-        except TimeoutError:
-            pass
+    async def async_added_to_hass(self):
+        """Register callbacks."""
+        self._connector.add_update_option_listener(self.update_option_listener)
+        self._connector.register_async_update_callbacks(self.async_update_callback)
+
+    async def async_update_callback(self, isPush: bool = False):
+        new_val = self.get_attr_native_value()
+        changed = (self._attr_native_value != new_val) or (
+            self.coordinator and not self.coordinator.last_update_success
+        )
+        if changed:
+            self._state_value = new_val
+            self.async_write_ha_state()
+
+    def update_option_listener(self):
+        _should_poll = self._op_code not in self._connector._ntfPropertyMap
+        self._attr_should_poll = (
+            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
+        )
+        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
+        _LOGGER.debug(
+            f"{self._attr_name}({self._op_code}): _should_poll is {_should_poll}"
+        )
 
     async def async_set_on_timer_time(self, timer_time):
         val = str(timer_time).split(":")
@@ -413,44 +411,3 @@ class EchonetSensor(SensorEntity):
             raise NoEntitySpecifiedError(
                 "The required parameter EPC has not been specified."
             )
-
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
-
-    async def async_update_callback(self, isPush: bool = False):
-        new_val = self._connector._update_data.get(self._op_code)
-        if "dict_key" in self._sensor_attributes:
-            if hasattr(new_val, "get"):
-                new_val = new_val.get(self._sensor_attributes["dict_key"])
-            else:
-                new_val = None
-        if "accessor_lambda" in self._sensor_attributes:
-            new_val = self._sensor_attributes["accessor_lambda"](
-                new_val, self._sensor_attributes["accessor_index"]
-            )
-        changed = (
-            new_val is not None and self._state_value != new_val
-        ) or self._attr_available != self._server_state["available"]
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._state_value = new_val
-            self._attr_native_value = self.get_attr_native_value()
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.async_schedule_update_ha_state(_force)
-
-    def update_option_listener(self):
-        _should_poll = self._op_code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(
-            f"{self._attr_name}({self._op_code}): _should_poll is {_should_poll}"
-        )
