@@ -89,7 +89,7 @@ PLATFORMS = [
     Platform.COVER,
 ]
 PARALLEL_UPDATES = 0
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=1)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
 SETUP_BUDGET = 45.0
@@ -323,7 +323,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.config_entries.async_update_entry(
             entry, title=entry.title, data={"host": host, "instances": instances}
         )
-
+    _LOGGER.debug( entry.data["instances"] )
     for instance in entry.data["instances"]:
         # auto update to new style
         if "ntfmap" not in instance:
@@ -393,9 +393,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     }
                 }
             )
-
+        _LOGGER.debug("Instantiating a ECHONETConnector...." )
         echonetlite = ECHONETConnector(instance, hass, entry)
         await echonetlite.startup()
+        await echonetlite.async_config_entry_first_refresh()
         try:
             # Since there is a small chance of failure, perform a few retries for each instance.
             for retry in range(1, 4):
@@ -409,6 +410,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
                 try:
                     await _run_with_timeout(
+                        # echonetlite.async_config_entry_first_refresh(),
                         echonetlite.async_update(),
                         per_try_budget,
                     )
@@ -688,6 +690,12 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         Raises:
             ConfigEntryNotReady: If the device fails to respond within timeout.
         """
+        _LOGGER.debug(f"Polling from Coordiantor with _async_update_data")
+        _LOGGER.debug(self.data)
+        _LOGGER.debug(
+            "Coordinator Poll: %s listeners subscribed", 
+            len(self._listeners)
+        )
         try:
             update_data = await self.async_update_data({})
             return update_data
@@ -719,7 +727,8 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
             # Rebuild batch flags with new size and retry update
             self._make_batch_request_flags()
-            return await self._async_update_data()
+            update_data = await self._async_update_data()
+            return update_data
 
     async def async_update(self, **kwargs):
         """Perform an immediate data update (bypassing coordinator polling).

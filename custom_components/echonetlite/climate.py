@@ -150,7 +150,7 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
 
         self._last_mode = HVACMode.OFF
 
-        self._attr_should_poll = True
+        self._attr_should_poll = False
         self._attr_available = True
 
         self.update_option_listener()
@@ -357,6 +357,7 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
 
     async def async_added_to_hass(self):
         """Register callbacks."""
+        await super().async_added_to_hass()
         self._connector.add_update_option_listener(self.update_option_listener)
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
