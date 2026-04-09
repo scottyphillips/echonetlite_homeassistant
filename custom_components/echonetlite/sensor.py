@@ -215,7 +215,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
 
     def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
         """Initialize the sensor.
-        
+
         Args:
             connector: The ECHONETConnector instance which is also a DataUpdateCoordinator.
             config: The config entry for this integration.
@@ -224,7 +224,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
             hass: Home Assistant instance (optional).
         """
         super().__init__(connector)
-        
+
         name = get_device_name(connector, config)
         self._connector = connector
         self._op_code = op_code
@@ -423,7 +423,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush: bool = False):
-         # === SECTION 1: DATA EXTRACTION  ===
+        # === SECTION 1: DATA EXTRACTION  ===
         new_val = self._connector._update_data.get(self._op_code)
         if "dict_key" in self._sensor_attributes:
             if hasattr(new_val, "get"):
@@ -439,7 +439,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
             new_val is not None and self._state_value != new_val
         ) or self._attr_available != self._server_state["available"]
         if changed:
-             # === SECTION 3: FORCE FLAG - Inside `if changed:` ===
+            # === SECTION 3: FORCE FLAG - Inside `if changed:` ===
             _force = bool(not self._attr_available and self._server_state["available"])
 
             # === SECTION 4: STATE TRACKING - Inside `if changed:` ===

@@ -30,6 +30,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
 # Throttle removed - UpdateCoordinator handles update intervals
 from pychonet import ECHONETAPIClient
 from pychonet.echonetapiclient import EchonetMaxOpcError
@@ -683,7 +684,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         Returns:
             Dictionary containing the latest device data keyed by EPC codes.
-            
+
         Raises:
             ConfigEntryNotReady: If the device fails to respond within timeout.
         """
