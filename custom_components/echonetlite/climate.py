@@ -185,6 +185,116 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
             # "sw_version": "",
         }
 
+    @property
+    def current_temperature(self) -> float | None:
+        """Return the current room temperature."""
+        _val = self._connector.data.get(ENL_HVAC_ROOM_TEMP)
+        # 0x7F: Overflow, 0x80: Underflow, 0x7E: Value cannot be returned
+        if _val in {0x7F, 0x80, 0x7E}:
+            return None
+        return _val
+
+    @property
+    def target_temperature(self) -> float | None:
+        """Return the temperature we try to reach."""
+        _val = self._connector.data.get(ENL_HVAC_SET_TEMP)
+        # -3: Rule of thumb, 0xFD: Temperature indeterminable
+        if _val in {-3, 0xFD}:
+            return None
+        return _val
+
+    @property
+    def target_humidity(self) -> int | None:
+        """Return the target humidity."""
+        return self._connector.data.get(ENL_HVAC_SET_HUMIDITY)
+
+    @property
+    def hvac_mode(self) -> HVACMode:
+        """Return the current operation mode."""
+        _val = self._connector.data.get(ENL_HVAC_MODE)
+        
+        if self._connector.data[ENL_STATUS] != DATA_STATE_ON:
+            return HVACMode.OFF
+        
+        if _val == "auto":
+            return HVACMode.HEAT_COOL
+        elif _val == "other":
+            if self._connector._user_options.get(ENL_HVAC_MODE) == "as_idle":
+                # Return last known mode when in 'other' state with as_idle option
+                return getattr(self, '_last_mode', HVACMode.OFF)
+            else:
+                return HVACMode.OFF
+        else:
+            # Store the mode for later reference
+            # if hasattr(self, '_last_mode'):
+            #     self._last_mode = _val
+            return _val
+
+    @property
+    def hvac_action(self) -> HVACAction:
+        """Return the current HVAC action."""
+        if self._connector.data[ENL_STATUS] != DATA_STATE_ON:
+            return HVACAction.OFF
+        
+        mode = self._connector.data.get(ENL_HVAC_MODE)
+        
+        if mode == HVACMode.HEAT:
+            return HVACAction.HEATING
+        elif mode == HVACMode.COOL:
+            return HVACAction.COOLING
+        elif mode == HVACMode.DRY:
+            return HVACAction.DRYING
+        elif mode == HVACMode.FAN_ONLY:
+            return HVACAction.FAN
+        elif mode in (HVACMode.HEAT_COOL, "auto"):
+            _room_temp = self._connector.data.get(ENL_HVAC_ROOM_TEMP)
+            set_temp = self._connector.data.get(ENL_HVAC_SET_TEMP)
+            if _room_temp is not None and set_temp is not None:
+                if set_temp < _room_temp:
+                    return HVACAction.COOLING
+                elif set_temp > _room_temp:
+                    return HVACAction.HEATING
+            return HVACAction.IDLE
+        elif mode == "other":
+            if self._connector._user_options.get(ENL_HVAC_MODE) == "as_idle":
+                return HVACAction.IDLE
+            else:
+                return HVACAction.OFF
+        else:
+            _LOGGER.warning(f"Unknown HVAC mode {mode}")
+            return HVACAction.IDLE
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if the device is on."""
+        return self._connector.data[ENL_STATUS] == DATA_STATE_ON
+
+    @property
+    def fan_mode(self) -> str | None:
+        """Return the current fan mode."""
+        if ENL_FANSPEED in self._connector.data:
+            return self._connector.data[ENL_FANSPEED]
+        return None
+
+    @property
+    def preset_mode(self) -> str | None:
+        """Return the current preset mode (normal/high-speed/silent)."""
+        if ENL_HVAC_SILENT_MODE in self._connector.data:
+            return self._connector.data[ENL_HVAC_SILENT_MODE]
+        return None
+
+    @property
+    def swing_mode(self) -> str | None:
+        """Return the current swing mode."""
+        if self._connector.data.get(ENL_AUTO_DIRECTION) in getattr(self, '_attr_swing_modes', DEFAULT_SWING_MODES):
+            return self._connector.data.get(ENL_AUTO_DIRECTION)
+        elif self._connector.data.get(ENL_SWING_MODE) in getattr(self, '_attr_swing_modes', DEFAULT_SWING_MODES):
+            return self._connector.data.get(ENL_SWING_MODE)
+        else:
+            if ENL_AIR_VERT in self._connector.data:
+                return self._connector.data[ENL_AIR_VERT]
+            return None
+
     def _set_min_max_temp(self):
         self._attr_min_temp = self._connector._user_options["min_temp_auto"]
         self._attr_max_temp = self._connector._user_options["max_temp_auto"]
@@ -199,104 +309,19 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
                 self._attr_max_temp = self._connector._user_options["max_temp_cool"]
 
     def _set_attrs(self):
-        """current temperature."""
-        _val = self._connector.data.get(ENL_HVAC_ROOM_TEMP)
-        # 0x7F: Overflow, 0x80: Underflow, 0x7E:Value cannot be returned
-        if _val in {0x7F, 0x80, 0x7E}:
-            _val = None
-        self._attr_current_temperature = _val
-
-        """temperature we try to reach."""
-        _val = self._connector.data.get(ENL_HVAC_SET_TEMP)
-        # -3: Rule of thumb, 0xFD: Temperature indeterminable
-        if _val in {-3, 0xFD}:
-            _val = None
-        self._attr_target_temperature = _val
-
-        """temperature we try to reach."""
-        self._attr_target_humidity = self._connector.data.get(ENL_HVAC_SET_HUMIDITY)
-
-        """current operation ie. heat, cool, idle."""
-        _val = self._connector.data.get(ENL_HVAC_MODE)
-        self._attr_hvac_mode = HVACMode.OFF
+        """Update internal state and trigger min/max temp recalculation.
+        
+        Note: All climate attributes are now @property getters that compute values on demand.
+        This method is kept for backward compatibility and to handle side effects like
+        updating _last_mode and calling _set_min_max_temp().
+        """
+        # Update _last_mode based on current hvac mode
         if self._connector.data[ENL_STATUS] == DATA_STATE_ON:
-            if _val == "auto":
-                self._attr_hvac_mode = HVACMode.HEAT_COOL
-            elif _val == "other":
-                if self._connector._user_options.get(ENL_HVAC_MODE) == "as_idle":
-                    self._attr_hvac_mode = self._last_mode
-                else:
-                    self._attr_hvac_mode = HVACMode.OFF
-            else:
-                self._attr_hvac_mode = _val
-            if self._attr_hvac_mode != HVACMode.OFF:
-                self._last_mode = self._attr_hvac_mode
-
-        """current operation ie. heat, cool, idle."""
-        self._attr_hvac_action = HVACAction.OFF
-        if self._connector.data[ENL_STATUS] == DATA_STATE_ON:
-            if self._connector.data[ENL_HVAC_MODE] == HVACMode.HEAT:
-                self._attr_hvac_action = HVACAction.HEATING
-            elif self._connector.data[ENL_HVAC_MODE] == HVACMode.COOL:
-                self._attr_hvac_action = HVACAction.COOLING
-            elif self._connector.data[ENL_HVAC_MODE] == HVACMode.DRY:
-                self._attr_hvac_action = HVACAction.DRYING
-            elif self._connector.data[ENL_HVAC_MODE] == HVACMode.FAN_ONLY:
-                self._attr_hvac_action = HVACAction.FAN
-            elif (
-                self._connector.data[ENL_HVAC_MODE] == HVACMode.HEAT_COOL
-                or self._connector.data[ENL_HVAC_MODE] == "auto"
-            ):
-                _room_temp = self._connector.data.get(ENL_HVAC_ROOM_TEMP)
-                if _room_temp := self._connector.data.get(ENL_HVAC_ROOM_TEMP):
-                    if self._connector.data[ENL_HVAC_SET_TEMP] < _room_temp:
-                        self._attr_hvac_action = HVACAction.COOLING
-                    elif self._connector.data[ENL_HVAC_SET_TEMP] > _room_temp:
-                        self._attr_hvac_action = HVACAction.HEATING
-                else:
-                    self._attr_hvac_action = HVACAction.IDLE
-            elif self._connector.data[ENL_HVAC_MODE] == "other":
-                if self._connector._user_options.get(ENL_HVAC_MODE) == "as_idle":
-                    self._attr_hvac_action = HVACAction.IDLE
-                else:
-                    self._attr_hvac_action = HVACAction.OFF
-            else:
-                _LOGGER.warning(
-                    f"Unknown HVAC mode {self._connector.data.get(ENL_HVAC_MODE)}"
-                )
-                self._attr_hvac_action = HVACAction.IDLE
-
-        """true if the device is on."""
-        self._attr_is_on = (
-            True if self._connector.data[ENL_STATUS] == DATA_STATE_ON else False
-        )
-
-        """fan setting."""
-        self._attr_fan_mode = (
-            self._connector.data[ENL_FANSPEED]
-            if ENL_FANSPEED in self._connector.data
-            else None
-        )
-
-        """preset setting."""
-        self._attr_preset_mode = (
-            self._connector.data[ENL_HVAC_SILENT_MODE]
-            if ENL_HVAC_SILENT_MODE in self._connector.data
-            else None
-        )
-
-        """swing mode setting."""
-        if self._connector.data.get(ENL_AUTO_DIRECTION) in self._attr_swing_modes:
-            self._attr_swing_mode = self._connector.data.get(ENL_AUTO_DIRECTION)
-        elif self._connector.data.get(ENL_SWING_MODE) in self._attr_swing_modes:
-            self._attr_swing_mode = self._connector.data.get(ENL_SWING_MODE)
-        else:
-            self._attr_swing_mode = (
-                self._connector.data[ENL_AIR_VERT]
-                if ENL_AIR_VERT in self._connector.data
-                else None
-            )
-
+            mode = self._connector.data.get(ENL_HVAC_MODE)
+            if mode and mode not in ("auto", "other"):
+                self._last_mode = mode
+        
+        # Trigger min/max temp recalculation based on current hvac_mode
         self._set_min_max_temp()
 
     async def async_set_fan_mode(self, fan_mode):
