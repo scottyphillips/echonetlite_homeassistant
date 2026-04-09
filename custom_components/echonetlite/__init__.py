@@ -816,16 +816,19 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         return update_data.copy()
 
     async def async_update_callback(self, isPush: bool = False):
-        """Handle push notification updates from the ECHONET API.
-
-        This method is called when the device sends unsolicited updates via push notifications.
-        It triggers a no-request update to refresh local state without additional network traffic.
-
-        Args:
-            isPush: Flag indicating this was triggered by a push notification.
-        """
         _LOGGER.debug("received push notification update callback with isPush=%s", isPush)
-        await self.poll_pychonet(kwargs={"no_request": True})
+        
+        # 1. Get the new data from the push
+        new_data = await self.poll_pychonet(kwargs={"no_request": True})
+        
+        # 2. MERGE: Start with what we already know, then overwrite with the new bits
+        # self.data is the Coordinator's internal storage
+        combined_data = {**(self.data or {}), **(new_data or {})}
+        
+        # 3. Update the Coordinator (this resets the 30s timer and pings entities)
+        self.async_set_updated_data(combined_data)
+
+        # 4. Clean up legacy callbacks
         for update_func in self._update_callbacks:
             await update_func(isPush)
 

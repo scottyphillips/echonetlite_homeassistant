@@ -2,6 +2,7 @@ import logging
 import math
 
 import voluptuous as vol
+from homeassistant.core import callback
 from homeassistant.components.climate import (
     ClimateEntity,
 )
@@ -371,6 +372,21 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
     #         self._attr_available = self._server_state["available"]
     #         self._set_attrs()
     #         self.async_schedule_update_ha_state(_force | isPush)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(
+            f"Coordinator update callback triggered for {self._device_name} with data: {self.coordinator.data}"
+        )
+        # We update the local attributes from the central data.
+        self._set_attrs()
+        
+        # We use the Coordinator's availability status.
+        self._attr_available = self.coordinator.last_update_success
+        
+        # Inform HA that the state needs writing to the UI.
+        self.async_write_ha_state()
 
     def update_option_listener(self):
         """list of available fan modes."""
