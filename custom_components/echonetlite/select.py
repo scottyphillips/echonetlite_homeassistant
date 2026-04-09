@@ -196,6 +196,7 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
     async def async_added_to_hass(self):
         """Register callbacks."""
         await super().async_added_to_hass()
+
     #    self._connector.add_update_option_listener(self.update_option_listener)
     #    self._connector.register_async_update_callbacks(self.async_update_callback)
 
@@ -238,20 +239,20 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
                     self._attr_should_poll = True
             self._attr_available = self._server_state["available"]
             self.update_attr()
-        
+
         # We use the Coordinator's availability status.
         self._attr_available = self.coordinator.last_update_success
-        
+
         # Inform HA that the state needs writing to the UI.
         self.async_write_ha_state()
 
     # Logic for "should_poll" is no longer needed since we rely on the Coordinator's update mechanism and availability status.
     # def update_option_listener(self):
-        # _should_poll = self._code not in self._connector._ntfPropertyMap
-        # self._attr_should_poll = (
-        #     self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        # )
-        # self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        #_LOGGER.debug(
-        #    f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
-        #)
+    # _should_poll = self._code not in self._connector._ntfPropertyMap
+    # self._attr_should_poll = (
+    #     self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
+    # )
+    # self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
+    # _LOGGER.debug(
+    #    f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
+    # )

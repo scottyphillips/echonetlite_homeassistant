@@ -212,16 +212,16 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
     def hvac_mode(self) -> HVACMode:
         """Return the current operation mode."""
         _val = self._connector.data.get(ENL_HVAC_MODE)
-        
+
         if self._connector.data[ENL_STATUS] != DATA_STATE_ON:
             return HVACMode.OFF
-        
+
         if _val == "auto":
             return HVACMode.HEAT_COOL
         elif _val == "other":
             if self._connector._user_options.get(ENL_HVAC_MODE) == "as_idle":
                 # Return last known mode when in 'other' state with as_idle option
-                return getattr(self, '_last_mode', HVACMode.OFF)
+                return getattr(self, "_last_mode", HVACMode.OFF)
             else:
                 return HVACMode.OFF
         else:
@@ -235,9 +235,9 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
         """Return the current HVAC action."""
         if self._connector.data[ENL_STATUS] != DATA_STATE_ON:
             return HVACAction.OFF
-        
+
         mode = self._connector.data.get(ENL_HVAC_MODE)
-        
+
         if mode == HVACMode.HEAT:
             return HVACAction.HEATING
         elif mode == HVACMode.COOL:
@@ -286,9 +286,13 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
     @property
     def swing_mode(self) -> str | None:
         """Return the current swing mode."""
-        if self._connector.data.get(ENL_AUTO_DIRECTION) in getattr(self, '_attr_swing_modes', DEFAULT_SWING_MODES):
+        if self._connector.data.get(ENL_AUTO_DIRECTION) in getattr(
+            self, "_attr_swing_modes", DEFAULT_SWING_MODES
+        ):
             return self._connector.data.get(ENL_AUTO_DIRECTION)
-        elif self._connector.data.get(ENL_SWING_MODE) in getattr(self, '_attr_swing_modes', DEFAULT_SWING_MODES):
+        elif self._connector.data.get(ENL_SWING_MODE) in getattr(
+            self, "_attr_swing_modes", DEFAULT_SWING_MODES
+        ):
             return self._connector.data.get(ENL_SWING_MODE)
         else:
             if ENL_AIR_VERT in self._connector.data:
@@ -310,7 +314,7 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
 
     def _set_attrs(self):
         """Update internal state and trigger min/max temp recalculation.
-        
+
         Note: All climate attributes are now @property getters that compute values on demand.
         This method is kept for backward compatibility and to handle side effects like
         updating _last_mode and calling _set_min_max_temp().
@@ -320,7 +324,7 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
             mode = self._connector.data.get(ENL_HVAC_MODE)
             if mode and mode not in ("auto", "other"):
                 self._last_mode = mode
-        
+
         # Trigger min/max temp recalculation based on current hvac_mode
         self._set_min_max_temp()
 
@@ -381,7 +385,6 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
         self._connector.add_update_option_listener(self.update_option_listener)
         # self._connector.register_async_update_callbacks(self.async_update_callback)
 
-
     # disabling async_update_callback for now as DataUpdateCoordinator will handle update callbacks directly and to minimise changes, but keeping the function here for any future use if needed.
     # async def async_update_callback(self, isPush: bool = False):
     #     changed = (
@@ -406,10 +409,10 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
         )
         # We update the local attributes from the central data.
         self._set_attrs()
-        
+
         # We use the Coordinator's availability status.
         self._attr_available = self.coordinator.last_update_success
-        
+
         # Inform HA that the state needs writing to the UI.
         self.async_write_ha_state()
 

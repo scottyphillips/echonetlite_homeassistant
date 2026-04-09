@@ -366,7 +366,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
                     ):
                         new_val = new_val * self._connector.data[multiplier_opcode]
                 return new_val
-            
+
             elif self._attr_device_class in [
                 SensorDeviceClass.TEMPERATURE,
                 SensorDeviceClass.HUMIDITY,

@@ -551,9 +551,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         self._instance_data = instance
 
         # Initialize self.data for DataUpdateCoordinator with correct type hinting - this will be populated with EPC code keys in _make_update_flags_full_list()
-        self.data: dict[int, Any] = (
-            {}
-        )  
+        self.data: dict[int, Any] = {}
 
         # Core connector attributes - preserved from original implementation
         self.hass = hass
@@ -816,15 +814,17 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         return update_data.copy()
 
     async def async_update_callback(self, isPush: bool = False):
-        _LOGGER.debug("received push notification update callback with isPush=%s", isPush)
-        
+        _LOGGER.debug(
+            "received push notification update callback with isPush=%s", isPush
+        )
+
         # 1. Get the new data from the push
         new_data = await self.poll_pychonet(kwargs={"no_request": True})
-        
+
         # 2. MERGE: Start with what we already know, then overwrite with the new bits
         # self.data is the Coordinator's internal storage
         combined_data = {**(self.data or {}), **(new_data or {})}
-        
+
         # 3. Update the Coordinator (this resets the 30s timer and pings entities)
         self.async_set_updated_data(combined_data)
 
