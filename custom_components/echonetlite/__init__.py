@@ -824,6 +824,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         Args:
             isPush: Flag indicating this was triggered by a push notification.
         """
+        _LOGGER.debug("received push notification update callback with isPush=%s", isPush)
         await self.poll_pychonet(kwargs={"no_request": True})
         for update_func in self._update_callbacks:
             await update_func(isPush)
