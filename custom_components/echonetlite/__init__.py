@@ -697,7 +697,9 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             ConfigEntryNotReady: If the device fails to respond within timeout.
         """
         _LOGGER.debug(f"Polling from Coordiantor with _async_update_data")
-        _LOGGER.info(f"Current self.data: {self.data}") # setting to info so I dont have to enable debug logging. 
+        _LOGGER.info(
+            f"Current self.data: {self.data}"
+        )  # setting to info so I dont have to enable debug logging.
         _LOGGER.debug("Coordinator Poll: %s listeners subscribed", len(self._listeners))
         try:
             update_data = await self.poll_pychonet({})
