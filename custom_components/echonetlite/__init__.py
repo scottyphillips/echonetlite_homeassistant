@@ -323,7 +323,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.config_entries.async_update_entry(
             entry, title=entry.title, data={"host": host, "instances": instances}
         )
-    _LOGGER.debug( entry.data["instances"] )
+    _LOGGER.debug(entry.data["instances"])
     for instance in entry.data["instances"]:
         # auto update to new style
         if "ntfmap" not in instance:
@@ -393,7 +393,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     }
                 }
             )
-        _LOGGER.debug("Instantiating a ECHONETConnector...." )
+        _LOGGER.debug("Instantiating a ECHONETConnector....")
         echonetlite = ECHONETConnector(instance, hass, entry)
         await echonetlite.startup()
         await echonetlite.async_config_entry_first_refresh()
@@ -692,10 +692,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         """
         _LOGGER.debug(f"Polling from Coordiantor with _async_update_data")
         _LOGGER.debug(self.data)
-        _LOGGER.debug(
-            "Coordinator Poll: %s listeners subscribed", 
-            len(self._listeners)
-        )
+        _LOGGER.debug("Coordinator Poll: %s listeners subscribed", len(self._listeners))
         try:
             update_data = await self.async_update_data({})
             return update_data
