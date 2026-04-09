@@ -14,6 +14,7 @@ from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
 from pychonet.lib.eojx import EOJX_CLASS
@@ -207,13 +208,23 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     async_add_entities(entities, True)
 
 
-class EchonetSensor(SensorEntity):
+class EchonetSensor(CoordinatorEntity, SensorEntity):
     """Representation of an ECHONETLite Temperature Sensor."""
 
     _attr_translation_key = DOMAIN
 
     def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
-        """Initialize the sensor."""
+        """Initialize the sensor.
+        
+        Args:
+            connector: The ECHONETConnector instance which is also a DataUpdateCoordinator.
+            config: The config entry for this integration.
+            op_code: The EPC code for this sensor.
+            attributes: Sensor configuration attributes.
+            hass: Home Assistant instance (optional).
+        """
+        super().__init__(connector)
+        
         name = get_device_name(connector, config)
         self._connector = connector
         self._op_code = op_code
@@ -382,14 +393,6 @@ class EchonetSensor(SensorEntity):
                     return None
         return None
 
-    async def async_update(self):
-        """Retrieve latest state."""
-        try:
-            await self._connector.async_update()
-            self._attr_native_value = self.get_attr_native_value()
-        except TimeoutError:
-            pass
-
     async def async_set_on_timer_time(self, timer_time):
         val = str(timer_time).split(":")
         mes = {"EPC": 0x91, "PDC": 0x02, "EDT": int(val[0]) * 256 + int(val[1])}
@@ -420,6 +423,7 @@ class EchonetSensor(SensorEntity):
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
     async def async_update_callback(self, isPush: bool = False):
+         # === SECTION 1: DATA EXTRACTION  ===
         new_val = self._connector._update_data.get(self._op_code)
         if "dict_key" in self._sensor_attributes:
             if hasattr(new_val, "get"):
@@ -430,11 +434,15 @@ class EchonetSensor(SensorEntity):
             new_val = self._sensor_attributes["accessor_lambda"](
                 new_val, self._sensor_attributes["accessor_index"]
             )
+        # === SECTION 2: CHANGE DETECTION (Lines 16-18) ===
         changed = (
             new_val is not None and self._state_value != new_val
         ) or self._attr_available != self._server_state["available"]
         if changed:
+             # === SECTION 3: FORCE FLAG - Inside `if changed:` ===
             _force = bool(not self._attr_available and self._server_state["available"])
+
+            # === SECTION 4: STATE TRACKING - Inside `if changed:` ===
             self._state_value = new_val
             self._attr_native_value = self.get_attr_native_value()
             if self._attr_available != self._server_state["available"]:

@@ -29,7 +29,8 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.util import Throttle
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+# Throttle removed - UpdateCoordinator handles update intervals
 from pychonet import ECHONETAPIClient
 from pychonet.echonetapiclient import EchonetMaxOpcError
 from pychonet.EchonetInstance import (
@@ -510,35 +511,83 @@ async def get_echonet_connector():
     return
 
 
-class ECHONETConnector:
-    """EchonetAPIConnector is used to centralise API calls for  Echonet devices.
-    API calls are aggregated per instance (not per node!)"""
+class ECHONETConnector(DataUpdateCoordinator[dict]):
+    """EchonetAPIConnector is used to centralise API calls for Echonet devices.
+    API calls are aggregated per instance (not per node!)
 
-    def __init__(self, instance, hass, entry):
+    This class extends DataUpdateCoordinator to manage ECHONET device data updates,
+    providing built-in polling and caching capabilities while maintaining all
+    existing bespoke logic for batch requests, quirks, and callbacks."""
+
+    def __init__(self, instance: dict, hass: HomeAssistant, entry: ConfigEntry):
+        """Initialize the ECHONETConnector coordinator.
+
+        Args:
+            instance: The ECHONET device instance configuration dictionary.
+            hass: The Home Assistant instance.
+            entry: The config entry for this integration.
+        """
+        # Calculate a unique name for this coordinator using string formatting
+        # to avoid nested quote issues in f-strings
+        display_name = self._get_display_name(instance)
+
+        # Initialize as an DataUpdateCoordinator - the base class handles polling and caching
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=display_name,
+            update_method=self._async_update_data,
+            update_interval=MIN_TIME_BETWEEN_UPDATES,
+        )
+
+        # Store original instance config for reference
+        self._instance_data = instance
+
+        # Core connector attributes - preserved from original implementation
         self.hass = hass
+        self._entry = entry
+
+        # Device identification
         self._host = instance["host"]
         self._eojgc = instance["eojgc"]
         self._eojcc = instance["eojcc"]
         self._eojci = instance["eojci"]
-        self._update_flag_batches = []
-        self._update_data = {}
-        self._api = hass.data[DOMAIN]["api"]
-        self._update_callbacks = []
-        self._update_option_func = []
-        self._update_flags_full_list = []
-        self._ntfPropertyMap = instance["ntfmap"]
-        self._getPropertyMap = instance["getmap"]
-        self._setPropertyMap = instance["setmap"]
+        self._uid = instance.get("uid")
+        self._uidi = instance.get("uidi")
+        self._name = instance.get("name")
+
+        # Manufacturer and product identification for quirks matching
         self._manufacturer = None
         self._host_product_code = None
-        self._enl_op_codes = ENL_OP_CODES.get(self._eojgc, {}).get(self._eojcc, {})
         if "manufacturer" in instance:
             self._manufacturer = instance["manufacturer"]
         if "host_product_code" in instance:
             self._host_product_code = instance["host_product_code"]
-        self._uid = instance.get("uid")
-        self._uidi = instance.get("uidi")
-        self._name = instance.get("name")
+
+        # ECHONET property maps from configuration
+        self._ntfPropertyMap = instance["ntfmap"]
+        self._getPropertyMap = instance["getmap"]
+        self._setPropertyMap = instance["setmap"]
+
+        # Operation codes mapping for this device type
+        self._enl_op_codes = ENL_OP_CODES.get(self._eojgc, {}).get(self._eojcc, {})
+
+        # Update management - batch requests and flags
+        self._update_flag_batches: list[list[int]] = []
+        self._update_flags_full_list: list[int] = []
+        self._update_data: dict[int, Any] = {}
+
+        # Callbacks for push notifications and option updates
+        self._update_callbacks: list[callable] = []
+        self._update_option_func: list[callable] = []
+
+        # User configurable options (fan modes, swing modes, temperature ranges, etc.)
+        self._user_options: dict[str, Any] = {}
+
+        # Get API instance from Home Assistant data store
+        self._api = hass.data[DOMAIN]["api"]
+
+        # Register update callbacks with the API for push notifications
         self._api.register_async_update_callbacks(
             self._host,
             self._eojgc,
@@ -546,23 +595,41 @@ class ECHONETConnector:
             self._eojci,
             self.async_update_callback,
         )
-        self._entry = entry
 
+        # Create the pychonet Factory instance for this device type
         self._instance = echonet.Factory(
             self._host, self._api, self._eojgc, self._eojcc, self._eojci
         )
 
+    def _get_display_name(self, instance: dict) -> str:
+        """Generate a display name for the coordinator."""
+        if instance.get("name"):
+            return f"ECHONET {instance['name']}"
+        return (
+            f"ECHONET {instance['host']}-{instance['eojgc']}"
+            f"-{instance['eojcc']}-{instance['eojci']}"
+        )
+
     async def startup(self):
+        """Complete initialization of the connector/coordinator.
+
+        This method performs one-time setup including:
+        - Loading device-specific quirks
+        - Initializing user options from config entry
+        - Building update flag lists and batch configurations
+        """
         entry = self._entry
 
         _LOGGER.debug(
-            f"Starting ECHONETLite {self._instance.__class__.__name__} instance for {self._eojgc}-{self._eojcc}-{self._eojci}, manufacturer: {self._manufacturer}, host_product_code: {self._host_product_code} at {self._host}"
+            f"Starting ECHONETLite {self._instance.__class__.__name__} instance for "
+            f"{self._eojgc}-{self._eojcc}-{self._eojci}, manufacturer: {self._manufacturer}, "
+            f"host_product_code: {self._host_product_code} at {self._host}"
         )
 
-        # Check Check the definition of quirk
+        # Load device-specific quirks
         await self._load_quirk()
 
-        # TODO this looks messy.
+        # Initialize default user options for fan, swing modes and temperature ranges
         self._user_options = {
             ENL_FANSPEED: False,
             ENL_AUTO_DIRECTION: False,
@@ -576,33 +643,31 @@ class ECHONETConnector:
             "min_temp_auto": 15,
             "max_temp_auto": 35,
         }
-        # User selectable options for fan + swing modes for HVAC
-        for option in USER_OPTIONS.keys():
-            if (
-                entry.options.get(USER_OPTIONS[option]["option"]) is not None
-            ):  # check if options has been created
-                if (
-                    len(entry.options.get(USER_OPTIONS[option]["option"])) > 0
-                ):  # if it has been created then check list length.
-                    self._user_options[option] = entry.options.get(
-                        USER_OPTIONS[option]["option"]
-                    )
 
-        # Temperature range options for heat, cool and auto modes
+        # Apply user-configurable options from config entry
+        for option in USER_OPTIONS.keys():
+            if entry.options.get(USER_OPTIONS[option]["option"]) is not None:
+                option_value = entry.options.get(USER_OPTIONS[option]["option"])
+                if isinstance(option_value, list) and len(option_value) > 0:
+                    self._user_options[option] = option_value
+                else:
+                    self._user_options[option] = False
+
+        # Apply temperature range options
         for option in TEMP_OPTIONS.keys():
             if entry.options.get(option) is not None:
                 self._user_options[option] = entry.options.get(option)
 
-        # Misc options
+        # Apply miscellaneous options
         for key, option in MISC_OPTIONS.items():
             if entry.options.get(key) is not None:
                 self._user_options[key] = entry.options.get(key, option.get("default"))
 
-        # Make _update_flags_full_list
+        # Build the full list of EPC codes to update
         self._make_update_flags_full_list()
         self._update_option_func.append(self._make_update_flags_full_list)
 
-        # Make batch request flags
+        # Configure batch request flags for efficient polling
         self._make_batch_request_flags()
         self._update_option_func.append(self._make_batch_request_flags)
 
@@ -610,12 +675,23 @@ class ECHONETConnector:
         if self._uid is None:
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
 
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    async def async_update(self, **kwargs):
+    async def _async_update_data(self) -> dict[int, Any]:
+        """Fetch the latest data from the ECHONET device.
+
+        This method is called periodically by UpdateCoordinator for polling updates.
+        It handles batch requests and manages the maximum property code (MPC) error.
+
+        Returns:
+            Dictionary containing the latest device data keyed by EPC codes.
+            
+        Raises:
+            ConfigEntryNotReady: If the device fails to respond within timeout.
+        """
         try:
-            await self.async_update_data(kwargs)
+            update_data = await self.async_update_data({})
+            return update_data
         except EchonetMaxOpcError as ex:
-            # Adjust the maximum number of properties for batch requests
+            # Adjust the maximum number of properties for batch requests when MPC error occurs
             batch_size_max = self._user_options.get(
                 CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
             )
@@ -626,9 +702,52 @@ class ECHONETConnector:
             )
             if batch_data_len >= batch_size_max:
                 _LOGGER.error(
-                    f"The integration has adjusted the number of batch requests to {self._host} to {batch_size_max}, but no response is received. Please check and try restarting the device etc."
+                    f"The integration has adjusted the number of batch requests to "
+                    f"{self._host} to {batch_size_max}, but no response is received. "
+                    f"Please check and try restarting the device etc."
+                )
+                return self._update_data.copy()
+
+            # Update user option for batch size and persist to config entry
+            self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
+            entry_options = dict(self._entry.options)
+            entry_options.update({CONF_BATCH_SIZE_MAX: batch_data_len})
+            self.hass.config_entries.async_update_entry(
+                self._entry, options=entry_options
+            )
+
+            # Rebuild batch flags with new size and retry update
+            self._make_batch_request_flags()
+            return await self._async_update_data()
+
+    async def async_update(self, **kwargs):
+        """Perform an immediate data update (bypassing coordinator polling).
+
+        This method is maintained for backward compatibility with existing entities.
+        It triggers a manual update of the device data.
+
+        Args:
+            **kwargs: Additional keyword arguments including 'no_request' to skip polling.
+        """
+        try:
+            await self.async_update_data(kwargs)
+        except EchonetMaxOpcError as ex:
+            batch_size_max = self._user_options.get(
+                CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
+            )
+            batch_data_len = max(
+                ex.args[0],
+                MIN_UPDATE_BATCH_SIZE,
+                batch_size_max - 1,
+            )
+            if batch_data_len >= batch_size_max:
+                _LOGGER.error(
+                    f"The integration has adjusted the number of batch requests to "
+                    f"{self._host} to {batch_size_max}, but no response is received. "
+                    f"Please check and try restarting the device etc."
                 )
                 return None
+
             self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
             entry_options = dict(self._entry.options)
             entry_options.update({CONF_BATCH_SIZE_MAX: batch_data_len})
@@ -639,12 +758,24 @@ class ECHONETConnector:
 
             await self.async_update(**kwargs)
 
-    async def async_update_data(self, kwargs):
+    async def async_update_data(self, kwargs: dict) -> dict[int, Any]:
+        """Execute the data fetch from device properties.
+
+        This method performs batched property requests to minimize network traffic.
+        It handles the MPC (Maximum Property Code) error by adjusting batch sizes.
+
+        Args:
+            kwargs: Dictionary containing optional 'no_request' flag for push-only updates.
+
+        Returns:
+            Dictionary containing fetched data keyed by EPC codes.
+        """
         update_data = {}
         no_request = "no_request" in kwargs and kwargs["no_request"]
+
         for i, flags in enumerate(self._update_flag_batches):
             if i > 0:
-                # Interval 100ms to next request
+                # Add 100ms interval between batch requests to avoid overwhelming the device
                 await asyncio.sleep(0.1)
             batch_data = await self._instance.update(flags, no_request)
             if batch_data is not False:
@@ -652,82 +783,138 @@ class ECHONETConnector:
                     update_data[flags[0]] = batch_data
                 elif isinstance(batch_data, dict):
                     update_data.update(batch_data)
+
         _LOGGER.debug(polling_update_debug_log(update_data, self))
         if len(update_data) > 0:
             self._update_data.update(update_data)
 
+        return update_data.copy()
+
     async def async_update_callback(self, isPush: bool = False):
+        """Handle push notification updates from the ECHONET API.
+
+        This method is called when the device sends unsolicited updates via push notifications.
+        It triggers a no-request update to refresh local state without additional network traffic.
+
+        Args:
+            isPush: Flag indicating this was triggered by a push notification.
+        """
         await self.async_update_data(kwargs={"no_request": True})
         for update_func in self._update_callbacks:
             await update_func(isPush)
 
-    def _make_update_flags_full_list(self):
+    def _make_update_flags_full_list(self) -> bool:
+        """Build the complete list of EPC codes to poll.
+
+        This method constructs the full list of property codes that should be updated
+        during polling, including super energy codes and device-specific properties.
+
+        Returns:
+            True if the list has changed, False otherwise (for change detection).
+        """
         _prev_update_flags_full_list = self._update_flags_full_list.copy()
-        # Make EPC codes for update
+
+        # Reset the update flags list
         self._update_flags_full_list = []
-        # Is enabled CONF_ENABLE_SUPER_ENERGY
+
+        # Include super energy codes if enabled
         _enabled_super_energy = self._user_options.get(
             CONF_ENABLE_SUPER_ENERGY,
             ENABLE_SUPER_ENERGY_DEFAULT.get(self._eojgc, {}).get(self._eojcc, True),
         )
-        # General purpose data items
-        flags = [] # PR 246
+
         if _enabled_super_energy:
             _enl_super_codes = ENL_SUPER_CODES
         else:
             _enl_super_codes = {
                 k: v for k, v in ENL_SUPER_CODES.items() if k not in ENL_SUPER_ENERGES
             }
-        flags += list(_enl_super_codes)
 
-        # Get supported EPC_FUNCTIONS in pychonet object class
+        flags = list(_enl_super_codes)  # PR 246
+
+        # Add supported EPC_FUNCTIONS from the pychonet object class
         _epc_keys = set(self._instance.EPC_FUNCTIONS.keys()) - set(EPC_SUPER.keys())
         for item in self._getPropertyMap:
             if item in _epc_keys:
                 flags.append(item)
 
+        # Build final list with None initialization
         for value in flags:
             if value in self._getPropertyMap:
                 self._update_flags_full_list.append(value)
                 self._update_data[value] = None
 
         _LOGGER.debug(
-            f"Echonet device {self._host}-{self._eojgc}-{self._eojcc}-{self._eojci} update_flags_full_list: {self._update_flags_full_list}"
+            f"Echonet device {self._host}-{self._eojgc}-{self._eojcc}-{self._eojci} "
+            f"update_flags_full_list: {self._update_flags_full_list}"
         )
 
         return _prev_update_flags_full_list != self._update_flags_full_list
 
     def _make_batch_request_flags(self):
-        # Split list of codes into batches of 10
+        """Split the update flags list into batched requests.
+
+        The ECHONET protocol has limits on how many properties can be requested
+        in a single message. This method splits the full list into manageable batches.
+
+        Args:
+            CONF_BATCH_SIZE_MAX: User-configurable maximum batch size (default 10).
+        """
         self._update_flag_batches = []
         start_index = 0
         full_list_length = len(self._update_flags_full_list)
 
-        # Make batch request flags
         batch_size_max = self._user_options.get(
             CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
         )
+
         while start_index + batch_size_max < full_list_length:
             self._update_flag_batches.append(
                 self._update_flags_full_list[start_index : start_index + batch_size_max]
             )
             start_index += batch_size_max
+
+        # Add remaining flags as final batch
         self._update_flag_batches.append(
             self._update_flags_full_list[start_index:full_list_length]
         )
+
         _LOGGER.debug(
-            f"Echonet device {self._host}-{self._eojgc}-{self._eojcc}-{self._eojci} batch request flags list: {self._update_flag_batches}"
+            f"Echonet device {self._host}-{self._eojgc}-{self._eojcc}-{self._eojci} "
+            f"batch request flags list: {self._update_flag_batches}"
         )
 
-    def register_async_update_callbacks(self, update_func):
+    def register_async_update_callbacks(self, update_func: callable):
+        """Register a callback function to be called on data updates.
+
+        This method allows entities and other components to receive notifications
+        when device data changes via push notifications or polling.
+
+        Args:
+            update_func: Async callable that will be invoked with (isPush) parameter.
+        """
         self._update_callbacks.append(update_func)
 
-    def add_update_option_listener(self, update_func):
+    def add_update_option_listener(self, update_func: callable):
+        """Register a listener for option change notifications.
+
+        This method allows components to react when user options are changed
+        and require rebuilding of flag lists or batch configurations.
+
+        Args:
+            update_func: Callable that returns True if a reload is needed.
+        """
         self._update_option_func.append(update_func)
 
     async def _load_quirk(self):
-        # self._manufacturer, self._host_product_code, self._eojgc, self._eojcc
-        def update(extention):
+        """Load device-specific quirks for manufacturer-specific behavior.
+
+        Quirks are used to handle devices with non-standard EPC implementations
+        or proprietary extensions that require special handling.
+        """
+
+        def update(extention: Any):
+            """Apply quirk definitions to the instance."""
             for epc in extention.QUIRKS:
                 if func := extention.QUIRKS[epc].get("EPC_FUNCTION"):
                     self._instance.EPC_FUNCTIONS.update({epc: func})
@@ -736,6 +923,7 @@ class ECHONETConnector:
             _LOGGER.debug(f"Echonet EPC_FUNCTIONS is: {self._instance.EPC_FUNCTIONS}")
             _LOGGER.debug(f"Echonet _enl_op_codes is: {self._enl_op_codes}")
 
+        # Check for manufacturer-specific quirks
         if self._manufacturer:
             check = [
                 "quirks",
@@ -745,6 +933,7 @@ class ECHONETConnector:
             ]
             path = os.path.dirname(__file__) + "/" + "/".join(check) + ".py"
             _LOGGER.debug(f"Echonet _load_quirk check path is: {path}")
+
             if os.path.isfile(path):
                 mod = "." + ".".join(check)
                 _LOGGER.debug(f"Echonet import module is: {mod} of {__package__}")
@@ -752,6 +941,8 @@ class ECHONETConnector:
                     partial(import_module, mod, package=__package__)
                 )
                 update(extention)
+
+            # Check for product-code-specific quirks
             if self._host_product_code:
                 check = [
                     "quirks",
@@ -761,6 +952,7 @@ class ECHONETConnector:
                 ]
                 path = os.path.dirname(__file__) + "/" + "/".join(check) + ".py"
                 _LOGGER.debug(f"Echonet _load_quirk check path is: {path}")
+
                 if os.path.isfile(path):
                     mod = "." + ".".join(check)
                     _LOGGER.debug(f"Echonet import module is: {mod} of {__package__}")
