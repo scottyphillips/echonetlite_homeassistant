@@ -1,6 +1,8 @@
 import logging
 from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.components.select import SelectEntity
+from homeassistant.core import callback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from pychonet.HomeAirConditioner import (
     ENL_AIR_HORZ,
     ENL_AIR_VERT,
@@ -63,7 +65,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     async_add_entities(entities, True)
 
 
-class EchonetSelect(SelectEntity):
+class EchonetSelect(CoordinatorEntity, SelectEntity):
     _attr_translation_key = DOMAIN
 
     SELECT_USING_USER_OPTIONS = {
@@ -86,6 +88,7 @@ class EchonetSelect(SelectEntity):
 
     def __init__(self, hass, connector, config, code, options):
         """Initialize the select."""
+        super().__init__(connector)
         name = get_device_name(connector, config)
         self._connector = connector
         self._config = config
@@ -132,7 +135,7 @@ class EchonetSelect(SelectEntity):
             options.get(CONF_DISABLED_DEFAULT)
         )
 
-        self.update_option_listener()
+        # self.update_option_listener()
 
     @property
     def device_info(self):
@@ -161,20 +164,20 @@ class EchonetSelect(SelectEntity):
 
     async def async_select_option(self, option: str):
         self._attr_current_option = option
-        self.async_schedule_update_ha_state()
+        # self.async_schedule_update_ha_state()
         if not await self._connector._instance.setMessage(
             self._code, self._options[option]
         ):
             # Restore previous state
             self._attr_current_option = self._connector._update_data.get(self._code)
-            self.async_schedule_update_ha_state()
+        #    self.async_schedule_update_ha_state()
 
-    async def async_update(self):
-        """Retrieve latest state."""
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
+    # async def async_update(self):
+    #     """Retrieve latest state."""
+    #     try:
+    #         await self._connector.async_update()
+    #     except TimeoutError:
+    #         pass
 
     def update_attr(self):
         self._attr_options = list(self._options.keys())
@@ -192,11 +195,36 @@ class EchonetSelect(SelectEntity):
 
     async def async_added_to_hass(self):
         """Register callbacks."""
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
+        await super().async_added_to_hass()
+    #    self._connector.add_update_option_listener(self.update_option_listener)
+    #    self._connector.register_async_update_callbacks(self.async_update_callback)
 
-    async def async_update_callback(self, isPush: bool = False):
-        new_val = self._connector._update_data.get(self._code)
+    # async def async_update_callback(self, isPush: bool = False):
+    #     new_val = self._connector.data.get(self._code)
+    #     changed = (
+    #         new_val is not None and self._attr_current_option != new_val
+    #     ) or self._attr_available != self._server_state["available"]
+    #     if changed:
+    #         _force = bool(not self._attr_available and self._server_state["available"])
+    #         self._attr_current_option = new_val
+    #         if self._attr_available != self._server_state["available"]:
+    #             if self._server_state["available"]:
+    #                 self.update_option_listener()
+    #             else:
+    #                 self._attr_should_poll = True
+    #         self._attr_available = self._server_state["available"]
+    #         self.update_attr()
+    #         self.async_schedule_update_ha_state(_force)
+
+    # This logic needs to be moved to a @property metnod that reads from the Coordinator's data and availability status, since we are now relying on the Coordinator's update mechanism.
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(
+            f"Coordinator update callback for Select triggered for {self._device_name} with data: {self.coordinator.data}"
+        )
+        # We update the local attributes from the central data.
+        new_val = self._connector.data.get(self._code)
         changed = (
             new_val is not None and self._attr_current_option != new_val
         ) or self._attr_available != self._server_state["available"]
@@ -210,14 +238,20 @@ class EchonetSelect(SelectEntity):
                     self._attr_should_poll = True
             self._attr_available = self._server_state["available"]
             self.update_attr()
-            self.async_schedule_update_ha_state(_force)
+        
+        # We use the Coordinator's availability status.
+        self._attr_available = self.coordinator.last_update_success
+        
+        # Inform HA that the state needs writing to the UI.
+        self.async_write_ha_state()
 
-    def update_option_listener(self):
-        _should_poll = self._code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(
-            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
-        )
+    # Logic for "should_poll" is no longer needed since we rely on the Coordinator's update mechanism and availability status.
+    # def update_option_listener(self):
+        # _should_poll = self._code not in self._connector._ntfPropertyMap
+        # self._attr_should_poll = (
+        #     self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
+        # )
+        # self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
+        #_LOGGER.debug(
+        #    f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
+        #)
