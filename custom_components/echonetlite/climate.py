@@ -234,7 +234,7 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
         """current operation ie. heat, cool, idle."""
         self._attr_hvac_action = HVACAction.OFF
         if self._connector.data[ENL_STATUS] == DATA_STATE_ON:
-            if self._connector._data[ENL_HVAC_MODE] == HVACMode.HEAT:
+            if self._connector.data[ENL_HVAC_MODE] == HVACMode.HEAT:
                 self._attr_hvac_action = HVACAction.HEATING
             elif self._connector.data[ENL_HVAC_MODE] == HVACMode.COOL:
                 self._attr_hvac_action = HVACAction.COOLING
@@ -353,22 +353,24 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
         """Register callbacks."""
         await super().async_added_to_hass()
         self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
+        # self._connector.register_async_update_callbacks(self.async_update_callback)
 
-    async def async_update_callback(self, isPush: bool = False):
-        changed = (
-            self._olddata != self._connector.data
-            or self._attr_available != self._server_state["available"]
-        )
-        _LOGGER.debug(
-            f"Called async_update_callback on {self._device_name}.\nChanged: {changed}\nUpdate data: {self._connector.data}\nOld data: {self._olddata}"
-        )
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._olddata = self._connector.data.copy()
-            self._attr_available = self._server_state["available"]
-            self._set_attrs()
-            self.async_schedule_update_ha_state(_force | isPush)
+
+    # disabling async_update_callback for now as DataUpdateCoordinator will handle update callbacks directly and to minimise changes, but keeping the function here for any future use if needed.
+    # async def async_update_callback(self, isPush: bool = False):
+    #     changed = (
+    #         self._olddata != self._connector.data
+    #         or self._attr_available != self._server_state["available"]
+    #     )
+    #     _LOGGER.debug(
+    #         f"Called async_update_callback on {self._device_name}.\nChanged: {changed}\nUpdate data: {self._connector.data}\nOld data: {self._olddata}"
+    #     )
+    #     if changed:
+    #         _force = bool(not self._attr_available and self._server_state["available"])
+    #         self._olddata = self._connector.data.copy()
+    #         self._attr_available = self._server_state["available"]
+    #         self._set_attrs()
+    #         self.async_schedule_update_ha_state(_force | isPush)
 
     def update_option_listener(self):
         """list of available fan modes."""
