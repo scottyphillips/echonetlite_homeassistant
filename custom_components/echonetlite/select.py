@@ -127,7 +127,7 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
             else f"{self._connector._uid}-{self._code}"
         )
         self._device_name = name
-        self._attr_should_poll = True
+        self._attr_should_poll = False
         self._attr_available = True
         self._attr_force_update = False
 
@@ -136,6 +136,30 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
         )
 
         # self.update_option_listener()
+
+    @property
+    def options(self) -> list:
+        """Return available select options, with user override support."""
+        if self._code in self._user_option_epcs:
+            if self._connector._user_options[self._code] is not False:
+                return self._connector._user_options[self._code]
+        return list(self._options.keys())
+
+    @property
+    def current_option(self) -> str | None:
+        """Return current option with fallback for raw int values, reading fresh from coordinator."""
+        val = self._connector.data.get(self._code)
+        if val is not None and val not in self.options:
+            # Handle raw int case - reverse lookup in _options dict
+            keys = [k for k, v in self._options.items() if v == val]
+            if keys:
+                return keys[0]
+        return val
+
+    @property
+    def icon(self) -> str | None:
+        """Return icon for current option with default fallback."""
+        return self._icons.get(self.current_option, self._icon_default)
 
     @property
     def device_info(self):
@@ -172,73 +196,16 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
             self._attr_current_option = self._connector._update_data.get(self._code)
         #    self.async_schedule_update_ha_state()
 
-    # async def async_update(self):
-    #     """Retrieve latest state."""
-    #     try:
-    #         await self._connector.async_update()
-    #     except TimeoutError:
-    #         pass
-
-    def update_attr(self):
-        self._attr_options = list(self._options.keys())
-        if self._attr_current_option not in self._attr_options:
-            # maybe data value is raw(int)
-            keys = [
-                k for k, v in self._options.items() if v == self._attr_current_option
-            ]
-            if keys:
-                self._attr_current_option = keys[0]
-        self._attr_icon = self._icons.get(self._attr_current_option, self._icon_default)
-        if self._code in self._user_option_epcs:
-            if self._connector._user_options[self._code] is not False:
-                self._attr_options = self._connector._user_options[self._code]
-
     async def async_added_to_hass(self):
         """Register callbacks."""
         await super().async_added_to_hass()
 
-    #    self._connector.add_update_option_listener(self.update_option_listener)
-    #    self._connector.register_async_update_callbacks(self.async_update_callback)
-
-    # async def async_update_callback(self, isPush: bool = False):
-    #     new_val = self._connector.data.get(self._code)
-    #     changed = (
-    #         new_val is not None and self._attr_current_option != new_val
-    #     ) or self._attr_available != self._server_state["available"]
-    #     if changed:
-    #         _force = bool(not self._attr_available and self._server_state["available"])
-    #         self._attr_current_option = new_val
-    #         if self._attr_available != self._server_state["available"]:
-    #             if self._server_state["available"]:
-    #                 self.update_option_listener()
-    #             else:
-    #                 self._attr_should_poll = True
-    #         self._attr_available = self._server_state["available"]
-    #         self.update_attr()
-    #         self.async_schedule_update_ha_state(_force)
-
-    # This logic needs to be moved to a @property metnod that reads from the Coordinator's data and availability status, since we are now relying on the Coordinator's update mechanism.
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         _LOGGER.debug(
             f"Coordinator update callback for Select triggered for {self._device_name} with data: {self.coordinator.data}"
         )
-        # We update the local attributes from the central data.
-        new_val = self._connector.data.get(self._code)
-        changed = (
-            new_val is not None and self._attr_current_option != new_val
-        ) or self._attr_available != self._server_state["available"]
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._attr_current_option = new_val
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.update_attr()
 
         # We use the Coordinator's availability status.
         self._attr_available = self.coordinator.last_update_success
@@ -246,13 +213,7 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
         # Inform HA that the state needs writing to the UI.
         self.async_write_ha_state()
 
-    # Logic for "should_poll" is no longer needed since we rely on the Coordinator's update mechanism and availability status.
-    # def update_option_listener(self):
-    # _should_poll = self._code not in self._connector._ntfPropertyMap
-    # self._attr_should_poll = (
-    #     self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-    # )
-    # self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-    # _LOGGER.debug(
-    #    f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
-    # )
+    @property
+    def should_poll(self) -> bool:
+        """Return whether entity should be polled - always False with coordinator."""
+        return False
