@@ -5,6 +5,7 @@ import voluptuous as vol
 from homeassistant.components.climate import (
     ClimateEntity,
 )
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     ClimateEntityFeature,
@@ -83,17 +84,23 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     )
 
 
-class EchonetClimate(ClimateEntity):
+class EchonetClimate(CoordinatorEntity, ClimateEntity):
     """Representation of an ECHONETLite climate device."""
 
     _attr_translation_key = DOMAIN
 
     def __init__(self, connector, config):
-        """Initialize the climate device."""
+        """Initialize the climate device.
+
+        Args:
+            connector: The ECHONETConnector instance which is also a DataUpdateCoordinator.
+            config: The config entry for this integration.
+        """
+        super().__init__(connector)
         name = get_device_name(connector, config)
         self._attr_name = name
         self._device_name = name
-        self._connector = connector  # new line
+        self._connector = connector
         self._attr_unique_id = (
             self._connector._uidi if self._connector._uidi else self._connector._uid
         )
@@ -151,13 +158,6 @@ class EchonetClimate(ClimateEntity):
 
         # see, https://developers.home-assistant.io/blog/2024/01/24/climate-climateentityfeatures-expanded
         self._enable_turn_on_off_backwards_compatibility = False
-
-    async def async_update(self):
-        """Get the latest state from the HVAC."""
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
 
     @property
     def device_info(self):
