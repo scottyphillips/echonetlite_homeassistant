@@ -863,9 +863,11 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             if value in self._getPropertyMap:
                 self._update_flags_full_list.append(value)
                 self._update_data[value] = (
-                    None  # Fix - use self.data from DataUpdateCoordinator instead
+                    None  # Remove at some stage - use self.data from DataUpdateCoordinator instead
                 )
-
+                self.data[value] = (
+                    None  # This should instantiate self.data with the correct keys for DataUpdateCoordinator
+                )
         _LOGGER.debug(
             f"Echonet device {self._host}-{self._eojgc}-{self._eojcc}-{self._eojci} "
             f"update_flags_full_list: {self._update_flags_full_list}"
