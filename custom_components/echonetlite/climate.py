@@ -299,34 +299,45 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
                 return self._connector.data[ENL_AIR_VERT]
             return None
 
-    def _set_min_max_temp(self):
-        self._attr_min_temp = self._connector._user_options["min_temp_auto"]
-        self._attr_max_temp = self._connector._user_options["max_temp_auto"]
+    @property
+    def min_temp(self) -> float:
+        """Return the minimum temperature based on current operation mode."""
+        mode = self.hvac_mode
 
-        if hasattr(self, "_attr_hvac_mode"):
-            """minimum/maximum temperature supported by the HVAC."""
-            if self._attr_hvac_mode == HVACMode.HEAT:
-                self._attr_min_temp = self._connector._user_options["min_temp_heat"]
-                self._attr_max_temp = self._connector._user_options["max_temp_heat"]
-            elif self._attr_hvac_mode == HVACMode.COOL:
-                self._attr_min_temp = self._connector._user_options["min_temp_cool"]
-                self._attr_max_temp = self._connector._user_options["max_temp_cool"]
+        if mode == HVACMode.HEAT:
+            return self._connector._user_options.get("min_temp_heat", 16)
+        if mode == HVACMode.COOL:
+            return self._connector._user_options.get("min_temp_cool", 18)
+
+        # Default/Auto (HEAT_COOL), DRY, FAN_ONLY, OFF ranges
+        return self._connector._user_options.get("min_temp_auto", 16)
+
+    @property
+    def max_temp(self) -> float:
+        """Return the maximum temperature based on current operation mode."""
+        mode = self.hvac_mode
+
+        if mode == HVACMode.HEAT:
+            return self._connector._user_options.get("max_temp_heat", 30)
+        if mode == HVACMode.COOL:
+            return self._connector._user_options.get("max_temp_cool", 27)
+
+        # Default/Auto (HEAT_COOL), DRY, FAN_ONLY, OFF ranges
+        return self._connector._user_options.get("max_temp_auto", 30)
 
     def _set_attrs(self):
-        """Update internal state and trigger min/max temp recalculation.
+        """Update internal state.
 
-        Note: All climate attributes are now @property getters that compute values on demand.
+        Note: All climate attributes including min/max temperature are now @property
+        getters that compute values on demand based on current hvac_mode.
         This method is kept for backward compatibility and to handle side effects like
-        updating _last_mode and calling _set_min_max_temp().
+        updating _last_mode.
         """
         # Update _last_mode based on current hvac mode
         if self._connector.data[ENL_STATUS] == DATA_STATE_ON:
             mode = self._connector.data.get(ENL_HVAC_MODE)
             if mode and mode not in ("auto", "other"):
                 self._last_mode = mode
-
-        # Trigger min/max temp recalculation based on current hvac_mode
-        self._set_min_max_temp()
 
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode."""
@@ -417,7 +428,7 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
         self.async_write_ha_state()
 
     def update_option_listener(self):
-        """list of available fan modes."""
+        """Update list of available fan and swing modes from options."""
         _modes = self._connector._user_options.get(ENL_FANSPEED)
         if _modes:
             self._attr_fan_modes = _modes
@@ -433,7 +444,6 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
         else:
             self._attr_swing_modes = DEFAULT_SWING_MODES
 
-        self._set_min_max_temp()
         if self.hass:
             self.async_schedule_update_ha_state()
 
