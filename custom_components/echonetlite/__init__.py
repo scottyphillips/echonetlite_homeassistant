@@ -550,6 +550,11 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         # Store original instance config for reference
         self._instance_data = instance
 
+        # Initialize self.data for DataUpdateCoordinator with correct type hinting - this will be populated with EPC code keys in _make_update_flags_full_list()
+        self.data: dict[int, Any] = (
+            {}
+        )  
+
         # Core connector attributes - preserved from original implementation
         self.hass = hass
         self._entry = entry

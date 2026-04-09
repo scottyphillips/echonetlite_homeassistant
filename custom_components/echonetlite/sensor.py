@@ -306,8 +306,8 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
 
     def get_attr_native_value(self):
         """Return the state of the sensor."""
-        if self._op_code in self._connector._update_data:
-            new_val = self._connector._update_data[self._op_code]
+        if self._op_code in self._connector.data:
+            new_val = self._connector.data[self._op_code]
             if "dict_key" in self._sensor_attributes:
                 if hasattr(new_val, "get"):
                     self._state_value = new_val.get(self._sensor_attributes["dict_key"])
@@ -350,12 +350,10 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
                 if CONF_MULTIPLIER_OPCODE in self._sensor_attributes:
                     multiplier_opcode = self._sensor_attributes[CONF_MULTIPLIER_OPCODE]
                     if (
-                        multiplier_opcode in self._connector._update_data
-                        and self._connector._update_data[multiplier_opcode] is not None
+                        multiplier_opcode in self._connector.data
+                        and self._connector.data[multiplier_opcode] is not None
                     ):
-                        new_val = (
-                            new_val * self._connector._update_data[multiplier_opcode]
-                        )
+                        new_val = new_val * self._connector.data[multiplier_opcode]
                     else:
                         return None
                 if CONF_MULTIPLIER_OPTIONAL_OPCODE in self._sensor_attributes:
@@ -363,12 +361,10 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
                         CONF_MULTIPLIER_OPTIONAL_OPCODE
                     ]
                     if (
-                        multiplier_opcode in self._connector._update_data
-                        and self._connector._update_data[multiplier_opcode] is not None
+                        multiplier_opcode in self._connector.data
+                        and self._connector.data[multiplier_opcode] is not None
                     ):
-                        new_val = (
-                            new_val * self._connector._update_data[multiplier_opcode]
-                        )
+                        new_val = new_val * self._connector.data[multiplier_opcode]
                 return new_val
             elif self._attr_device_class in [
                 SensorDeviceClass.TEMPERATURE,
@@ -384,7 +380,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
                     return 1
                 else:
                     return self._state_value
-            elif self._op_code in self._connector._update_data:
+            elif self._op_code in self._connector.data:
                 if isinstance(self._state_value, (int, float)):
                     return self._state_value
                 if len(self._state_value) < 255:
@@ -423,9 +419,10 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
         self._connector.add_update_option_listener(self.update_option_listener)
         self._connector.register_async_update_callbacks(self.async_update_callback)
 
+    # highly likely update_callback no longer needed because DataUpdateCoordinator will handle update_callbacks directly but keeping it for now to minimise changes and for any future use if needed.
     async def async_update_callback(self, isPush: bool = False):
         # === SECTION 1: DATA EXTRACTION  ===
-        new_val = self._connector._update_data.get(self._op_code)
+        new_val = self._connector.data.get(self._op_code)
         if "dict_key" in self._sensor_attributes:
             if hasattr(new_val, "get"):
                 new_val = new_val.get(self._sensor_attributes["dict_key"])
