@@ -63,9 +63,18 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 MAP_BINARY_STATE = {
-    True: True, "1": True, DATA_STATE_ON: True, DATA_STATE_OPEN: True, "yes": True,
-    False: False, "0": False, DATA_STATE_OFF: False, DATA_STATE_CLOSE: False, "no": False,
+    True: True,
+    "1": True,
+    DATA_STATE_ON: True,
+    DATA_STATE_OPEN: True,
+    "yes": True,
+    False: False,
+    "0": False,
+    DATA_STATE_OFF: False,
+    DATA_STATE_CLOSE: False,
+    "no": False,
 }
+
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
@@ -228,7 +237,7 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
         """Initialize the sensor."""
         # Initialize coordinator first - must call parent before setting other properties
         super().__init__(connector)
-        
+
         name = get_device_name(connector, config)
         self._op_code = op_code
         self._sensor_attributes = attributes
@@ -267,7 +276,7 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
         self._attr_entity_registry_enabled_default = not bool(
             self._sensor_attributes.get(CONF_DISABLED_DEFAULT)
         )
-        
+
         # Coordinator handles polling automatically - no need for _attr_should_poll
 
     @property
@@ -297,12 +306,18 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
     def is_on(self) -> bool | None:
         """Return True if entity is on."""
         raw_val = self.coordinator.data.get(self._op_code)
-        
+
         # Handle dictionary or array accessors
         if "dict_key" in self._sensor_attributes:
-            raw_val = raw_val.get(self._sensor_attributes["dict_key"]) if hasattr(raw_val, "get") else None
+            raw_val = (
+                raw_val.get(self._sensor_attributes["dict_key"])
+                if hasattr(raw_val, "get")
+                else None
+            )
         elif "accessor_lambda" in self._sensor_attributes:
-            raw_val = self._sensor_attributes["accessor_lambda"](raw_val, self._sensor_attributes["accessor_index"])
+            raw_val = self._sensor_attributes["accessor_lambda"](
+                raw_val, self._sensor_attributes["accessor_index"]
+            )
 
         return MAP_BINARY_STATE.get(raw_val)
 
