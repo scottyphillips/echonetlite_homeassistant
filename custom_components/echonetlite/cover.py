@@ -76,20 +76,19 @@ class EchonetCover(CoordinatorEntity, CoverEntity):
         """
         super().__init__(coordinator)
         name = get_device_name(coordinator, config)
-        self._connector = coordinator  # Keep reference for compatibility
         self._attr_name = name
         self._device_name = name
         self._attr_unique_id = (
-            self._connector._uidi if self._connector._uidi else self._connector._uid
+            self.coordinator._uidi if self.coordinator._uidi else self.coordinator._uid
         )
 
         self._support_flags = (
             CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
         )
-        if ENL_OPENING_LEVEL in list(self._connector._setPropertyMap):
+        if ENL_OPENING_LEVEL in list(self.coordinator._setPropertyMap):
             self._support_flags |= CoverEntityFeature.SET_POSITION
 
-        if ENL_BLIND_ANGLE in list(self._connector._setPropertyMap):
+        if ENL_BLIND_ANGLE in list(self.coordinator._setPropertyMap):
             self._support_flags |= (
                 CoverEntityFeature.OPEN_TILT
                 | CoverEntityFeature.CLOSE_TILT
@@ -167,34 +166,34 @@ class EchonetCover(CoordinatorEntity, CoverEntity):
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
-        await self._connector._instance.setMessage(ENL_OPENSTATE, 0x42)
+        await self.coordinator._instance.setMessage(ENL_OPENSTATE, 0x42)
         self.coordinator.data[ENL_OPENSTATE] = DATA_STATE_CLOSE
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
-        await self._connector._instance.setMessage(ENL_OPENSTATE, 0x41)
+        await self.coordinator._instance.setMessage(ENL_OPENSTATE, 0x41)
         self.coordinator.data[ENL_OPENSTATE] = DATA_STATE_OPEN
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover movement."""
-        await self._connector._instance.setMessage(ENL_OPENSTATE, 0x43)
+        await self.coordinator._instance.setMessage(ENL_OPENSTATE, 0x43)
         self.coordinator.data[ENL_OPENSTATE] = DATA_STATE_STOP
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Set the cover position."""
         desired_position = kwargs[ATTR_POSITION]
         current_position = self.current_cover_position or 0
-        await self._connector._instance.setMessage(ENL_OPENING_LEVEL, desired_position)
+        await self.coordinator._instance.setMessage(ENL_OPENING_LEVEL, desired_position)
         self.coordinator.data[ENL_OPENING_LEVEL] = int(desired_position)
 
     async def async_close_cover_tilt(self, **kwargs: Any) -> None:
         """Close the cover tilt."""
-        await self._connector._instance.setMessage(ENL_BLIND_ANGLE, 0)
+        await self.coordinator._instance.setMessage(ENL_BLIND_ANGLE, 0)
         self.coordinator.data[ENL_BLIND_ANGLE] = 0
 
     async def async_open_cover_tilt(self, **kwargs: Any) -> None:
         """Open the cover tilt."""
-        await self._connector._instance.setMessage(ENL_BLIND_ANGLE, 180)
+        await self.coordinator._instance.setMessage(ENL_BLIND_ANGLE, 180)
         self.coordinator.data[ENL_BLIND_ANGLE] = 180
 
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
@@ -202,7 +201,7 @@ class EchonetCover(CoordinatorEntity, CoverEntity):
         tilt = math.ceil(
             percentage_to_ranged_value(TILT_RANGE, kwargs[ATTR_TILT_POSITION])
         )
-        await self._connector._instance.setMessage(ENL_BLIND_ANGLE, tilt)
+        await self.coordinator._instance.setMessage(ENL_BLIND_ANGLE, tilt)
         self.coordinator.data[ENL_BLIND_ANGLE] = int(tilt)
 
     async def async_added_to_hass(self):

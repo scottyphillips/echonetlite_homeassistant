@@ -89,12 +89,11 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
         """Initialize the select."""
         super().__init__(connector)
         name = get_device_name(connector, config)
-        self._connector = connector
         self._config = config
         self._code = code
         self._optimistic = False
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
+        self._server_state = self.coordinator._api._state[
+            self.coordinator._instance._host
         ]
         self._sub_state = None
         if type(options.get(TYPE_SELECT)) == dict:
@@ -109,21 +108,21 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
         self._attr_options = list(self._options.keys())
 
         self._user_option_epcs = self.SELECT_USING_USER_OPTIONS.get(
-            hex(self._connector._instance._eojgc)
+            hex(self.coordinator._instance._eojgc)
             + "-"
-            + hex(self._connector._instance._eojcc),
+            + hex(self.coordinator._instance._eojcc),
             set(),
-        ).intersection(set(self._connector._user_options.keys()))
+        ).intersection(set(self.coordinator._user_options.keys()))
 
         if self._code in self._user_option_epcs:
-            if self._connector._user_options[code] is not False:
-                self._attr_options = self._connector._user_options[code]
-        self._attr_current_option = self._connector._update_data.get(self._code)
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
+            if self.coordinator._user_options[code] is not False:
+                self._attr_options = self.coordinator._user_options[code]
+        self._attr_current_option = self.coordinator._update_data.get(self._code)
+        self._attr_name = f"{config.title} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._code, None, self.coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
         self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._code}"
+            f"{self.coordinator._uidi}-{self._code}"
+            if self.coordinator._uidi
+            else f"{self.coordinator._uid}-{self._code}"
         )
         self._device_name = name
         self._attr_should_poll = False
@@ -140,14 +139,14 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
     def options(self) -> list:
         """Return available select options, with user override support."""
         if self._code in self._user_option_epcs:
-            if self._connector._user_options[self._code] is not False:
-                return self._connector._user_options[self._code]
+            if self.coordinator._user_options[self._code] is not False:
+                return self.coordinator._user_options[self._code]
         return list(self._options.keys())
 
     @property
     def current_option(self) -> str | None:
         """Return current option with fallback for raw int values, reading fresh from coordinator."""
-        val = self._connector.data.get(self._code)
+        val = self.coordinator.data.get(self._code)
         if val is not None and val not in self.options:
             # Handle raw int case - reverse lookup in _options dict
             keys = [k for k, v in self._options.items() if v == val]
@@ -166,21 +165,21 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
             "identifiers": {
                 (
                     DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
+                    self.coordinator._uid,
+                    self.coordinator._instance._eojgc,
+                    self.coordinator._instance._eojcc,
+                    self.coordinator._instance._eojci,
                 )
             },
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
+            "manufacturer": self.coordinator._manufacturer
             + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
+                " " + self.coordinator._host_product_code
+                if self.coordinator._host_product_code
                 else ""
             ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
+            "model": EOJX_CLASS[self.coordinator._instance._eojgc][
+                self.coordinator._instance._eojcc
             ],
             # "sw_version": "",
         }
@@ -188,11 +187,11 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
     async def async_select_option(self, option: str):
         self._attr_current_option = option
         # self.async_schedule_update_ha_state()
-        if not await self._connector._instance.setMessage(
+        if not await self.coordinator._instance.setMessage(
             self._code, self._options[option]
         ):
             # Restore previous state
-            self._attr_current_option = self._connector._update_data.get(self._code)
+            self._attr_current_option = self.coordinator._update_data.get(self._code)
         #    self.async_schedule_update_ha_state()
 
     async def async_added_to_hass(self):

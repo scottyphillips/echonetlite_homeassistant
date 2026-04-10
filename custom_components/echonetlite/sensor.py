@@ -224,20 +224,19 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
         super().__init__(connector)
 
         name = get_device_name(connector, config)
-        self._connector = connector
         self._op_code = op_code
         self._sensor_attributes = attributes
-        self._eojgc = self._connector._eojgc
-        self._eojcc = self._connector._eojcc
-        self._eojci = self._connector._eojci
+        self._eojgc = self.coordinator._eojgc
+        self._eojcc = self.coordinator._eojcc
+        self._eojci = self.coordinator._eojci
         self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._op_code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}"
+            f"{self.coordinator._uidi}-{self._op_code}"
+            if self.coordinator._uidi
+            else f"{self.coordinator._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}"
         )
         self._device_name = name
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
+        self._server_state = self.coordinator._api._state[
+            self.coordinator._instance._host
         ]
 
         _attr_keys = self._sensor_attributes.keys()
@@ -247,7 +246,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
         self._attr_state_class = self._sensor_attributes.get(CONF_STATE_CLASS)
 
         # Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
-        self._attr_name = f"{name} {get_name_by_epc_code(self._eojgc, self._eojcc, self._op_code, self._attr_device_class, self._connector._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
+        self._attr_name = f"{name} {get_name_by_epc_code(self._eojgc, self._eojcc, self._op_code, self._attr_device_class, self.coordinator._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
 
         if "dict_key" in _attr_keys:
             self._attr_unique_id += f'-{self._sensor_attributes["dict_key"]}'
@@ -283,17 +282,17 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
             "identifiers": {
                 (
                     DOMAIN,
-                    self._connector._uid,
-                    self._connector._eojgc,
-                    self._connector._eojcc,
-                    self._connector._eojci,
+                    self.coordinator._uid,
+                    self.coordinator._eojgc,
+                    self.coordinator._eojcc,
+                    self.coordinator._eojci,
                 )
             },
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
+            "manufacturer": self.coordinator._manufacturer
             + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
+                " " + self.coordinator._host_product_code
+                if self.coordinator._host_product_code
                 else ""
             ),
             "model": EOJX_CLASS[self._eojgc][self._eojcc],
@@ -311,8 +310,8 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
         This method contains all transformation logic for computing the raw sensor value.
         It is called by the native_value property getter.
         """
-        if self._op_code in self._connector.data:
-            new_val = self._connector.data[self._op_code]
+        if self._op_code in self.coordinator.data:
+            new_val = self.coordinator.data[self._op_code]
 
             # Initialize extracted_value (will be set below based on attributes)
             extracted_value = None
@@ -362,11 +361,11 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
                 if CONF_MULTIPLIER_OPCODE in self._sensor_attributes:
                     multiplier_opcode = self._sensor_attributes[CONF_MULTIPLIER_OPCODE]
                     if (
-                        multiplier_opcode in self._connector.data
-                        and self._connector.data[multiplier_opcode] is not None
+                        multiplier_opcode in self.coordinator.data
+                        and self.coordinator.data[multiplier_opcode] is not None
                     ):
                         result_value = (
-                            result_value * self._connector.data[multiplier_opcode]
+                            result_value * self.coordinator.data[multiplier_opcode]
                         )
                     else:
                         return None
@@ -375,11 +374,11 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
                         CONF_MULTIPLIER_OPTIONAL_OPCODE
                     ]
                     if (
-                        multiplier_opcode in self._connector.data
-                        and self._connector.data[multiplier_opcode] is not None
+                        multiplier_opcode in self.coordinator.data
+                        and self.coordinator.data[multiplier_opcode] is not None
                     ):
                         result_value = (
-                            result_value * self._connector.data[multiplier_opcode]
+                            result_value * self.coordinator.data[multiplier_opcode]
                         )
                 return result_value
 
@@ -397,7 +396,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
                     return 1
                 else:
                     return extracted_value
-            elif self._op_code in self._connector.data:
+            elif self._op_code in self.coordinator.data:
                 if isinstance(extracted_value, (int, float)):
                     return extracted_value
                 if len(extracted_value) < 255:
@@ -409,7 +408,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
     async def async_set_on_timer_time(self, timer_time):
         val = str(timer_time).split(":")
         mes = {"EPC": 0x91, "PDC": 0x02, "EDT": int(val[0]) * 256 + int(val[1])}
-        if await self._connector._instance.setMessages([mes]):
+        if await self.coordinator._instance.setMessages([mes]):
             pass
         else:
             raise InvalidStateError(
@@ -419,7 +418,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
     async def async_set_value_int_1b(self, value, epc=None):
         if epc:
             value = int(value)
-            if await self._connector._instance.setMessage(epc, value):
+            if await self.coordinator._instance.setMessage(epc, value):
                 pass
             else:
                 raise InvalidStateError(
