@@ -3,6 +3,7 @@ from homeassistant.const import (
     CONF_ICON,
     CONF_NAME,
     CONF_TYPE,
+    CONF_MINIMUM,
     CONF_MAXIMUM,
     CONF_UNIT_OF_MEASUREMENT,
 )
@@ -94,6 +95,11 @@ class EchonetNumber(CoordinatorEntity, NumberEntity):
         if value is not None:
             return int(value) - self._as_zero
         return None
+
+    @property
+    def native_min_value(self):
+        """Return the minimum value."""
+        return self._options.get(CONF_MINIMUM, 0) - self._as_zero
 
     @property
     def native_max_value(self):
