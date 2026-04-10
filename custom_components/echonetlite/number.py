@@ -55,11 +55,11 @@ class EchonetNumber(CoordinatorEntity, NumberEntity):
     def __init__(self, connector, config, code, options):
         """Initialize the number."""
         super().__init__(connector)
-        
+
         self._connector = connector
         self._config = config
         self._code = code
-        
+
         self._attr_icon = options.get(CONF_ICON, None)
         self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
         self._attr_unique_id = (
@@ -77,7 +77,7 @@ class EchonetNumber(CoordinatorEntity, NumberEntity):
         self._attr_device_class = self._options.get(
             CONF_TYPE, options.get(CONF_TYPE, None)
         )
-        
+
         # Initialize values via properties - coordinator handles updates automatically
         self._attr_entity_registry_enabled_default = not bool(
             options.get(CONF_DISABLED_DEFAULT)
@@ -126,7 +126,7 @@ class EchonetNumber(CoordinatorEntity, NumberEntity):
                 if max_opc_value is None:
                     # Fallback to connector data
                     max_opc_value = self._connector._update_data.get(max_opc)
-            
+
             if max_opc_value is not None:
                 return int(max_opc_value) - self._as_zero
         return self._conf_max - self._as_zero
