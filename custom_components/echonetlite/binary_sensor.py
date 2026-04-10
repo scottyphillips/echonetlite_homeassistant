@@ -174,7 +174,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                     config,
                                     op_code,
                                     _enl_op_codes.get(op_code) | {"dict_key": attr_key},
-                                    hass,
                                 )
                             )
                         continue
@@ -212,7 +211,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                 op_code,
                                 ENL_OP_CODES["default"] | {CONF_DISABLED_DEFAULT: True},
                             ),
-                            hass,
                         )
                     )
                 continue
@@ -222,7 +220,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     config,
                     op_code,
                     ENL_OP_CODES["default"],
-                    hass,
                 )
             )
     async_add_entities(entities, True)
@@ -233,7 +230,7 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
 
     _attr_translation_key = DOMAIN
 
-    def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
+    def __init__(self, connector, config, op_code, attributes) -> None:
         """Initialize the sensor."""
         # Initialize coordinator first - must call parent before setting other properties
         super().__init__(connector)

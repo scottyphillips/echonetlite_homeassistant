@@ -192,7 +192,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                 op_code,
                                 ENL_OP_CODES["default"] | {CONF_DISABLED_DEFAULT: True},
                             ),
-                            hass,
                         )
                     )
                 continue
@@ -202,7 +201,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     config,
                     op_code,
                     ENL_OP_CODES["default"],
-                    hass,
                 )
             )
     async_add_entities(entities, True)
@@ -213,7 +211,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
 
     _attr_translation_key = DOMAIN
 
-    def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
+    def __init__(self, connector, config, op_code, attributes) -> None:
         """Initialize the sensor.
 
         Args:
@@ -241,7 +239,6 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
         self._server_state = self._connector._api._state[
             self._connector._instance._host
         ]
-        self._hass = hass
 
         _attr_keys = self._sensor_attributes.keys()
 

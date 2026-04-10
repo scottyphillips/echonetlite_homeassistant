@@ -54,7 +54,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             if _by_epc_func or TYPE_SELECT in _enl_op_code_dict.keys():
                 entities.append(
                     EchonetSelect(
-                        hass,
                         entity["echonetlite"],
                         config,
                         op_code,
@@ -86,7 +85,7 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
         },
     }
 
-    def __init__(self, hass, connector, config, code, options):
+    def __init__(self, connector, config, code, options):
         """Initialize the select."""
         super().__init__(connector)
         name = get_device_name(connector, config)
