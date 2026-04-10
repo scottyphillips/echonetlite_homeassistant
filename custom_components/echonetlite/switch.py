@@ -250,6 +250,6 @@ class EchonetSwitch(CoordinatorEntity[dict], SwitchEntity):
             self._code, self._options[CONF_SERVICE_DATA]["off"]
         )
 
-    def async_added_to_hass(self) -> None:
+    async def async_added_to_hass(self) -> None:
         """Register callbacks when entity is added to Home Assistant."""
-        super().async_added_to_hass()
+        await super().async_added_to_hass()
