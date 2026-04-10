@@ -232,6 +232,7 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
     """Representation of an ECHONETLite binary sensor."""
 
     _attr_translation_key = DOMAIN
+
     def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
         """Initialize the sensor."""
         # Initialize coordinator first - must call parent before setting other properties
@@ -320,9 +321,9 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
 
         return MAP_BINARY_STATE.get(raw_val)
 
-    def async_added_to_hass(self) -> None:
+    async def async_added_to_hass(self) -> None:
         """Register callbacks when entity is added to Home Assistant."""
-        super().async_added_to_hass()
+        await super().async_added_to_hass()
 
     @property
     def extra_state_attributes(self) -> dict | None:
