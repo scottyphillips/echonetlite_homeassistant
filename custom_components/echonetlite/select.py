@@ -117,7 +117,7 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
         if self._code in self._user_option_epcs:
             if self.coordinator._user_options[code] is not False:
                 self._attr_options = self.coordinator._user_options[code]
-        self._attr_current_option = self.coordinator._update_data.get(self._code)
+        self._attr_current_option = self.coordinator.data.get(self._code)
         self._attr_name = f"{config.title} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._code, None, self.coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
         self._attr_unique_id = (
             f"{self.coordinator._uidi}-{self._code}"
@@ -191,7 +191,7 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
             self._code, self._options[option]
         ):
             # Restore previous state
-            self._attr_current_option = self.coordinator._update_data.get(self._code)
+            self._attr_current_option = self.coordinator.data.get(self._code)
         #    self.async_schedule_update_ha_state()
 
     async def async_added_to_hass(self):
