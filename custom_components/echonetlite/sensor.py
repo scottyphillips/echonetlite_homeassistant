@@ -154,7 +154,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                     config,
                                     op_code,
                                     _enl_op_codes.get(op_code) | {"dict_key": attr_key},
-                                    hass,
                                 )
                             )
                         continue
