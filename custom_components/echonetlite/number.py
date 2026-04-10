@@ -41,8 +41,8 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     EchonetNumber(
                         entity["echonetlite"],
                         config,
-                        op_code,
                         _enl_op_codes[op_code],
+                        op_code,
                     )
                 )
 
@@ -52,13 +52,13 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetNumber(CoordinatorEntity, NumberEntity):
     _attr_translation_key = DOMAIN
 
-    def __init__(self, connector, config, code, options):
+    def __init__(self, coordinator, config, options, epc_code):
         """Initialize the number."""
-        super().__init__(connector)
+        super().__init__(coordinator)
 
-        self._connector = connector
+        self._connector = coordinator
         self._config = config
-        self._code = code
+        self._code = epc_code
 
         self._attr_icon = options.get(CONF_ICON, None)
         self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
@@ -73,7 +73,7 @@ class EchonetNumber(CoordinatorEntity, NumberEntity):
         self._conf_max = int(options[TYPE_NUMBER][CONF_MAXIMUM])
         self._byte_length = int(options[TYPE_NUMBER].get(CONF_BYTE_LENGTH, 1))
 
-        self._device_name = get_device_name(connector, config)
+        self._device_name = get_device_name(coordinator, config)
         self._attr_device_class = self._options.get(
             CONF_TYPE, options.get(CONF_TYPE, None)
         )

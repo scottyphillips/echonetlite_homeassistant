@@ -42,8 +42,8 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     EchonetTime(
                         entity["echonetlite"],
                         config,
-                        op_code,
                         _enl_op_codes.get(op_code, {}),
+                        op_code,  
                     )
                 )
 
@@ -55,7 +55,7 @@ class EchonetTime(CoordinatorEntity, TimeEntity):
 
     _attr_translation_key = DOMAIN
 
-    def __init__(self, coordinator, config, code, options):
+    def __init__(self, coordinator, config, options, epc_code ):
         """Initialize the time entity.
 
         Args:
@@ -67,7 +67,7 @@ class EchonetTime(CoordinatorEntity, TimeEntity):
         super().__init__(coordinator)
 
         self._config = config
-        self._code = code
+        self._code = epc_code
 
         self._attr_icon = options.get(CONF_ICON, None)
         self._attr_name = f"{config.title} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._code, None, self.coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"

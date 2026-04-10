@@ -113,27 +113,27 @@ class EchonetLight(CoordinatorEntity, LightEntity):
 
     _attr_translation_key = DOMAIN
 
-    def __init__(self, coordinator, config, custom_options):
+    def __init__(self, coordinator, config, options):
         """Initialize the light device.
 
         Args:
             coordinator: The ECHONETConnector instance which is also a DataUpdateCoordinator.
             config: The config entry for this integration.
-            custom_options: Custom configuration options for the light.
+            options: Custom configuration options for the light.
         """
         super().__init__(coordinator)
         name = get_device_name(coordinator, config)
         self._attr_name = name
         self._device_name = name
         self._connector = coordinator  # Keep reference for compatibility
-        self._custom_options = custom_options
+        self._custom_options = options
         self._attr_unique_id = (
             coordinator._uidi if coordinator._uidi else coordinator._uid
         )
         self._attr_supported_color_modes = set()
 
         # Set temperature limits for color temp conversion
-        if mireds_int := custom_options.get("echonet_mireds_int"):
+        if mireds_int := options.get("echonet_mireds_int"):
             mireds = mireds_int.values()
             self._attr_min_color_temp_kelvin = _mireds_to_kelvin(max(mireds))
             self._attr_max_color_temp_kelvin = _mireds_to_kelvin(min(mireds))
@@ -142,7 +142,7 @@ class EchonetLight(CoordinatorEntity, LightEntity):
             self._attr_max_color_temp_kelvin = _mireds_to_kelvin(MIN_MIREDS)
 
         # Keep mired limits for internal calculations
-        if mireds_int := custom_options.get("echonet_mireds_int"):
+        if mireds_int := options.get("echonet_mireds_int"):
             mireds = mireds_int.values()
             self._min_mireds = min(mireds)
             self._max_mireds = max(mireds)
@@ -151,11 +151,11 @@ class EchonetLight(CoordinatorEntity, LightEntity):
             self._max_mireds = MAX_MIREDS
 
         # Determine supported color modes based on device capabilities
-        if custom_options[ENL_COLOR_TEMP] in list(coordinator._setPropertyMap):
+        if options[ENL_COLOR_TEMP] in list(coordinator._setPropertyMap):
             self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
             self._attr_color_mode = ColorMode.COLOR_TEMP
 
-        if custom_options[ENL_BRIGHTNESS] in list(coordinator._setPropertyMap):
+        if options[ENL_BRIGHTNESS] in list(coordinator._setPropertyMap):
             if not self._attr_supported_color_modes:
                 self._attr_supported_color_modes.add(ColorMode.BRIGHTNESS)
                 self._attr_color_mode = ColorMode.BRIGHTNESS

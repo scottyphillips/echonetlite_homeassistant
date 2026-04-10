@@ -52,8 +52,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     EchonetSwitch(
                         entity["echonetlite"],
                         config,
-                        op_code,
                         _enl_op_code_dict,
+                        op_code,
+                        
                     )
                 )
                 if op_code == ENL_STATUS:
@@ -68,8 +69,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     EchonetSwitch(
                         entity["echonetlite"],
                         config,
-                        op_code,
                         switch_conf,
+                        op_code,
+                        
                     )
                 )
 
@@ -100,7 +102,7 @@ class EchonetSwitch(CoordinatorEntity[dict], SwitchEntity):
 
     _attr_translation_key = DOMAIN
 
-    def __init__(self, connector, config, code, options) -> None:
+    def __init__(self, coordinator, config, options, epc_code, ) -> None:
         """Initialize the switch.
 
         Args:
@@ -110,17 +112,17 @@ class EchonetSwitch(CoordinatorEntity[dict], SwitchEntity):
             options: Configuration options for this switch entity.
         """
         # Initialize coordinator first - must call parent before setting other properties
-        super().__init__(connector)
+        super().__init__(coordinator)
 
-        self._code = code
+        self._code = epc_code
         self._options = options
-        self._eojgc = connector._eojgc
-        self._eojcc = connector._eojcc
-        self._eojci = connector._eojci
-        self._device_name = get_device_name(connector, config)
+        self._eojgc = coordinator._eojgc
+        self._eojcc = coordinator._eojcc
+        self._eojci = coordinator._eojci
+        self._device_name = get_device_name(coordinator, config)
 
         # Process EPC function data to determine on/off values
-        epc_function_data = connector._instance.EPC_FUNCTIONS.get(code, None)
+        epc_function_data = coordinator._instance.EPC_FUNCTIONS.get(epc_code, None)
         if type(epc_function_data) == list:
             data_keys = list(epc_function_data[1].keys())
             data_items = list(epc_function_data[1].values())
@@ -155,18 +157,18 @@ class EchonetSwitch(CoordinatorEntity[dict], SwitchEntity):
 
         # Build unique_id and name
         self._attr_unique_id = (
-            f"{connector._uidi}-{self._code}"
-            if connector._uidi
-            else f"{connector._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._code}"
+            f"{coordinator._uidi}-{self._code}"
+            if coordinator._uidi
+            else f"{coordinator._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._code}"
         )
         if self._from_number:
             self._attr_unique_id += "-switch"
             self._attr_name = (
-                f"{config.title} {get_name_by_epc_code(self._eojgc, self._eojcc, self._code, None, connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))} "
+                f"{config.title} {get_name_by_epc_code(self._eojgc, self._eojcc, self._code, None, coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))} "
                 + options.get(CONF_NAME, "Switch")
             )
         else:
-            self._attr_name = f"{config.title} {get_name_by_epc_code(self._eojgc, self._eojcc, self._code, None, connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
+            self._attr_name = f"{config.title} {get_name_by_epc_code(self._eojgc, self._eojcc, self._code, None, coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
 
         # Set icon and enabled default from options
         self._attr_icon = options.get(CONF_ICON)

@@ -230,13 +230,13 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
 
     _attr_translation_key = DOMAIN
 
-    def __init__(self, connector, config, op_code, attributes) -> None:
+    def __init__(self, connector, config, epc_code, attributes) -> None:
         """Initialize the sensor."""
         # Initialize coordinator first - must call parent before setting other properties
         super().__init__(connector)
 
         name = get_device_name(connector, config)
-        self._op_code = op_code
+        self._op_code = epc_code
         self._sensor_attributes = attributes
         self._eojgc = connector._eojgc
         self._eojcc = connector._eojcc

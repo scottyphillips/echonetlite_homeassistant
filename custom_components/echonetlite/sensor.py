@@ -210,7 +210,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
 
     _attr_translation_key = DOMAIN
 
-    def __init__(self, connector, config, op_code, attributes) -> None:
+    def __init__(self, coordinator, config, epc_code, attributes) -> None:
         """Initialize the sensor.
 
         Args:
@@ -220,10 +220,10 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
             attributes: Sensor configuration attributes.
             hass: Home Assistant instance (optional).
         """
-        super().__init__(connector)
+        super().__init__(coordinator)
 
-        name = get_device_name(connector, config)
-        self._op_code = op_code
+        name = get_device_name(coordinator, config)
+        self._op_code = epc_code
         self._sensor_attributes = attributes
         self._eojgc = self.coordinator._eojgc
         self._eojcc = self.coordinator._eojcc

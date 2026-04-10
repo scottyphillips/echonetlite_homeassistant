@@ -56,8 +56,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     EchonetSelect(
                         entity["echonetlite"],
                         config,
-                        op_code,
                         _enl_op_code_dict,
+                        op_code,
+                        
                     )
                 )
 
@@ -85,12 +86,12 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
         },
     }
 
-    def __init__(self, connector, config, code, options):
+    def __init__(self, coordinator, config, options, epc_code):
         """Initialize the select."""
-        super().__init__(connector)
-        name = get_device_name(connector, config)
+        super().__init__(coordinator)
+        name = get_device_name(coordinator, config)
         self._config = config
-        self._code = code
+        self._code = epc_code
         self._optimistic = False
         self._server_state = self.coordinator._api._state[
             self.coordinator._instance._host
@@ -101,7 +102,7 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
         else:
             # Read from _instance.EPC FUNCTIONS definition
             # Swap key, value of _instance.EPC_FUNCTIONS[opc][1]
-            self._options = _swap_dict(connector._instance.EPC_FUNCTIONS[code][1])
+            self._options = _swap_dict(coordinator._instance.EPC_FUNCTIONS[code][1])
         self._icons = options.get(CONF_ICONS, {})
         self._attr_icon = options.get(CONF_ICON, None)
         self._icon_default = self._attr_icon
@@ -115,8 +116,8 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
         ).intersection(set(self.coordinator._user_options.keys()))
 
         if self._code in self._user_option_epcs:
-            if self.coordinator._user_options[code] is not False:
-                self._attr_options = self.coordinator._user_options[code]
+            if self.coordinator._user_options[epc_code] is not False:
+                self._attr_options = self.coordinator._user_options[epc_code]
         self._attr_current_option = self.coordinator.data.get(self._code)
         self._attr_name = f"{config.title} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._code, None, self.coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
         self._attr_unique_id = (
