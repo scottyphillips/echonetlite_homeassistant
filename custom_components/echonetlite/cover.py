@@ -62,7 +62,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
 
 class EchonetCover(CoverEntity):
-    """Representation of an ECHONETLite climate device."""
+    """Representation of an ECHONETLite cover device."""
 
     def __init__(self, connector, config):
         """Initialize the cover device."""

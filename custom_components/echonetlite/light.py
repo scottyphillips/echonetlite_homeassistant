@@ -1,3 +1,5 @@
+"""Support for ECHONETLite lights."""
+
 import logging
 
 from pychonet.GeneralLighting import ENL_STATUS, ENL_BRIGHTNESS, ENL_COLOR_TEMP
@@ -6,7 +8,6 @@ from pychonet.CeilingFan import (
     ENL_FAN_LIGHT_BRIGHTNESS,
     ENL_FAN_LIGHT_COLOR_TEMP,
 )
-
 
 from pychonet.lib.const import ENL_ON
 from pychonet.lib.eojx import EOJX_CLASS
@@ -22,6 +23,8 @@ from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
 )
+from homeassistant.core import callback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import get_device_name
 from .const import DATA_STATE_ON, DOMAIN, CONF_FORCE_POLLING
@@ -105,22 +108,30 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     async_add_devices(entities, True)
 
 
-class EchonetLight(LightEntity):
+class EchonetLight(CoordinatorEntity, LightEntity):
     """Representation of a ECHONET light device."""
 
-    def __init__(self, connector, config, custom_options):
-        """Initialize the climate device."""
-        name = get_device_name(connector, config)
+    _attr_translation_key = DOMAIN
+
+    def __init__(self, coordinator, config, custom_options):
+        """Initialize the light device.
+
+        Args:
+            coordinator: The ECHONETConnector instance which is also a DataUpdateCoordinator.
+            config: The config entry for this integration.
+            custom_options: Custom configuration options for the light.
+        """
+        super().__init__(coordinator)
+        name = get_device_name(coordinator, config)
         self._attr_name = name
-        self._connector = connector  # new line
+        self._device_name = name
+        self._connector = coordinator  # Keep reference for compatibility
+        self._custom_options = custom_options
         self._attr_unique_id = (
-            self._connector._uidi if self._connector._uidi else self._connector._uid
+            coordinator._uidi if coordinator._uidi else coordinator._uid
         )
-        self._attr_supported_features = LightEntityFeature(0)
-        self._attr_supported_color_modes = set()
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
+
+        # Set temperature limits for color temp conversion
         if mireds_int := custom_options.get("echonet_mireds_int"):
             mireds = mireds_int.values()
             self._attr_min_color_temp_kelvin = _mireds_to_kelvin(max(mireds))
@@ -128,6 +139,7 @@ class EchonetLight(LightEntity):
         else:
             self._attr_min_color_temp_kelvin = _mireds_to_kelvin(MAX_MIREDS)
             self._attr_max_color_temp_kelvin = _mireds_to_kelvin(MIN_MIREDS)
+
         # Keep mired limits for internal calculations
         if mireds_int := custom_options.get("echonet_mireds_int"):
             mireds = mireds_int.values()
@@ -136,77 +148,106 @@ class EchonetLight(LightEntity):
         else:
             self._min_mireds = MIN_MIREDS
             self._max_mireds = MAX_MIREDS
-        self._custom_options = custom_options
-        if custom_options[ENL_COLOR_TEMP] in list(self._connector._setPropertyMap):
+
+        # Determine supported color modes based on device capabilities
+        if custom_options[ENL_COLOR_TEMP] in list(coordinator._setPropertyMap):
             self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
             self._attr_color_mode = ColorMode.COLOR_TEMP
-        if custom_options[ENL_BRIGHTNESS] in list(self._connector._setPropertyMap):
+
+        if custom_options[ENL_BRIGHTNESS] in list(coordinator._setPropertyMap):
             if not self._attr_supported_color_modes:
                 self._attr_supported_color_modes.add(ColorMode.BRIGHTNESS)
                 self._attr_color_mode = ColorMode.BRIGHTNESS
+
         if not self._attr_supported_color_modes:
             self._attr_supported_color_modes.add(ColorMode.ONOFF)
             self._attr_color_mode = ColorMode.ONOFF
 
-        self._olddata = {}
-        self._attr_is_on = (
-            True
-            if self._connector._update_data[custom_options[ENL_STATUS]] == DATA_STATE_ON
-            else False
-        )
-
-        if hasattr(self._connector._instance, "getEffectList"):
-            self._attr_effect_list = self._connector._instance.getEffectList()
+        # Set effect list if device supports it
+        if hasattr(coordinator._instance, "getEffectList"):
+            self._attr_effect_list = coordinator._instance.getEffectList()
             if self._attr_effect_list:
                 self._attr_supported_features |= LightEntityFeature.EFFECT
 
-        if hasattr(self._connector._instance, "getLightColorLevelMax"):
-            self._light_color_level_max = (
-                self._connector._instance.getLightColorLevelMax()
-            )
+        # Set max color level for color temperature calculation
+        if hasattr(coordinator._instance, "getLightColorLevelMax"):
+            self._light_color_level_max = coordinator._instance.getLightColorLevelMax()
         else:
             self._light_color_level_max = 100
 
-        self._attr_should_poll = True
-        self._attr_available = True
-
-        self._set_attrs()
-
-        self.update_option_listener()
-
-    async def async_update(self):
-        """Get the latest state from the Light."""
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
-
     @property
     def device_info(self):
+        """Return device information for this entity."""
         return {
             "identifiers": {
                 (
                     DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
+                    self.coordinator._uid,
+                    self.coordinator._eojgc,
+                    self.coordinator._eojcc,
+                    self.coordinator._instance._eojci,
                 )
             },
-            "name": self._attr_name,
-            "manufacturer": self._connector._manufacturer
+            "name": self._device_name,
+            "manufacturer": self.coordinator._manufacturer
             + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
+                f" {self.coordinator._host_product_code}"
+                if self.coordinator._host_product_code
                 else ""
             ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
+            "model": EOJX_CLASS[self.coordinator._eojgc][
+                self.coordinator._eojcc
             ],
-            # "sw_version": "",
         }
 
+    @property
+    def is_on(self) -> bool:
+        """Return true if the device is on."""
+        return (
+            self.coordinator.data.get(self._custom_options[ENL_STATUS]) == DATA_STATE_ON
+        )
+
+    @property
+    def brightness(self) -> int | None:
+        """Return the brightness of this light between 0..255."""
+        brightness = self.coordinator.data.get(
+            self._custom_options[ENL_BRIGHTNESS]
+        )
+        if brightness is not None and brightness >= 0:
+            return min(
+                round(float(brightness) / DEVICE_SCALE * DEFAULT_BRIGHTNESS_SCALE), 255
+            )
+        return None
+
+    @property
+    def color_temp_kelvin(self) -> int | None:
+        """Return the color temperature in Kelvin."""
+        enl_color_temp = self._custom_options[ENL_COLOR_TEMP]
+        _val = self.coordinator.data.get(enl_color_temp)
+
+        if self._custom_options["echonet_color"]:
+            # Use custom mired mapping for known color temperatures
+            color_temp = _val if _val else "white"
+            mired_val = self._custom_options["echonet_mireds_int"].get(
+                self._custom_options["echonet_int_color"].get(color_temp, 0x42), 153
+            )
+            return _mireds_to_kelvin(mired_val)
+        else:
+            # Calculate mired value from color level
+            mired_val = (self._max_mireds - self._min_mireds) * (
+                (self._light_color_level_max - _val) / self._light_color_level_max
+            ) + self._min_mireds if _val is not None else None
+            return _mireds_to_kelvin(mired_val) if mired_val else None
+
+    @property
+    def effect(self) -> str | None:
+        """Return the current effect."""
+        if hasattr(self.coordinator._instance, "getEffect"):
+            return self.coordinator._instance.getEffect()
+        return None
+
     async def async_turn_on(self, **kwargs):
+        """Turn on the light."""
         states = {"status": ENL_ON}
 
         if (
@@ -214,16 +255,10 @@ class EchonetLight(LightEntity):
             and self._attr_supported_color_modes
             and self._attr_color_mode in {ColorMode.BRIGHTNESS, ColorMode.COLOR_TEMP}
         ):
-            normalized_brightness = (
-                float(kwargs[ATTR_BRIGHTNESS]) / DEFAULT_BRIGHTNESS_SCALE
-            )
+            normalized_brightness = float(kwargs[ATTR_BRIGHTNESS]) / DEFAULT_BRIGHTNESS_SCALE
             device_brightness = round(normalized_brightness * DEVICE_SCALE)
             # Make sure the brightness is not rounded down to 0
-            device_brightness = max(device_brightness, 1)
-
-            # send the message to the lamp
-            states["brightness"] = device_brightness
-            self._attr_brightness = kwargs[ATTR_BRIGHTNESS]
+            states["brightness"] = max(device_brightness, 1)
 
         if (
             ATTR_COLOR_TEMP_KELVIN in kwargs
@@ -232,20 +267,19 @@ class EchonetLight(LightEntity):
         ):
             # Convert kelvin from HA to mireds for internal device logic
             attr_color_tmp = float(_kelvin_to_mireds(kwargs[ATTR_COLOR_TEMP_KELVIN]))
+
             if self._custom_options["echonet_color"]:
+                # Use custom color temperature mapping
                 color_temp_int = 0x41
                 for i, mired in self._custom_options["echonet_mireds_int"].items():
                     if attr_color_tmp <= mired + 15:
                         color_temp_int = i
                         break
-                color_temp = self._custom_options["echonet_color"].get(color_temp_int)
                 _LOGGER.debug(
-                    f"New color temp of light: {color_temp} - {color_temp_int}"
-                )
-                self._attr_color_temp_kelvin = _mireds_to_kelvin(
-                    int(self._custom_options["echonet_mireds_int"].get(color_temp_int))
+                    f"New color temp of light: {self._custom_options['echonet_color'].get(color_temp_int)} - {color_temp_int}"
                 )
             else:
+                # Calculate color temperature level
                 color_scale = (attr_color_tmp - float(self._min_mireds)) / float(
                     self._max_mireds - self._min_mireds
                 )
@@ -257,142 +291,41 @@ class EchonetLight(LightEntity):
                 _LOGGER.debug(
                     f"New color temp of light: {attr_color_tmp} mireds - {color_temp_int}"
                 )
-                self._attr_color_temp_kelvin = _mireds_to_kelvin(int(attr_color_tmp))
 
             states["color_temperature"] = int(color_temp_int)
 
         if ATTR_EFFECT in kwargs and kwargs[ATTR_EFFECT] in self._attr_effect_list:
             states[ATTR_EFFECT] = kwargs[ATTR_EFFECT]
 
-        if hasattr(self._connector._instance, "setLightStates"):
-            return await self._connector._instance.setLightStates(states)
+        # Execute the appropriate method based on device capabilities
+        if hasattr(self.coordinator._instance, "setLightStates"):
+            return await self.coordinator._instance.setLightStates(states)
         else:
             """Turn on."""
             result = await getattr(
-                self._connector._instance, self._custom_options["on"]
+                self.coordinator._instance, self._custom_options["on"]
             )()
 
             if result:
                 if states.get("brightness"):
-                    result &= await self._connector._instance.setBrightness(
+                    result &= await self.coordinator._instance.setBrightness(
                         states["brightness"]
                     )
 
                 if states.get("color_temperature"):
-                    result &= await self._connector._instance.setColorTemperature(
+                    result &= await self.coordinator._instance.setColorTemperature(
                         states["color_temperature"]
                     )
 
     async def async_turn_off(self, **kwargs):
-        """Turn off."""
-        await getattr(self._connector._instance, self._custom_options["off"])()
+        """Turn off the light."""
+        await getattr(self.coordinator._instance, self._custom_options["off"])()
 
-    def _set_attrs(self):
-        if self._attr_supported_color_modes and self._attr_color_mode in {
-            ColorMode.BRIGHTNESS,
-            ColorMode.COLOR_TEMP,
-        }:
-            """brightness of this light between 0..255."""
-            _LOGGER.debug(
-                f"Current brightness of light: {self._connector._update_data[self._custom_options[ENL_BRIGHTNESS]]}"
-            )
-            brightness = (
-                int(self._connector._update_data[self._custom_options[ENL_BRIGHTNESS]])
-                if self._custom_options[ENL_BRIGHTNESS] in self._connector._update_data
-                else -1
-            )
-            if brightness >= 0:
-                self._attr_brightness = min(
-                    round(float(brightness) / DEVICE_SCALE * DEFAULT_BRIGHTNESS_SCALE),
-                    255,
-                )
-            else:
-                self._attr_brightness = 128
-
-        if (
-            self._attr_supported_color_modes
-            and self._attr_color_mode == ColorMode.COLOR_TEMP
-        ):
-            """color temperature in kelvin."""
-            enl_color_temp = self._custom_options[ENL_COLOR_TEMP]
-            _LOGGER.debug(
-                f"Current color temp of light: {self._connector._update_data[enl_color_temp]}"
-            )
-
-            if self._custom_options["echonet_color"]:
-                # get the current echonet mireds and convert to kelvin
-                color_temp = (
-                    self._connector._update_data[enl_color_temp]
-                    if enl_color_temp in self._connector._update_data
-                    else "white"
-                )
-                mired_val = self._custom_options["echonet_mireds_int"].get(
-                    self._custom_options["echonet_int_color"].get(color_temp), 153
-                )
-                self._attr_color_temp_kelvin = _mireds_to_kelvin(mired_val)
-            else:
-                mired_val = (self._max_mireds - self._min_mireds) * (
-                    (
-                        self._light_color_level_max
-                        - self._connector._update_data[enl_color_temp]
-                    )
-                    / self._light_color_level_max
-                ) + self._min_mireds
-                self._attr_color_temp_kelvin = _mireds_to_kelvin(mired_val)
-
-        if hasattr(self._connector._instance, "getEffect"):
-            self._attr_effect = self._connector._instance.getEffect()
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
 
     async def async_added_to_hass(self):
-        """Register callbacks."""
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
-
-    async def async_update_callback(self, isPush: bool = False):
-        changed = (
-            self._olddata != self._connector._update_data
-            or self._attr_available != self._server_state["available"]
-        )
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._olddata = self._connector._update_data.copy()
-            self._attr_is_on = (
-                True
-                if self._connector._update_data[self._custom_options[ENL_STATUS]]
-                == DATA_STATE_ON
-                else False
-            )
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self._set_attrs()
-            self.async_schedule_update_ha_state(_force)
-            if isPush and self._attr_should_poll:
-                try:
-                    await self._connector.async_update()
-                except TimeoutError:
-                    pass
-
-    def update_option_listener(self):
-        _should_poll = (
-            self._custom_options[ENL_STATUS] not in self._connector._ntfPropertyMap
-            or (
-                self._attr_supported_color_modes
-                and ColorMode.BRIGHTNESS in self._attr_supported_color_modes
-                and self._custom_options[ENL_BRIGHTNESS]
-                not in self._connector._ntfPropertyMap
-            )
-            or (
-                self._attr_supported_color_modes
-                and ColorMode.COLOR_TEMP in self._attr_supported_color_modes
-                and ENL_COLOR_TEMP not in self._connector._ntfPropertyMap
-            )
-        )
-        self._attr_should_poll = bool(
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(f"{self._attr_name}: _should_poll is {_should_poll}")
+        """Register callbacks when entity is added to Home Assistant."""
+        await super().async_added_to_hass()
