@@ -55,17 +55,15 @@ class EchonetNumber(CoordinatorEntity, NumberEntity):
     def __init__(self, coordinator, config, options, epc_code):
         """Initialize the number."""
         super().__init__(coordinator)
-
-        self._connector = coordinator
         self._config = config
         self._code = epc_code
 
         self._attr_icon = options.get(CONF_ICON, None)
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
+        self._attr_name = f"{config.title} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._code, None, self.coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
         self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._code}"
+            f"{self.coordinator._uidi}-{self._code}"
+            if self.coordinator._uidi
+            else f"{self.coordinator._uid}-{self._code}"
         )
 
         self._options = options[TYPE_NUMBER]
@@ -91,7 +89,7 @@ class EchonetNumber(CoordinatorEntity, NumberEntity):
             if value is not None:
                 return int(value) - self._as_zero
         # Fallback to connector data if coordinator data not available yet
-        value = self._connector._update_data.get(self._code)
+        value = self.coordinator._update_data.get(self._code)
         if value is not None:
             return int(value) - self._as_zero
         return None
@@ -115,7 +113,7 @@ class EchonetNumber(CoordinatorEntity, NumberEntity):
                     max_opc_value = outer_value.get(max_opc[1])
                 else:
                     # Fallback to connector data
-                    outer_value = self._connector._update_data.get(max_opc[0])
+                    outer_value = self.coordinator._update_data.get(max_opc[0])
                     if outer_value and isinstance(outer_value, dict):
                         max_opc_value = outer_value.get(max_opc[1])
                     else:
@@ -125,7 +123,7 @@ class EchonetNumber(CoordinatorEntity, NumberEntity):
                 max_opc_value = master_data.get(max_opc)
                 if max_opc_value is None:
                     # Fallback to connector data
-                    max_opc_value = self._connector._update_data.get(max_opc)
+                    max_opc_value = self.coordinator._update_data.get(max_opc)
 
             if max_opc_value is not None:
                 return int(max_opc_value) - self._as_zero
@@ -138,27 +136,27 @@ class EchonetNumber(CoordinatorEntity, NumberEntity):
             "identifiers": {
                 (
                     DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
+                    self.coordinator._uid,
+                    self.coordinator._instance._eojgc,
+                    self.coordinator._instance._eojcc,
+                    self.coordinator._instance._eojci,
                 )
             },
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
+            "manufacturer": self.coordinator._manufacturer
             + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
+                " " + self.coordinator._host_product_code
+                if self.coordinator._host_product_code
                 else ""
             ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
+            "model": EOJX_CLASS[self.coordinator._instance._eojgc][
+                self.coordinator._instance._eojcc
             ],
         }
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
-        if await self._connector._instance.setMessage(
+        if await self.coordinator._instance.setMessage(
             self._code, int(value + self._as_zero), self._byte_length
         ):
             pass

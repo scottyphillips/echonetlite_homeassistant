@@ -87,11 +87,12 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                 EchonetSwitch(
                     entity["echonetlite"],
                     config,
-                    ENL_STATUS,
                     {
                         CONF_ICON: "mdi:power-settings",
                         CONF_SERVICE_DATA: SWITCH_POWER,
                     },
+                    ENL_STATUS,
+
                 )
             )
     async_add_entities(entities, True)
