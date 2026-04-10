@@ -195,9 +195,7 @@ class EchonetLight(CoordinatorEntity, LightEntity):
                 if self.coordinator._host_product_code
                 else ""
             ),
-            "model": EOJX_CLASS[self.coordinator._eojgc][
-                self.coordinator._eojcc
-            ],
+            "model": EOJX_CLASS[self.coordinator._eojgc][self.coordinator._eojcc],
         }
 
     @property
@@ -210,9 +208,7 @@ class EchonetLight(CoordinatorEntity, LightEntity):
     @property
     def brightness(self) -> int | None:
         """Return the brightness of this light between 0..255."""
-        brightness = self.coordinator.data.get(
-            self._custom_options[ENL_BRIGHTNESS]
-        )
+        brightness = self.coordinator.data.get(self._custom_options[ENL_BRIGHTNESS])
         if brightness is not None and brightness >= 0:
             return min(
                 round(float(brightness) / DEVICE_SCALE * DEFAULT_BRIGHTNESS_SCALE), 255
@@ -234,9 +230,13 @@ class EchonetLight(CoordinatorEntity, LightEntity):
             return _mireds_to_kelvin(mired_val)
         else:
             # Calculate mired value from color level
-            mired_val = (self._max_mireds - self._min_mireds) * (
-                (self._light_color_level_max - _val) / self._light_color_level_max
-            ) + self._min_mireds if _val is not None else None
+            mired_val = (
+                (self._max_mireds - self._min_mireds)
+                * ((self._light_color_level_max - _val) / self._light_color_level_max)
+                + self._min_mireds
+                if _val is not None
+                else None
+            )
             return _mireds_to_kelvin(mired_val) if mired_val else None
 
     @property
@@ -255,7 +255,9 @@ class EchonetLight(CoordinatorEntity, LightEntity):
             and self._attr_supported_color_modes
             and self._attr_color_mode in {ColorMode.BRIGHTNESS, ColorMode.COLOR_TEMP}
         ):
-            normalized_brightness = float(kwargs[ATTR_BRIGHTNESS]) / DEFAULT_BRIGHTNESS_SCALE
+            normalized_brightness = (
+                float(kwargs[ATTR_BRIGHTNESS]) / DEFAULT_BRIGHTNESS_SCALE
+            )
             device_brightness = round(normalized_brightness * DEVICE_SCALE)
             # Make sure the brightness is not rounded down to 0
             states["brightness"] = max(device_brightness, 1)
