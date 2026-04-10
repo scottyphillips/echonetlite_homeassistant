@@ -318,10 +318,6 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
 
         return MAP_BINARY_STATE.get(raw_val)
 
-    async def async_added_to_hass(self) -> None:
-        """Register callbacks when entity is added to Home Assistant."""
-        await super().async_added_to_hass()
-
     @property
     def extra_state_attributes(self) -> dict | None:
         """Return device-specific state attributes."""

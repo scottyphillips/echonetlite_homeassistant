@@ -194,24 +194,15 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
             self._attr_current_option = self.coordinator.data.get(self._code)
         #    self.async_schedule_update_ha_state()
 
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        await super().async_added_to_hass()
+    # @callback
+    # def _handle_coordinator_update(self) -> None:
+    #     """Handle updated data from the coordinator."""
+    #     _LOGGER.debug(
+    #         f"Coordinator update callback for Select triggered for {self._device_name} with data: {self.coordinator.data}"
+    #     )
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        _LOGGER.debug(
-            f"Coordinator update callback for Select triggered for {self._device_name} with data: {self.coordinator.data}"
-        )
+    #     # We use the Coordinator's availability status.
+    #     self._attr_available = self.coordinator.last_update_success
 
-        # We use the Coordinator's availability status.
-        self._attr_available = self.coordinator.last_update_success
-
-        # Inform HA that the state needs writing to the UI.
-        self.async_write_ha_state()
-
-    @property
-    def should_poll(self) -> bool:
-        """Return whether entity should be polled - always False with coordinator."""
-        return False
+    #     # Inform HA that the state needs writing to the UI.
+    #     self.async_write_ha_state()

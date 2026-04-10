@@ -427,7 +427,3 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
             raise NoEntitySpecifiedError(
                 "The required parameter EPC has not been specified."
             )
-
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        await super().async_added_to_hass()

@@ -141,15 +141,3 @@ class EchonetTime(CoordinatorEntity, TimeEntity):
             raise InvalidStateError(
                 "The state setting is not supported or is an invalid value."
             )
-
-    async def async_added_to_hass(self):
-        """Called when entity is added to Home Assistant.
-
-        The CoordinatorEntity base class handles all update notifications automatically,
-        so no additional callbacks need to be registered here.
-        """
-        await super().async_added_to_hass()
-
-    async def async_will_remove_from_hass(self):
-        """Called when entity is being removed from Home Assistant."""
-        await super().async_will_remove_from_hass()

@@ -203,7 +203,3 @@ class EchonetCover(CoordinatorEntity, CoverEntity):
         )
         await self.coordinator._instance.setMessage(ENL_BLIND_ANGLE, tilt)
         self.coordinator.data[ENL_BLIND_ANGLE] = int(tilt)
-
-    async def async_added_to_hass(self):
-        """Register callbacks when entity is added to Home Assistant."""
-        await super().async_added_to_hass()

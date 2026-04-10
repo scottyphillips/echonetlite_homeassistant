@@ -327,7 +327,3 @@ class EchonetLight(CoordinatorEntity, LightEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         self.async_write_ha_state()
-
-    async def async_added_to_hass(self):
-        """Register callbacks when entity is added to Home Assistant."""
-        await super().async_added_to_hass()

@@ -166,7 +166,3 @@ class EchonetNumber(CoordinatorEntity, NumberEntity):
             raise InvalidStateError(
                 "The state setting is not supported or is an invalid value."
             )
-
-    async def async_added_to_hass(self):
-        """Register callbacks (handled automatically by CoordinatorEntity)."""
-        await super().async_added_to_hass()
