@@ -1,3 +1,5 @@
+"""Support for ECHONETLite covers."""
+
 import logging
 import math
 
@@ -19,6 +21,7 @@ from homeassistant.components.cover import (
     CoverEntity,
     CoverEntityFeature,
 )
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.ElectricBlind import (
@@ -61,24 +64,25 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     async_add_devices(entities, True)
 
 
-class EchonetCover(CoverEntity):
+class EchonetCover(CoordinatorEntity, CoverEntity):
     """Representation of an ECHONETLite cover device."""
 
-    def __init__(self, connector, config):
-        """Initialize the cover device."""
-        name = get_device_name(connector, config)
+    def __init__(self, coordinator, config):
+        """Initialize the cover device.
+
+        Args:
+            coordinator: The ECHONETConnector instance which is also a DataUpdateCoordinator.
+            config: The config entry for this integration.
+        """
+        super().__init__(coordinator)
+        name = get_device_name(coordinator, config)
+        self._connector = coordinator  # Keep reference for compatibility
         self._attr_name = name
         self._device_name = name
-        self._connector = connector  # new line
         self._attr_unique_id = (
             self._connector._uidi if self._connector._uidi else self._connector._uid
         )
-        self._attr_is_closed = False
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-        self._olddata = {}
-        self._attr_should_poll = True
+
         self._support_flags = (
             CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
         )
@@ -94,133 +98,113 @@ class EchonetCover(CoverEntity):
                 | CoverEntityFeature.SET_TILT_POSITION
             )
 
-        self._attr_current_cover_position = None
-        self._attr_current_cover_tilt_position = None
-        self._attr_is_opening = False
-        self._attr_is_closing = False
-        self.update_attr()
-        self.update_option_listener()
-
-    async def async_close_cover(self, **kwargs: Any) -> None:
-        await self._connector._instance.setMessage(ENL_OPENSTATE, 0x42)
-        self._connector._update_data[ENL_OPENSTATE] = DATA_STATE_CLOSE
-        if ENL_OPENCLOSE_STATUS in self._connector._update_data:
-            self._attr_is_opening = False
-            self._attr_is_closing = True
-
-    async def async_open_cover(self, **kwargs: Any) -> None:
-        await self._connector._instance.setMessage(ENL_OPENSTATE, 0x41)
-        self._connector._update_data[ENL_OPENSTATE] = DATA_STATE_OPEN
-        if ENL_OPENCLOSE_STATUS in self._connector._update_data:
-            self._attr_is_opening = True
-            self._attr_is_closing = False
-
-    async def async_stop_cover(self, **kwargs: Any) -> None:
-        await self._connector._instance.setMessage(ENL_OPENSTATE, 0x43)
-        self._connector._update_data[ENL_OPENSTATE] = DATA_STATE_STOP
-        self._attr_is_opening = False
-        self._attr_is_closing = False
-        await self._connector.async_update()
-        self.update_attr()
-
-    async def async_set_cover_position(self, **kwargs: Any) -> None:
-        desired_position = kwargs[ATTR_POSITION]
-        current_position = self._attr_current_cover_position
-        await self._connector._instance.setMessage(ENL_OPENING_LEVEL, desired_position)
-        self._connector._update_data[ENL_OPENING_LEVEL] = int(desired_position)
-        self._attr_is_opening = desired_position > current_position
-        self._attr_is_closing = desired_position < current_position
-
-    async def async_close_cover_tilt(self, **kwargs: Any) -> None:
-        await self._connector._instance.setMessage(ENL_BLIND_ANGLE, 0)
-        self._connector._update_data[ENL_BLIND_ANGLE] = 0
-
-    async def async_open_cover_tilt(self, **kwargs: Any) -> None:
-        await self._connector._instance.setMessage(ENL_BLIND_ANGLE, 180)
-        self._connector._update_data[ENL_BLIND_ANGLE] = 180
-
-    async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
-        tilt = math.ceil(
-            percentage_to_ranged_value(TILT_RANGE, kwargs[ATTR_TILT_POSITION])
-        )
-        await self._connector._instance.setMessage(ENL_BLIND_ANGLE, tilt)
-        self._connector._update_data[ENL_BLIND_ANGLE] = int(tilt)
-
-    async def async_update(self):
-        await self._connector.async_update()
-
-    def update_attr(self):
-        if (
-            ENL_OPENING_LEVEL in self._connector._update_data
-            and self._connector._update_data[ENL_OPENING_LEVEL] != None
-        ):
-            self._attr_current_cover_position = int(
-                self._connector._update_data[ENL_OPENING_LEVEL]
-            )
-            self._attr_is_closed = self._attr_current_cover_position == 0
-        else:
-            self._attr_is_closed = (
-                self._connector._update_data[ENL_OPENSTATE] == DATA_STATE_CLOSE
-            )
-        if ENL_OPENCLOSE_STATUS in self._connector._update_data:
-            self._attr_is_opening = (
-                self._connector._update_data[ENL_OPENCLOSE_STATUS] == DATA_STATE_OPENING
-            )
-            self._attr_is_closing = (
-                self._connector._update_data[ENL_OPENCLOSE_STATUS] == DATA_STATE_CLOSING
-            )
-        if (
-            ENL_BLIND_ANGLE in self._connector._update_data
-            and self._connector._update_data[ENL_BLIND_ANGLE] != None
-        ):
-            self._attr_current_cover_tilt_position = ranged_value_to_percentage(
-                TILT_RANGE, int(self._connector._update_data[ENL_BLIND_ANGLE])
-            )
-
     @property
     def device_info(self):
+        """Return device information for this entity."""
         return {
             "identifiers": {
                 (
                     DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
+                    self.coordinator._uid,
+                    self.coordinator._eojgc,
+                    self.coordinator._eojcc,
+                    self.coordinator._eojci,
                 )
             },
             "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
+            "manufacturer": self.coordinator._manufacturer
             + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
+                " " + self.coordinator._host_product_code
+                if self.coordinator._host_product_code
                 else ""
             ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
-            ],
-            # "sw_version": "",
+            "model": EOJX_CLASS[self.coordinator._eojgc][self.coordinator._eojcc],
         }
 
+    @property
+    def current_cover_position(self):
+        """Return the current cover position."""
+        if (
+            ENL_OPENING_LEVEL in self.coordinator.data
+            and self.coordinator.data[ENL_OPENING_LEVEL] is not None
+        ):
+            return int(self.coordinator.data[ENL_OPENING_LEVEL])
+        return None
+
+    @property
+    def current_cover_tilt_position(self):
+        """Return the current cover tilt position."""
+        if (
+            ENL_BLIND_ANGLE in self.coordinator.data
+            and self.coordinator.data[ENL_BLIND_ANGLE] is not None
+        ):
+            return ranged_value_to_percentage(
+                TILT_RANGE, int(self.coordinator.data[ENL_BLIND_ANGLE])
+            )
+        return None
+
+    @property
+    def is_closed(self):
+        """Return true if the cover is closed."""
+        position = self.current_cover_position
+        if position is not None:
+            return position == 0
+        # Fallback to OPENSTATE if no position data available
+        openstate = self.coordinator.data.get(ENL_OPENSTATE)
+        return openstate == DATA_STATE_CLOSE
+
+    @property
+    def is_opening(self):
+        """Return true if the cover is opening."""
+        status = self.coordinator.data.get(ENL_OPENCLOSE_STATUS)
+        return status == DATA_STATE_OPENING if status else False
+
+    @property
+    def is_closing(self):
+        """Return true if the cover is closing."""
+        status = self.coordinator.data.get(ENL_OPENCLOSE_STATUS)
+        return status == DATA_STATE_CLOSING if status else False
+
+    async def async_close_cover(self, **kwargs: Any) -> None:
+        """Close the cover."""
+        await self._connector._instance.setMessage(ENL_OPENSTATE, 0x42)
+        self.coordinator.data[ENL_OPENSTATE] = DATA_STATE_CLOSE
+
+    async def async_open_cover(self, **kwargs: Any) -> None:
+        """Open the cover."""
+        await self._connector._instance.setMessage(ENL_OPENSTATE, 0x41)
+        self.coordinator.data[ENL_OPENSTATE] = DATA_STATE_OPEN
+
+    async def async_stop_cover(self, **kwargs: Any) -> None:
+        """Stop the cover movement."""
+        await self._connector._instance.setMessage(ENL_OPENSTATE, 0x43)
+        self.coordinator.data[ENL_OPENSTATE] = DATA_STATE_STOP
+
+    async def async_set_cover_position(self, **kwargs: Any) -> None:
+        """Set the cover position."""
+        desired_position = kwargs[ATTR_POSITION]
+        current_position = self.current_cover_position or 0
+        await self._connector._instance.setMessage(ENL_OPENING_LEVEL, desired_position)
+        self.coordinator.data[ENL_OPENING_LEVEL] = int(desired_position)
+
+    async def async_close_cover_tilt(self, **kwargs: Any) -> None:
+        """Close the cover tilt."""
+        await self._connector._instance.setMessage(ENL_BLIND_ANGLE, 0)
+        self.coordinator.data[ENL_BLIND_ANGLE] = 0
+
+    async def async_open_cover_tilt(self, **kwargs: Any) -> None:
+        """Open the cover tilt."""
+        await self._connector._instance.setMessage(ENL_BLIND_ANGLE, 180)
+        self.coordinator.data[ENL_BLIND_ANGLE] = 180
+
+    async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
+        """Set the cover tilt position."""
+        tilt = math.ceil(
+            percentage_to_ranged_value(TILT_RANGE, kwargs[ATTR_TILT_POSITION])
+        )
+        await self._connector._instance.setMessage(ENL_BLIND_ANGLE, tilt)
+        self.coordinator.data[ENL_BLIND_ANGLE] = int(tilt)
+
     async def async_added_to_hass(self):
-        """Register callbacks."""
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
-
-    async def async_update_callback(self, isPush=False):
-        changed = (
-            self._olddata != self._connector._update_data
-        ) or self._attr_available != self._server_state["available"]
-        if changed:
-            self._olddata = self._connector._update_data.copy()
-            self.update_attr()
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.async_schedule_update_ha_state()
-
-    def update_option_listener(self):
-        _LOGGER.info(f"{self._device_name}: _should_poll is {self._attr_should_poll}")
+        """Register callbacks when entity is added to Home Assistant."""
+        await super().async_added_to_hass()
