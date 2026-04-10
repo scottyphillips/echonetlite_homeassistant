@@ -232,8 +232,7 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
     """Representation of an ECHONETLite binary sensor."""
 
     _attr_translation_key = DOMAIN
-
-    def __init__(self, connector, config, op_code, attributes) -> None:
+    def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
         """Initialize the sensor."""
         # Initialize coordinator first - must call parent before setting other properties
         super().__init__(connector)
@@ -305,7 +304,6 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         """Return True if entity is on."""
-        _LOGGER.debug(f"Binary Sensor property accessed - raw value is {raw_val}")       
         raw_val = self.coordinator.data.get(self._op_code)
 
         # Handle dictionary or array accessors
