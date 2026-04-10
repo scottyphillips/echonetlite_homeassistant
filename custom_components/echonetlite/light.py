@@ -130,6 +130,7 @@ class EchonetLight(CoordinatorEntity, LightEntity):
         self._attr_unique_id = (
             coordinator._uidi if coordinator._uidi else coordinator._uid
         )
+        self._attr_supported_color_modes = set()
 
         # Set temperature limits for color temp conversion
         if mireds_int := custom_options.get("echonet_mireds_int"):
