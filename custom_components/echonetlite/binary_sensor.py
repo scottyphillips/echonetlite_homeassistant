@@ -80,9 +80,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     entities = []
     platform = entity_platform.async_get_current_platform()
     for entity in hass.data[DOMAIN][config.entry_id]:
-        _LOGGER.debug(f"Configuring ECHONETLite sensor {entity}")
+        _LOGGER.debug(f"Configuring ECHONETLite binary sensor {entity}")
         _LOGGER.debug(
-            f"Update flags for this sensor are {entity['echonetlite']._update_flags_full_list}"
+            f"Update flags for this binary sensor are {entity['echonetlite']._update_flags_full_list}"
         )
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
@@ -305,6 +305,7 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         """Return True if entity is on."""
+        _LOGGER.debug(f"Binary Sensor property accessed - raw value is {raw_val}")       
         raw_val = self.coordinator.data.get(self._op_code)
 
         # Handle dictionary or array accessors
