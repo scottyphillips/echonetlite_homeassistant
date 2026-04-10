@@ -230,9 +230,12 @@ def regist_as_binary_sensor(epc_function_data):
                 return True
     return False
 
+
 class DeviceTimeoutError(Exception):
     """Exception to indicate the device did not respond."""
+
     pass
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -695,16 +698,21 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         except EchonetMaxOpcError as ex:
             # 1. Adjust batch size
-            batch_size_max = self._user_options.get(CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE)
+            batch_size_max = self._user_options.get(
+                CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
+            )
             batch_data_len = max(ex.args[0], MIN_UPDATE_BATCH_SIZE, batch_size_max - 1)
-            
+
             if batch_data_len >= batch_size_max:
-                raise UpdateFailed(f"MPC Error: Device at {self._host} rejected batch even at minimum size.")
+                raise UpdateFailed(
+                    f"MPC Error: Device at {self._host} rejected batch even at minimum size."
+                )
 
             # 2. Persist new batch size
             self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
             self.hass.config_entries.async_update_entry(
-                self._entry, options={**self._entry.options, CONF_BATCH_SIZE_MAX: batch_data_len}
+                self._entry,
+                options={**self._entry.options, CONF_BATCH_SIZE_MAX: batch_data_len},
             )
 
             # 3. Rebuild and Retry
@@ -728,10 +736,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 # Merge with existing coordinator data
                 # Use 'self.data or {}' in case this is the first update
                 combined_data = {**(self.data or {}), **new_data}
-                
+
                 # This triggers all entities to update their state immediately
                 self.async_set_updated_data(combined_data)
-                
+
         except Exception as err:
             _LOGGER.error("Failed to process ECHONETLite push notification: %s", err)
 
@@ -745,12 +753,14 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
             # Hit the library. Returns False if a network request fails.
             batch_data = await self._instance.update(flags, no_request)
-            
+
             if batch_data is False:
-                if no_request: # Should not happen with local cache access
+                if no_request:  # Should not happen with local cache access
                     continue
                 # Raise custom error so _async_update_data can catch it
-                raise DeviceTimeoutError(f"Device at {self._host} failed to respond to EPCs {flags}")
+                raise DeviceTimeoutError(
+                    f"Device at {self._host} failed to respond to EPCs {flags}"
+                )
 
             if isinstance(batch_data, dict):
                 update_data.update(batch_data)
