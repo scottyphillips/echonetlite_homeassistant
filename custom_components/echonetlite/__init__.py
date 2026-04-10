@@ -230,6 +230,9 @@ def regist_as_binary_sensor(epc_function_data):
                 return True
     return False
 
+class DeviceTimeoutError(Exception):
+    """Exception to indicate the device did not respond."""
+    pass
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -585,9 +588,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         # Update management - batch requests and flags
         self._update_flag_batches: list[list[int]] = []
         self._update_flags_full_list: list[int] = []
-        self._update_data: dict[int, Any] = (
-            {}
-        )  # Deprecated - use self.data from DataUpdateCoordinator instead
 
         # Callbacks for push notifications and option updates
         self._update_callbacks: list[callable] = []
@@ -688,149 +688,76 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
 
     async def _async_update_data(self) -> dict[int, Any]:
-        """Fetch the latest data from the ECHONET device.
-
-        This method is called periodically by UpdateCoordinator for polling updates.
-        It handles batch requests and manages the maximum property code (MPC) error.
-
-        Returns:
-            Dictionary containing the latest device data keyed by EPC codes.
-
-        Raises:
-            ConfigEntryNotReady: If the device fails to respond within timeout.
-        """
-        _LOGGER.debug(f"Polling from Coordiantor with _async_update_data")
-        _LOGGER.info(
-            f"Current self.data: {self.data}"
-        )  # setting to info so I dont have to enable debug logging.
-        _LOGGER.debug("Coordinator Poll: %s listeners subscribed", len(self._listeners))
+        """Fetch the latest data from the ECHONET device."""
         try:
-            update_data = await self.poll_pychonet({})
-            return update_data
+            # Standard poll
+            return await self.poll_pychonet(no_request=False)
+
         except EchonetMaxOpcError as ex:
-            # Adjust the maximum number of properties for batch requests when MPC error occurs
-            batch_size_max = self._user_options.get(
-                CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
-            )
-            batch_data_len = max(
-                ex.args[0],
-                MIN_UPDATE_BATCH_SIZE,
-                batch_size_max - 1,
-            )
+            # 1. Adjust batch size
+            batch_size_max = self._user_options.get(CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE)
+            batch_data_len = max(ex.args[0], MIN_UPDATE_BATCH_SIZE, batch_size_max - 1)
+            
             if batch_data_len >= batch_size_max:
-                # Below should be refactored to raise an exception and handle it in the caller to avoid returning stale data from self._update_data
-                _LOGGER.error(
-                    f"The integration has adjusted the number of batch requests to "
-                    f"{self._host} to {batch_size_max}, but no response is received. "
-                    f"Please check and try restarting the device etc."
-                )
-                return self._update_data.copy()
+                raise UpdateFailed(f"MPC Error: Device at {self._host} rejected batch even at minimum size.")
 
-            # Update user option for batch size and persist to config entry
+            # 2. Persist new batch size
             self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
-            entry_options = dict(self._entry.options)
-            entry_options.update({CONF_BATCH_SIZE_MAX: batch_data_len})
             self.hass.config_entries.async_update_entry(
-                self._entry, options=entry_options
+                self._entry, options={**self._entry.options, CONF_BATCH_SIZE_MAX: batch_data_len}
             )
 
-            # Rebuild batch flags with new size and retry update
+            # 3. Rebuild and Retry
             self._make_batch_request_flags()
-            update_data = await self._async_update_data()
-            return update_data
+            try:
+                return await self.poll_pychonet(no_request=False)
+            except Exception as err:
+                raise UpdateFailed(f"Retry failed after MPC adjustment: {err}")
 
-    # Deprecate
-    async def async_update(self, **kwargs):
-        """Perform an immediate data update (bypassing coordinator polling).
-
-        This method is maintained for backward compatibility with existing entities.
-        It triggers a manual update of the device data.
-
-        Args:
-            **kwargs: Additional keyword arguments including 'no_request' to skip polling.
-        """
-        try:
-            await self.poll_pychonet(kwargs)
-        except EchonetMaxOpcError as ex:
-            batch_size_max = self._user_options.get(
-                CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
-            )
-            batch_data_len = max(
-                ex.args[0],
-                MIN_UPDATE_BATCH_SIZE,
-                batch_size_max - 1,
-            )
-            if batch_data_len >= batch_size_max:
-                _LOGGER.error(
-                    f"The integration has adjusted the number of batch requests to "
-                    f"{self._host} to {batch_size_max}, but no response is received. "
-                    f"Please check and try restarting the device etc."
-                )
-                return None
-
-            self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
-            entry_options = dict(self._entry.options)
-            entry_options.update({CONF_BATCH_SIZE_MAX: batch_data_len})
-            self.hass.config_entries.async_update_entry(
-                self._entry, options=entry_options
-            )
-            self._make_batch_request_flags()
-
-            await self.async_update(**kwargs)
-
-    async def poll_pychonet(self, kwargs: dict) -> dict[int, Any]:
-        """Execute the data fetch from device properties.
-
-        This method performs batched property requests to minimize network traffic.
-        It handles the MPC (Maximum Property Code) error by adjusting batch sizes.
-
-        Args:
-            kwargs: Dictionary containing optional 'no_request' flag for push-only updates.
-
-        Returns:
-            Dictionary containing fetched data keyed by EPC codes.
-        """
-        update_data = {}
-        no_request = "no_request" in kwargs and kwargs["no_request"]
-
-        for i, flags in enumerate(self._update_flag_batches):
-            if i > 0:
-                # Add 100ms interval between batch requests to avoid overwhelming the device
-                await asyncio.sleep(0.1)
-            # Perform the batch update request for the current set of flags
-            batch_data = await self._instance.update(flags, no_request)
-            if batch_data is not False:
-                if len(flags) == 1:
-                    update_data[flags[0]] = batch_data
-                elif isinstance(batch_data, dict):
-                    update_data.update(batch_data)
-
-        _LOGGER.debug(polling_update_debug_log(update_data, self))
-        if (
-            len(update_data) > 0
-        ):  # This is probably no longer needed because we are going to use self.data from DataUpdateCoordinator
-            self._update_data.update(update_data)
-
-        return update_data.copy()
+        except DeviceTimeoutError as err:
+            # This is the "Magic Clause": Raising UpdateFailed marks entities as Unavailable
+            raise UpdateFailed(f"Offline: {err}")
 
     async def async_update_callback(self, isPush: bool = False):
-        _LOGGER.debug(
-            "received push notification update callback with isPush=%s", isPush
-        )
+        """Handle push notifications from the device."""
+        try:
+            # Grab what the library currently knows (no network request)
+            new_data = await self.poll_pychonet(no_request=True)
 
-        # 1. Get the new data from the push
-        new_data = await self.poll_pychonet(kwargs={"no_request": True})
+            if new_data:
+                # Merge with existing coordinator data
+                # Use 'self.data or {}' in case this is the first update
+                combined_data = {**(self.data or {}), **new_data}
+                
+                # This triggers all entities to update their state immediately
+                self.async_set_updated_data(combined_data)
+                
+        except Exception as err:
+            _LOGGER.error("Failed to process ECHONETLite push notification: %s", err)
 
-        # 2. MERGE: Start with what we already know, then overwrite with the new bits
-        # self.data is the Coordinator's internal storage
-        combined_data = {**(self.data or {}), **(new_data or {})}
+    async def poll_pychonet(self, no_request: bool = False) -> dict[int, Any]:
+        """Fetch data from pychonet instance."""
+        update_data = {}
 
-        # 3. Update the Coordinator (this resets the 30s timer and pings entities)
-        self.async_set_updated_data(combined_data)
+        for i, flags in enumerate(self._update_flag_batches):
+            if i > 0 and not no_request:
+                await asyncio.sleep(0.1)
 
-        # 4. Clean up legacy callbacks
-        for update_func in self._update_callbacks:
-            await update_func(isPush)
+            # Hit the library. Returns False if a network request fails.
+            batch_data = await self._instance.update(flags, no_request)
+            
+            if batch_data is False:
+                if no_request: # Should not happen with local cache access
+                    continue
+                # Raise custom error so _async_update_data can catch it
+                raise DeviceTimeoutError(f"Device at {self._host} failed to respond to EPCs {flags}")
+
+            if isinstance(batch_data, dict):
+                update_data.update(batch_data)
+            elif len(flags) == 1:
+                update_data[flags[0]] = batch_data
+
+        return update_data
 
     def _make_update_flags_full_list(self) -> bool:
         """Build the complete list of EPC codes to poll.
@@ -871,9 +798,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         for value in flags:
             if value in self._getPropertyMap:
                 self._update_flags_full_list.append(value)
-                self._update_data[value] = (
-                    None  # Remove at some stage - use self.data from DataUpdateCoordinator instead
-                )
                 self.data[value] = (
                     None  # This should instantiate self.data with the correct keys for DataUpdateCoordinator
                 )
