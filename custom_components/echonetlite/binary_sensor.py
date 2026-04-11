@@ -8,15 +8,11 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_SERVICE,
     CONF_TYPE,
-    CONF_UNIT_OF_MEASUREMENT,
 )
 from homeassistant.helpers import config_validation as cv, entity_platform
 from .base_entity import EchonetEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import (
@@ -29,7 +25,6 @@ from pychonet.lib.epc_functions import (
 
 from . import (
     get_name_by_epc_code,
-    get_unit_by_devise_class,
     get_device_name,
     regist_as_inputs,
     regist_as_binary_sensor,
@@ -48,17 +43,10 @@ from .const import (
     TYPE_NUMBER,
     SERVICE_SET_ON_TIMER_TIME,
     SERVICE_SET_INT_1B,
-    CONF_FORCE_POLLING,
     CONF_ENABLE_SUPER_ENERGY,
     TYPE_DATA_DICT,
     TYPE_DATA_ARRAY_WITH_SIZE_OPCODE,
     CONF_DISABLED_DEFAULT,
-    CONF_MULTIPLIER,
-    CONF_MULTIPLIER_OPCODE,
-    CONF_MULTIPLIER_OPTIONAL_OPCODE,
-    CONF_ICON_POSITIVE,
-    CONF_ICON_NEGATIVE,
-    CONF_ICON_ZERO,
 )
 
 _LOGGER = logging.getLogger(__name__)

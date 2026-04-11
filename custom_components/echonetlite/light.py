@@ -10,7 +10,6 @@ from pychonet.CeilingFan import (
 )
 
 from pychonet.lib.const import ENL_ON
-from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import _swap_dict
 
 from homeassistant.components.light import (
@@ -25,10 +24,8 @@ from homeassistant.components.light import (
 )
 from homeassistant.core import callback
 from .base_entity import EchonetEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import get_device_name
-from .const import DATA_STATE_ON, DOMAIN, CONF_FORCE_POLLING
+from .const import DATA_STATE_ON, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 

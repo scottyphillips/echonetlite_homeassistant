@@ -5,14 +5,12 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_MINIMUM,
     CONF_MAXIMUM,
-    CONF_UNIT_OF_MEASUREMENT,
 )
 from homeassistant.exceptions import InvalidStateError
 from homeassistant.components.number import NumberEntity
 from .base_entity import EchonetEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from pychonet.lib.eojx import EOJX_CLASS
-from . import get_name_by_epc_code, get_unit_by_devise_class, get_device_name
+from . import get_name_by_epc_code
 from .const import (
     CONF_DISABLED_DEFAULT,
     DOMAIN,

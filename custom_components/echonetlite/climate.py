@@ -6,7 +6,6 @@ from homeassistant.core import callback
 from homeassistant.components.climate import (
     ClimateEntity,
 )
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     ClimateEntityFeature,

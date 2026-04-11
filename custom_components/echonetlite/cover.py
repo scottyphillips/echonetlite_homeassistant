@@ -12,7 +12,6 @@ from pychonet.lib.epc_functions import (
     DATA_STATE_OPENING,
     DATA_STATE_CLOSING,
 )
-from . import get_device_name
 from .const import DOMAIN
 
 from homeassistant.components.cover import (
@@ -22,9 +21,7 @@ from homeassistant.components.cover import (
     CoverEntityFeature,
 )
 from .base_entity import EchonetEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.ElectricBlind import (
     ENL_BLIND_ANGLE,
     ENL_OPENCLOSE_STATUS,

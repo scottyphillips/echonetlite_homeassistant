@@ -5,8 +5,7 @@ from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.components.time import TimeEntity
 from homeassistant.exceptions import InvalidStateError
 from .base_entity import EchonetEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from . import get_name_by_epc_code, get_device_name
+from . import get_name_by_epc_code
 from .const import (
     CONF_DISABLED_DEFAULT,
     DOMAIN,
@@ -15,7 +14,6 @@ from .const import (
     NON_SETUP_SINGLE_ENYITY,
     TYPE_TIME,
 )
-from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import _hh_mm
 
 _LOGGER = logging.getLogger(__name__)

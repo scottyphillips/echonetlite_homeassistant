@@ -1,9 +1,7 @@
 import logging
 from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.components.select import SelectEntity
-from homeassistant.core import callback
 from .base_entity import EchonetEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from pychonet.HomeAirConditioner import (
     ENL_AIR_HORZ,
     ENL_AIR_VERT,
@@ -20,7 +18,6 @@ from .const import (
     TYPE_SELECT,
     NON_SETUP_SINGLE_ENYITY,
 )
-from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import _swap_dict
 
 _LOGGER = logging.getLogger(__name__)

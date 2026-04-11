@@ -15,10 +15,8 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from .base_entity import EchonetEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
-from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import EPC_SUPER_FUNCTIONS
 
 from . import (
@@ -42,7 +40,6 @@ from .const import (
     TYPE_NUMBER,
     SERVICE_SET_ON_TIMER_TIME,
     SERVICE_SET_INT_1B,
-    CONF_FORCE_POLLING,
     CONF_ENABLE_SUPER_ENERGY,
     TYPE_DATA_DICT,
     TYPE_DATA_ARRAY_WITH_SIZE_OPCODE,

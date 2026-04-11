@@ -5,8 +5,7 @@ import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA, CONF_NAME
 from homeassistant.components.switch import SwitchEntity
 from .base_entity import EchonetEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from . import get_name_by_epc_code, get_device_name
+from . import get_name_by_epc_code
 from .const import (
     CONF_DISABLED_DEFAULT,
     DOMAIN,
@@ -18,12 +17,10 @@ from .const import (
     TYPE_SWITCH,
     TYPE_NUMBER,
     ENL_STATUS,
-    CONF_FORCE_POLLING,
 )
 from pychonet.lib.eojx import EOJX_CLASS
 
 _LOGGER = logging.getLogger(__name__)
-
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     """Set up the ECHONETLite switch platform."""

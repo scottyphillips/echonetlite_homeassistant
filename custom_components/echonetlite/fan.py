@@ -5,18 +5,14 @@ import logging
 from pychonet.HomeAirCleaner import FAN_SPEED
 from pychonet.lib.const import ENL_STATUS
 
-from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.CeilingFan import (
     ENL_FANSPEED_PERCENT,
     ENL_FAN_DIRECTION,
     ENL_FAN_OSCILLATION,
 )
 from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.const import PRECISION_WHOLE
 from .base_entity import EchonetEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import get_device_name
 from .const import (
     DATA_STATE_ON,
     DOMAIN,
