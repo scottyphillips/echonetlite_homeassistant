@@ -39,6 +39,7 @@ from pychonet.lib.eojx import EOJX_CLASS
 
 from . import get_device_name
 from .const import DATA_STATE_ON, DOMAIN, OPTION_HA_UI_SWING
+from .base_entity import EchonetEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,9 +86,9 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     )
 
 
-class EchonetClimate(CoordinatorEntity, ClimateEntity):
+class EchonetClimate(EchonetEntity):
     """Representation of an ECHONETLite climate device."""
-
+    super().__init__(coordinator, config)
     _attr_translation_key = DOMAIN
 
     def __init__(self, coordinator, config):
@@ -97,11 +98,10 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
             connector: The ECHONETConnector instance which is also a DataUpdateCoordinator.
             config: The config entry for this integration.
         """
-        super().__init__(coordinator)
+        super().__init__(coordinator, config)
         name = get_device_name(coordinator, config)
         self._attr_name = name
         self._device_name = name
-        # self._connector = coordinator
         self._attr_unique_id = (
             self.coordinator._uidi if self.coordinator._uidi else self.coordinator._uid
         )
@@ -151,7 +151,6 @@ class EchonetClimate(CoordinatorEntity, ClimateEntity):
 
         self._last_mode = HVACMode.OFF
 
-        self._attr_should_poll = False
         self._attr_available = True
 
         self.update_option_listener()

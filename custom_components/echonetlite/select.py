@@ -15,7 +15,6 @@ from . import get_name_by_epc_code, get_device_name
 from .const import (
     CONF_DISABLED_DEFAULT,
     DOMAIN,
-    CONF_FORCE_POLLING,
     CONF_ICONS,
     TYPE_SELECT,
     NON_SETUP_SINGLE_ENYITY,
@@ -126,7 +125,6 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
             else f"{self.coordinator._uid}-{self._code}"
         )
         self._device_name = name
-        self._attr_should_poll = False
         self._attr_available = True
         self._attr_force_update = False
 

@@ -270,7 +270,6 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
             self._sensor_attributes.get(CONF_DISABLED_DEFAULT)
         )
 
-        self._attr_should_poll = False
         self._attr_available = True
 
         #   self.update_option_listener()
