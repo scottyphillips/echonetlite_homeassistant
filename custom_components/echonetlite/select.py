@@ -58,7 +58,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         config,
                         _enl_op_code_dict,
                         op_code,
-                        
                     )
                 )
 
@@ -100,7 +99,9 @@ class EchonetSelect(EchonetEntity, SelectEntity):
         else:
             # Read from _instance.EPC FUNCTIONS definition
             # Swap key, value of _instance.EPC_FUNCTIONS[opc][1]
-            self._options = _swap_dict(self.coordinator._instance.EPC_FUNCTIONS[epc_code][1])
+            self._options = _swap_dict(
+                self.coordinator._instance.EPC_FUNCTIONS[epc_code][1]
+            )
         self._icons = options.get(CONF_ICONS, {})
         self._attr_icon = options.get(CONF_ICON, None)
         self._icon_default = self._attr_icon
@@ -118,11 +119,7 @@ class EchonetSelect(EchonetEntity, SelectEntity):
                 self._attr_options = self.coordinator._user_options[epc_code]
         self._attr_current_option = self.coordinator.data.get(self._code)
         self._attr_name = f"{config.title} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._code, None, self.coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
-        self._attr_unique_id = (
-            f"{self.coordinator._uidi}-{self._code}"
-            if self.coordinator._uidi
-            else f"{self.coordinator._uid}-{self._code}"
-        )
+        self._attr_unique_id = self._build_unique_id(self._code)
         self._attr_available = True
         self._attr_force_update = False
 

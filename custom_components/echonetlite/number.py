@@ -60,11 +60,7 @@ class EchonetNumber(EchonetEntity, NumberEntity):
 
         self._attr_icon = options.get(CONF_ICON, None)
         self._attr_name = f"{config.title} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._code, None, self.coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
-        self._attr_unique_id = (
-            f"{self.coordinator._uidi}-{self._code}"
-            if self.coordinator._uidi
-            else f"{self.coordinator._uid}-{self._code}"
-        )
+        self._attr_unique_id = self._build_unique_id(self._code)
 
         self._options = options[TYPE_NUMBER]
         self._as_zero = int(options[TYPE_NUMBER].get(CONF_AS_ZERO, 0))

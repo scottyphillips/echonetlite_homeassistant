@@ -122,9 +122,7 @@ class EchonetLight(EchonetEntity, LightEntity):
         """
         super().__init__(coordinator, config)
         self._custom_options = options
-        self._attr_unique_id = (
-            self.coordinator._uidi if self.coordinator._uidi else self.coordinator._uid 
-        )
+        self._attr_unique_id = self._build_unique_id()
         self._attr_supported_color_modes = set()
 
         # Set temperature limits for color temp conversion
@@ -167,7 +165,9 @@ class EchonetLight(EchonetEntity, LightEntity):
 
         # Set max color level for color temperature calculation
         if hasattr(self.coordinator._instance, "getLightColorLevelMax"):
-            self._light_color_level_max = self.coordinator._instance.getLightColorLevelMax()
+            self._light_color_level_max = (
+                self.coordinator._instance.getLightColorLevelMax()
+            )
         else:
             self._light_color_level_max = 100
 

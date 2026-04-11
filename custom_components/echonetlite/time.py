@@ -44,7 +44,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         entity["echonetlite"],
                         config,
                         _enl_op_codes.get(op_code, {}),
-                        op_code,  
+                        op_code,
                     )
                 )
 
@@ -54,7 +54,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetTime(EchonetEntity, TimeEntity):
     """Representation of an ECHONET Lite Time entity."""
 
-    def __init__(self, coordinator, config, options, epc_code ):
+    def __init__(self, coordinator, config, options, epc_code):
         """Initialize the time entity.
 
         Args:
@@ -70,11 +70,7 @@ class EchonetTime(EchonetEntity, TimeEntity):
 
         self._attr_icon = options.get(CONF_ICON, None)
         self._attr_name = f"{config.title} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._code, None, self.coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
-        self._attr_unique_id = (
-            f"{self.coordinator._uidi}-{self._code}"
-            if self.coordinator._uidi
-            else f"{self.coordinator._uid}-{self._code}"
-        )
+        self._attr_unique_id = self._build_unique_id(self._code)
 
         self._attr_entity_registry_enabled_default = not bool(
             options.get(CONF_DISABLED_DEFAULT)

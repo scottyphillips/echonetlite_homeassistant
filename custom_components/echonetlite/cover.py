@@ -76,9 +76,7 @@ class EchonetCover(EchonetEntity, CoverEntity):
             config: The config entry for this integration.
         """
         super().__init__(coordinator, config)
-        self._attr_unique_id = (
-            self.coordinator._uidi if self.coordinator._uidi else self.coordinator._uid
-        )
+        self._attr_unique_id = self._build_unique_id()
 
         self._support_flags = (
             CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP

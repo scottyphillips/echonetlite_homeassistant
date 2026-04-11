@@ -224,11 +224,7 @@ class EchonetSensor(EchonetEntity, SensorEntity):
         name = get_device_name(coordinator, config)
         self._op_code = epc_code
         self._sensor_attributes = attributes
-        self._attr_unique_id = (
-            f"{self.coordinator._uidi}-{self._op_code}"
-            if self.coordinator._uidi
-            else f"{self.coordinator._uid}-{self.coordinator._eojgc}-{self.coordinator._eojcc}-{self.coordinator._eojci}-{self._op_code}"
-        )
+        self._attr_unique_id = self._build_unique_id(self._op_code)
         self._device_name = name
         self._server_state = self.coordinator._api._state[
             self.coordinator._instance._host

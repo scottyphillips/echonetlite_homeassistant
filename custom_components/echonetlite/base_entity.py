@@ -20,7 +20,7 @@ class EchonetEntity(CoordinatorEntity):
     def device_info(self):
         """Return device information for this entity."""
         from pychonet.lib.eojx import EOJX_CLASS
-        
+
         return {
             "identifiers": {
                 (
@@ -41,25 +41,50 @@ class EchonetEntity(CoordinatorEntity):
             "model": EOJX_CLASS[self.coordinator._eojgc][self.coordinator._eojcc],
         }
 
-    def _build_unique_id(self, suffix: str | None = None, include_device_info: bool = False) -> str:
+    def _build_unique_id(self, suffix: str | None = None) -> str:
         """Build unique ID with optional suffix.
-        
+
+        Uses uidi (unique device identifier) if available - the modern approach.
+        Falls back to uid-based chain for older devices without uidi support.
+
         Args:
-            suffix: Optional string to append after uidi/uid (e.g., epc_code).
-            include_device_info: If True, use full device info fallback format.
-            
+            suffix: Optional string to append (e.g., epc_code).
+
         Returns:
-            Formatted unique_id string.
+            Formatted unique_id string with or without suffix.
         """
         if self.coordinator._uidi:
-            base = self.coordinator._uidi
-            return f"{base}-{suffix}" if suffix else base
-        
-        # Fallback to full identifier chain
-        parts = [self.coordinator._uid, self.coordinator._eojgc, self.coordinator._eojcc, self.coordinator._eojci]
-        if include_device_info:
-            result = "-".join(str(p) for p in parts)
-        else:
-            result = self.coordinator._uid
-        
-        return f"{result}-{suffix}" if suffix else result
+            # Modern approach: use unique device identifier
+            return (
+                f"{self.coordinator._uidi}-{suffix}"
+                if suffix
+                else self.coordinator._uidi
+            )
+
+        # Legacy fallback: build from uid + EOJ classification chain
+        return (
+            f"{self.coordinator._uid}-{self.coordinator._eojgc}-"
+            f"{self.coordinator._eojcc}-{self.coordinator._eojci}-{suffix}"
+            if suffix
+            else self.coordinator._uid
+        )
+
+    def _build_final_unique_id(
+        self, base_id: str, extra_suffixes: list | None = None
+    ) -> str:
+        """Append dynamic suffixes to a base unique_id.
+
+        Used for sensors with dict_key or accessor_index that create multiple
+        entities from a single EPC code (e.g., multi-element arrays).
+
+        Args:
+            base_id: The base unique_id to append suffixes to.
+            extra_suffixes: List of string values to append with dashes.
+
+        Returns:
+            Final formatted unique_id with all suffixes applied.
+        """
+        if not extra_suffixes:
+            return base_id
+
+        return f"{base_id}-{'-'.join(str(s) for s in extra_suffixes)}"

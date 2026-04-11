@@ -326,7 +326,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _uidi = _instance["uidi"]
             _registed = _registed_instances.get(_uidi)
             if _registed and _registed.get("uidi") == None:
-                # keep old type config (echonetlite < 3.6.0)
+                # keep old type config (echonetlite < 3.6.0) # legacy uses _instance['uid']. Shoould be removed in the future
                 del _instance["uidi"]
 
         hass.config_entries.async_update_entry(

@@ -55,7 +55,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         config,
                         _enl_op_code_dict,
                         op_code,
-                        
                     )
                 )
                 if op_code == ENL_STATUS:
@@ -72,7 +71,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         config,
                         switch_conf,
                         op_code,
-                        
                     )
                 )
 
@@ -93,7 +91,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         CONF_SERVICE_DATA: SWITCH_POWER,
                     },
                     ENL_STATUS,
-
                 )
             )
     async_add_entities(entities, True)
@@ -102,7 +99,13 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetSwitch(EchonetEntity, SwitchEntity):
     """Representation of an ECHONETLite switch."""
 
-    def __init__(self, coordinator, config, options, epc_code, ) -> None:
+    def __init__(
+        self,
+        coordinator,
+        config,
+        options,
+        epc_code,
+    ) -> None:
         """Initialize the switch.
 
         Args:
@@ -152,11 +155,7 @@ class EchonetSwitch(EchonetEntity, SwitchEntity):
         self._from_number = True if options.get(TYPE_NUMBER) else False
 
         # Build unique_id and name
-        self._attr_unique_id = (
-            f"{coordinator._uidi}-{self._code}"
-            if coordinator._uidi
-            else f"{coordinator._uid}-{self.coordinator._eojgc}-{self.coordinator._eojcc}-{self.coordinator._eojci}-{self._code}"
-        )
+        self._attr_unique_id = self._build_unique_id(self._code)
         if self._from_number:
             self._attr_unique_id += "-switch"
             self._attr_name = (
@@ -183,15 +182,6 @@ class EchonetSwitch(EchonetEntity, SwitchEntity):
         if raw_val is None:
             return None
         return raw_val in self._on_vals
-
-    @property
-    def extra_state_attributes(self) -> dict | None:
-        """Return device-specific state attributes.
-
-        Indicates whether the entity receives push notifications or requires polling.
-        """
-        _should_poll = self._code not in self.coordinator._ntfPropertyMap
-        return {"notify": "No" if _should_poll else "Yes"}
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn switch on."""

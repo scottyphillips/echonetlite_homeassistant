@@ -236,11 +236,7 @@ class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
 
         self._op_code = epc_code
         self._sensor_attributes = attributes
-        self._attr_unique_id = (
-            f"{self.coordinator._uidi}-{self._op_code}"
-            if self.coordinator._uidi
-            else f"{self.coordinator._uid}-{self.coordinator._eojgc}-{self.coordinator._eojcc}-{self.coordinator._eojci}-{self._op_code}"
-        )
+        self._attr_unique_id = self._build_unique_id(self._op_code)
         self._state_value = None
 
         _attr_keys = self._sensor_attributes.keys()
@@ -250,7 +246,7 @@ class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
         self._attr_state_class = self._sensor_attributes.get(CONF_STATE_CLASS)
 
         # Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
-        self._attr_name = f"{name} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._op_code, self._attr_device_class, self.coordinator._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
+        self._attr_name = f"{get_device_name(coordinator, config)} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._op_code, self._attr_device_class, self.coordinator._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
 
         if "dict_key" in _attr_keys:
             self._attr_unique_id += f'-{self._sensor_attributes["dict_key"]}'
