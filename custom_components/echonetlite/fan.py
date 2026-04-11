@@ -18,7 +18,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import get_device_name
 from .const import (
-    CONF_FORCE_POLLING,
     DATA_STATE_ON,
     DOMAIN,
     ENL_FANSPEED,

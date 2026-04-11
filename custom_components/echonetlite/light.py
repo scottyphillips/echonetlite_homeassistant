@@ -112,8 +112,6 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 class EchonetLight(EchonetEntity, LightEntity):
     """Representation of a ECHONET light device."""
 
-    _attr_translation_key = DOMAIN
-
     def __init__(self, coordinator, config, options):
         """Initialize the light device.
 

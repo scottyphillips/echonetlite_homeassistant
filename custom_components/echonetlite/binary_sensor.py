@@ -229,8 +229,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
     """Representation of an ECHONETLite binary sensor."""
 
-    _attr_translation_key = DOMAIN
-
     def __init__(self, coordinator, config, epc_code, attributes) -> None:
         """Initialize the sensor."""
         # Initialize coordinator first - must call parent before setting other properties

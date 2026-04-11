@@ -102,8 +102,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetSwitch(EchonetEntity, SwitchEntity):
     """Representation of an ECHONETLite switch."""
 
-    _attr_translation_key = DOMAIN
-
     def __init__(self, coordinator, config, options, epc_code, ) -> None:
         """Initialize the switch.
 

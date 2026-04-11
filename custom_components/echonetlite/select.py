@@ -66,7 +66,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 
 
 class EchonetSelect(EchonetEntity, SelectEntity):
-    _attr_translation_key = DOMAIN
 
     SELECT_USING_USER_OPTIONS = {
         "0x1-0x30": {

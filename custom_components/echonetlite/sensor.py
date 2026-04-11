@@ -209,8 +209,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetSensor(EchonetEntity, SensorEntity):
     """Representation of an ECHONETLite Temperature Sensor."""
 
-    _attr_translation_key = DOMAIN
-
     def __init__(self, coordinator, config, epc_code, attributes) -> None:
         """Initialize the sensor.
 

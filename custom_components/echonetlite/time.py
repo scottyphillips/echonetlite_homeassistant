@@ -54,8 +54,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 class EchonetTime(EchonetEntity, TimeEntity):
     """Representation of an ECHONET Lite Time entity."""
 
-    _attr_translation_key = DOMAIN
-
     def __init__(self, coordinator, config, options, epc_code ):
         """Initialize the time entity.
 
