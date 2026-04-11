@@ -124,10 +124,9 @@ class EchonetLight(EchonetEntity, LightEntity):
         name = get_device_name(coordinator, config)
         self._attr_name = name
         self._device_name = name
-        self._connector = coordinator  # Keep reference for compatibility
         self._custom_options = options
         self._attr_unique_id = (
-            coordinator._uidi if coordinator._uidi else coordinator._uid
+            self.coordinator._uidi if self.coordinator._uidi else self.coordinator._uid 
         )
         self._attr_supported_color_modes = set()
 
@@ -150,11 +149,11 @@ class EchonetLight(EchonetEntity, LightEntity):
             self._max_mireds = MAX_MIREDS
 
         # Determine supported color modes based on device capabilities
-        if options[ENL_COLOR_TEMP] in list(coordinator._setPropertyMap):
+        if options[ENL_COLOR_TEMP] in list(self.coordinator._setPropertyMap):
             self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
             self._attr_color_mode = ColorMode.COLOR_TEMP
 
-        if options[ENL_BRIGHTNESS] in list(coordinator._setPropertyMap):
+        if options[ENL_BRIGHTNESS] in list(self.coordinator._setPropertyMap):
             if not self._attr_supported_color_modes:
                 self._attr_supported_color_modes.add(ColorMode.BRIGHTNESS)
                 self._attr_color_mode = ColorMode.BRIGHTNESS
@@ -164,14 +163,14 @@ class EchonetLight(EchonetEntity, LightEntity):
             self._attr_color_mode = ColorMode.ONOFF
 
         # Set effect list if device supports it
-        if hasattr(coordinator._instance, "getEffectList"):
-            self._attr_effect_list = coordinator._instance.getEffectList()
+        if hasattr(self.coordinator._instance, "getEffectList"):
+            self._attr_effect_list = self.coordinator._instance.getEffectList()
             if self._attr_effect_list:
                 self._attr_supported_features |= LightEntityFeature.EFFECT
 
         # Set max color level for color temperature calculation
-        if hasattr(coordinator._instance, "getLightColorLevelMax"):
-            self._light_color_level_max = coordinator._instance.getLightColorLevelMax()
+        if hasattr(self.coordinator._instance, "getLightColorLevelMax"):
+            self._light_color_level_max = self.coordinator._instance.getLightColorLevelMax()
         else:
             self._light_color_level_max = 100
 

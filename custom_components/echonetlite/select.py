@@ -101,7 +101,7 @@ class EchonetSelect(EchonetEntity, SelectEntity):
         else:
             # Read from _instance.EPC FUNCTIONS definition
             # Swap key, value of _instance.EPC_FUNCTIONS[opc][1]
-            self._options = _swap_dict(coordinator._instance.EPC_FUNCTIONS[epc_code][1])
+            self._options = _swap_dict(self.coordinator._instance.EPC_FUNCTIONS[epc_code][1])
         self._icons = options.get(CONF_ICONS, {})
         self._attr_icon = options.get(CONF_ICON, None)
         self._icon_default = self._attr_icon

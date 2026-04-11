@@ -116,9 +116,6 @@ class EchonetSwitch(EchonetEntity, SwitchEntity):
 
         self._code = epc_code
         self._options = options
-        self._eojgc = coordinator._eojgc
-        self._eojcc = coordinator._eojcc
-        self._eojci = coordinator._eojci
         self._device_name = get_device_name(coordinator, config)
 
         # Process EPC function data to determine on/off values
@@ -159,16 +156,16 @@ class EchonetSwitch(EchonetEntity, SwitchEntity):
         self._attr_unique_id = (
             f"{coordinator._uidi}-{self._code}"
             if coordinator._uidi
-            else f"{coordinator._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._code}"
+            else f"{coordinator._uid}-{self.coordinator._eojgc}-{self.coordinator._eojcc}-{self.coordinator._eojci}-{self._code}"
         )
         if self._from_number:
             self._attr_unique_id += "-switch"
             self._attr_name = (
-                f"{config.title} {get_name_by_epc_code(self._eojgc, self._eojcc, self._code, None, coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))} "
+                f"{config.title} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._code, None, self.coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))} "
                 + options.get(CONF_NAME, "Switch")
             )
         else:
-            self._attr_name = f"{config.title} {get_name_by_epc_code(self._eojgc, self._eojcc, self._code, None, coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
+            self._attr_name = f"{config.title} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._code, None, self.coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
 
         # Set icon and enabled default from options
         self._attr_icon = options.get(CONF_ICON)
@@ -185,9 +182,9 @@ class EchonetSwitch(EchonetEntity, SwitchEntity):
                 (
                     DOMAIN,
                     coordinator._uid,
-                    self._eojgc,
-                    self._eojcc,
-                    self._eojci,
+                    self.coordinator._eojgc,
+                    self.coordinator._eojcc,
+                    self.coordinator._eojci,
                 )
             },
             "name": self._device_name,
@@ -197,7 +194,7 @@ class EchonetSwitch(EchonetEntity, SwitchEntity):
                 if coordinator._host_product_code
                 else ""
             ),
-            "model": EOJX_CLASS[self._eojgc][self._eojcc],
+            "model": EOJX_CLASS[self.coordinator._eojgc][self.coordinator._eojcc],
         }
 
     @property

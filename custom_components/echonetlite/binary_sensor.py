@@ -237,13 +237,10 @@ class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
         name = get_device_name(coordinator, config)
         self._op_code = epc_code
         self._sensor_attributes = attributes
-        self._eojgc = coordinator._eojgc
-        self._eojcc = coordinator._eojcc
-        self._eojci = coordinator._eojci
         self._attr_unique_id = (
-            f"{coordinator._uidi}-{self._op_code}"
-            if coordinator._uidi
-            else f"{coordinator._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}"
+            f"{self.coordinator._uidi}-{self._op_code}"
+            if self.coordinator._uidi
+            else f"{self.coordinator._uid}-{self.coordinator._eojgc}-{self.coordinator._eojcc}-{self.coordinator._eojci}-{self._op_code}"
         )
         self._device_name = name
         self._state_value = None
@@ -255,7 +252,7 @@ class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
         self._attr_state_class = self._sensor_attributes.get(CONF_STATE_CLASS)
 
         # Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
-        self._attr_name = f"{name} {get_name_by_epc_code(self._eojgc, self._eojcc, self._op_code, self._attr_device_class, connector._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
+        self._attr_name = f"{name} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._op_code, self._attr_device_class, self.coordinator._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
 
         if "dict_key" in _attr_keys:
             self._attr_unique_id += f'-{self._sensor_attributes["dict_key"]}'
@@ -281,9 +278,9 @@ class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
                 (
                     DOMAIN,
                     self.coordinator._uid,
-                    self._eojgc,
-                    self._eojcc,
-                    self._eojci,
+                    self.coordinator._eojgc,
+                    self.coordinator._eojcc,
+                    self.coordinator._eojci,
                 )
             },
             "name": self._device_name,
@@ -293,7 +290,7 @@ class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
                 if self.coordinator._host_product_code
                 else ""
             ),
-            "model": EOJX_CLASS[self._eojgc][self._eojcc],
+            "model": EOJX_CLASS[self.coordinator._eojgc][self.coordinator._eojcc],
         }
 
     @property

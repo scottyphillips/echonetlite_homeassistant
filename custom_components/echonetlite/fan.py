@@ -58,7 +58,7 @@ class EchonetFan(EchonetEntity, FanEntity):
 
         # Use uidi if available for unique_id, otherwise fall back to uid
         self._attr_unique_id = (
-            coordinator._uidi if coordinator._uidi else coordinator._uid
+            self.coordinator._uidi if self.coordinator._uidi else self.coordinator._uid
         )
 
         # Set supported features based on device capabilities
@@ -67,17 +67,17 @@ class EchonetFan(EchonetEntity, FanEntity):
             self._attr_supported_features |= FanEntityFeature.TURN_ON
         if hasattr(FanEntityFeature, "TURN_OFF"):
             self._attr_supported_features |= FanEntityFeature.TURN_OFF
-        if ENL_FANSPEED in list(coordinator._setPropertyMap):
+        if ENL_FANSPEED in list(self.coordinator._setPropertyMap):
             self._attr_supported_features |= FanEntityFeature.PRESET_MODE
-        if ENL_FANSPEED_PERCENT in list(coordinator._setPropertyMap):
+        if ENL_FANSPEED_PERCENT in list(self.coordinator._setPropertyMap):
             self._attr_supported_features |= FanEntityFeature.SET_SPEED
-        if ENL_FAN_DIRECTION in list(coordinator._setPropertyMap):
+        if ENL_FAN_DIRECTION in list(self.coordinator._setPropertyMap):
             self._attr_supported_features |= FanEntityFeature.DIRECTION
-        if ENL_FAN_OSCILLATION in list(coordinator._setPropertyMap):
+        if ENL_FAN_OSCILLATION in list(self.coordinator._setPropertyMap):
             self._attr_supported_features |= FanEntityFeature.OSCILLATE
 
         # Set speed count for the fan
-        self._attr_speed_count = getattr(coordinator._instance, "SPEED_COUNT", 100)
+        self._attr_speed_count = getattr(self.coordinator._instance, "SPEED_COUNT", 100)
 
     @property
     def device_info(self):
