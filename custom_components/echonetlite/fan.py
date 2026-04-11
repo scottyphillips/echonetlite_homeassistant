@@ -52,10 +52,6 @@ class EchonetFan(EchonetEntity, FanEntity):
         """Initialize the fan entity."""
         super().__init__(coordinator, config)
 
-        name = get_device_name(coordinator, config)
-        self._attr_name = name
-        self._device_name = name
-
         # Use uidi if available for unique_id, otherwise fall back to uid
         self._attr_unique_id = (
             self.coordinator._uidi if self.coordinator._uidi else self.coordinator._uid

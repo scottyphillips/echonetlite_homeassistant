@@ -97,9 +97,6 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             config: The config entry for this integration.
         """
         super().__init__(coordinator, config)
-        name = get_device_name(coordinator, config)
-        self._attr_name = name
-        self._device_name = name
         self._attr_unique_id = (
             self.coordinator._uidi if self.coordinator._uidi else self.coordinator._uid
         )

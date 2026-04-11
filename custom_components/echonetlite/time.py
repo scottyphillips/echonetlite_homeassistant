@@ -76,7 +76,6 @@ class EchonetTime(EchonetEntity, TimeEntity):
             else f"{self.coordinator._uid}-{self._code}"
         )
 
-        self._device_name = get_device_name(coordinator, config)
         self._attr_entity_registry_enabled_default = not bool(
             options.get(CONF_DISABLED_DEFAULT)
         )

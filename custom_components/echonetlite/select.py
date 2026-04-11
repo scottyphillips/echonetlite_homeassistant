@@ -88,7 +88,6 @@ class EchonetSelect(EchonetEntity, SelectEntity):
     def __init__(self, coordinator, config, options, epc_code):
         """Initialize the select."""
         super().__init__(coordinator, config)
-        name = get_device_name(coordinator, config)
         self._config = config
         self._code = epc_code
         self._optimistic = False
@@ -124,7 +123,6 @@ class EchonetSelect(EchonetEntity, SelectEntity):
             if self.coordinator._uidi
             else f"{self.coordinator._uid}-{self._code}"
         )
-        self._device_name = name
         self._attr_available = True
         self._attr_force_update = False
 

@@ -1,6 +1,7 @@
 """Base entity for ECHONETLite."""
 
 from .const import DOMAIN
+from . import get_device_name
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 
@@ -11,6 +12,9 @@ class EchonetEntity(CoordinatorEntity):
 
     def __init__(self, coordinator, config, **kwargs) -> None:
         super().__init__(coordinator)
+        name = get_device_name(coordinator, config)
+        self._attr_name = name
+        self._device_name = name
 
     @property
     def device_info(self):

@@ -121,9 +121,6 @@ class EchonetLight(EchonetEntity, LightEntity):
             options: Custom configuration options for the light.
         """
         super().__init__(coordinator, config)
-        name = get_device_name(coordinator, config)
-        self._attr_name = name
-        self._device_name = name
         self._custom_options = options
         self._attr_unique_id = (
             self.coordinator._uidi if self.coordinator._uidi else self.coordinator._uid 

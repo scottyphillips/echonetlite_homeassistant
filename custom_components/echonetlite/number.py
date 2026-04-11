@@ -71,7 +71,6 @@ class EchonetNumber(EchonetEntity, NumberEntity):
         self._conf_max = int(options[TYPE_NUMBER][CONF_MAXIMUM])
         self._byte_length = int(options[TYPE_NUMBER].get(CONF_BYTE_LENGTH, 1))
 
-        self._device_name = get_device_name(coordinator, config)
         self._attr_device_class = self._options.get(
             CONF_TYPE, options.get(CONF_TYPE, None)
         )

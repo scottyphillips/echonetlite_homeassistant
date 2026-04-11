@@ -234,7 +234,6 @@ class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
         # Initialize coordinator first - must call parent before setting other properties
         super().__init__(coordinator, config)
 
-        name = get_device_name(coordinator, config)
         self._op_code = epc_code
         self._sensor_attributes = attributes
         self._attr_unique_id = (
@@ -242,7 +241,6 @@ class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
             if self.coordinator._uidi
             else f"{self.coordinator._uid}-{self.coordinator._eojgc}-{self.coordinator._eojcc}-{self.coordinator._eojci}-{self._op_code}"
         )
-        self._device_name = name
         self._state_value = None
 
         _attr_keys = self._sensor_attributes.keys()

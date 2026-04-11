@@ -116,7 +116,6 @@ class EchonetSwitch(EchonetEntity, SwitchEntity):
 
         self._code = epc_code
         self._options = options
-        self._device_name = get_device_name(coordinator, config)
 
         # Process EPC function data to determine on/off values
         epc_function_data = coordinator._instance.EPC_FUNCTIONS.get(epc_code, None)
