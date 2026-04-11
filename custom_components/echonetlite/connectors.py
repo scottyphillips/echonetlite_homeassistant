@@ -6,6 +6,7 @@ import os
 from functools import partial
 from importlib import import_module
 from typing import Any
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
