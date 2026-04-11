@@ -190,9 +190,6 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             else:
                 return HVACMode.OFF
         else:
-            # Store the mode for later reference
-            # if hasattr(self, '_last_mode'):
-            #     self._last_mode = _val
             return _val
 
     @property

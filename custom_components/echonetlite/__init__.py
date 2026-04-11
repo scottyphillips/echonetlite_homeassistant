@@ -644,19 +644,13 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         # Load device-specific quirks
         await self._load_quirk()
 
-        # Initialize default user options for fan, swing modes and temperature ranges
+        # Initialize default user options for fan and swing modes
         self._user_options = {
             ENL_FANSPEED: False,
             ENL_AUTO_DIRECTION: False,
             ENL_SWING_MODE: False,
             ENL_AIR_VERT: False,
             ENL_AIR_HORZ: False,
-            "min_temp_heat": 15,
-            "max_temp_heat": 35,
-            "min_temp_cool": 15,
-            "max_temp_cool": 35,
-            "min_temp_auto": 15,
-            "max_temp_auto": 35,
         }
 
         # Apply user-configurable options from config entry
@@ -668,10 +662,12 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 else:
                     self._user_options[option] = False
 
-        # Apply temperature range options
+        # Apply temperature range options from TEMP_OPTIONS defaults (or config values)
         for option in TEMP_OPTIONS.keys():
             if entry.options.get(option) is not None:
                 self._user_options[option] = entry.options.get(option)
+            else:
+                self._user_options[option] = TEMP_OPTIONS[option].get("default")
 
         # Apply miscellaneous options
         for key, option in MISC_OPTIONS.items():

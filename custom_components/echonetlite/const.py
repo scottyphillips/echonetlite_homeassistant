@@ -1405,13 +1405,19 @@ USER_OPTIONS = {
     OPTION_HA_UI_SWING: {"option": OPTION_HA_UI_SWING, "option_list": []},
 }
 
+DEFAULT_CLIMATE_TEMPERATURES = {
+    "heat": {"min": 16, "max": 30},
+    "cool": {"min": 18, "max": 27},
+    "auto": {"min": 16, "max": 30},
+}
+
 TEMP_OPTIONS = {
-    "min_temp_heat": {"min": 10, "max": 25, "default": 16},
-    "max_temp_heat": {"min": 18, "max": 30, "default": 30},
-    "min_temp_cool": {"min": 15, "max": 25, "default": 16},
-    "max_temp_cool": {"min": 18, "max": 30, "default": 30},
-    "min_temp_auto": {"min": 15, "max": 25, "default": 16},
-    "max_temp_auto": {"min": 18, "max": 30, "default": 30},
+    "min_temp_heat": {"min": 10, "max": 25, "default": DEFAULT_CLIMATE_TEMPERATURES["heat"]["min"]},
+    "max_temp_heat": {"min": 18, "max": 30, "default": DEFAULT_CLIMATE_TEMPERATURES["heat"]["max"]},
+    "min_temp_cool": {"min": 15, "max": 25, "default": DEFAULT_CLIMATE_TEMPERATURES["cool"]["min"]},
+    "max_temp_cool": {"min": 18, "max": 30, "default": DEFAULT_CLIMATE_TEMPERATURES["cool"]["max"]},
+    "min_temp_auto": {"min": 15, "max": 25, "default": DEFAULT_CLIMATE_TEMPERATURES["auto"]["min"]},
+    "max_temp_auto": {"min": 18, "max": 30, "default": DEFAULT_CLIMATE_TEMPERATURES["auto"]["max"]},
 }
 
 MISC_OPTIONS = {
