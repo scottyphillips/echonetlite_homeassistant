@@ -8,7 +8,6 @@ import time as pytime
 from datetime import timedelta
 from typing import Any
 
-import pychonet as echonet
 from homeassistant import config_entries
 from homeassistant.components.number.const import NumberDeviceClass
 from homeassistant.components.sensor.const import SensorDeviceClass
@@ -26,56 +25,27 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 # Throttle removed - UpdateCoordinator handles update intervals
 from pychonet import ECHONETAPIClient
-from pychonet.echonetapiclient import EchonetMaxOpcError
 from pychonet.EchonetInstance import (
-    ENL_CUMULATIVE_POWER,
     ENL_GETMAP,
-    ENL_INSTANTANEOUS_POWER,
     ENL_SETMAP,
-    ENL_STATUS,
     ENL_UID,
-)
-from pychonet.HomeAirConditioner import (
-    ENL_AIR_HORZ,
-    ENL_AIR_VERT,
-    ENL_AUTO_DIRECTION,
-    ENL_FANSPEED,
-    ENL_SWING_MODE,
 )
 from pychonet.lib.const import ENL_STATMAP, VERSION
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
-from pychonet.lib.epc_functions import (
-    DICT_30_ON_OFF,
-    DICT_30_OPEN_CLOSED,
-    DICT_30_TRUE_FALSE,
-    DICT_41_ON_OFF,
-    _hh_mm,
-)
 from pychonet.lib.udpserver import UDPServer
 
 from .config_flow import ErrorConnect, async_discover_newhost, enumerate_instances
 from .const import (
-    CONF_BATCH_SIZE_MAX,
-    CONF_ENABLE_SUPER_ENERGY,
     DOMAIN,
-    ENABLE_SUPER_ENERGY_DEFAULT,
-    ENL_OP_CODES,
-    ENL_SUPER_CODES,
-    ENL_SUPER_ENERGES,
-    ENL_TIMER_SETTING,
     MISC_OPTIONS,
     TEMP_OPTIONS,
     USER_OPTIONS,
 )
 from .connectors import (
-    DeviceTimeoutError,
     ECHONETConnector,
-    regist_as_binary_sensor,
-    regist_as_inputs,
 )
 
 _LOGGER = logging.getLogger(__name__)

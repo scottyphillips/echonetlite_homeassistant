@@ -181,4 +181,11 @@
               "left-lc-center": "<< < ||",
               "left-lc-center-right": "<< < || >>",
               "left-lc-center-rc": "<< < || >",
-              "left-lc-center-rc-right": "<< < || > >>",
+              "left-lc-center-rc-right": "<< < || > >>"
+            }
+          }
+        }
+      }   
+    }
+  }
+}
