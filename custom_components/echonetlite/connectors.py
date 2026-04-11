@@ -7,12 +7,14 @@ from functools import partial
 from importlib import import_module
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from pychonet import ECHONETAPIClient
 from pychonet.echonetapiclient import EchonetMaxOpcError
 from pychonet.lib.epc import EPC_SUPER
+from pychonet.lib.epc_functions import _hh_mm
 
 from .const import (
     CONF_BATCH_SIZE_MAX,
@@ -22,10 +24,18 @@ from .const import (
     ENL_OP_CODES,
     ENL_SUPER_CODES,
     ENL_SUPER_ENERGES,
+    MISC_OPTIONS,
+    TEMP_OPTIONS,
+    USER_OPTIONS,
 )
+
 from .config_flow import ErrorConnect
 
 _LOGGER = logging.getLogger(__name__)
+
+# Batch size constants for ECHONET protocol
+MAX_UPDATE_BATCH_SIZE = 10
+MIN_UPDATE_BATCH_SIZE = 3
 
 
 def regist_as_inputs(epc_function_data):
@@ -92,9 +102,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
     existing bespoke logic for batch requests, quirks, and callbacks.
     """
 
-    def __init__(
-        self, instance: dict, hass: HomeAssistant, entry: config_entries.ConfigEntry
-    ):
+    def __init__(self, instance: dict, hass: HomeAssistant, entry: ConfigEntry):
         """Initialize the ECHONETConnector coordinator.
 
         Args:
@@ -103,7 +111,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             entry: The config entry for this integration.
         """
         import pychonet as echonet
-        from homeassistant import config_entries
 
         # Calculate a unique name for this coordinator using string formatting
         # to avoid nested quote issues in f-strings
