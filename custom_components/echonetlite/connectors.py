@@ -36,7 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 # Batch size constants for ECHONET protocol
 MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
-
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 def regist_as_inputs(epc_function_data):
     """Check if EPC function data should be registered as input entity.
@@ -122,7 +122,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             _LOGGER,
             name=display_name,
             update_method=self._async_update_data,
-            update_interval=None,  # Set via startup() based on MIN_TIME_BETWEEN_UPDATES
+            update_interval=MIN_TIME_BETWEEN_UPDATES,  # Set via startup() based on MIN_TIME_BETWEEN_UPDATES
         )
 
         # Store original instance config for reference
@@ -175,6 +175,15 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         # Get API instance from Home Assistant data store
         self._api: ECHONETAPIClient = hass.data[DOMAIN]["api"]
+
+        # Register update callbacks with the API for push notifications
+        self._api.register_async_update_callbacks(
+            self._host,
+            self._eojgc,
+            self._eojcc,
+            self._eojci,
+            self.async_update_callback,
+        )
 
         # Create the pychonet Factory instance for this device type
         self._instance = echonet.Factory(
