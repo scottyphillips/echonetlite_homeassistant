@@ -26,9 +26,13 @@ from pychonet.lib.epc_functions import (
 from . import (
     get_name_by_epc_code,
     get_device_name,
+)
+from .connectors import (
     regist_as_inputs,
     regist_as_binary_sensor,
 )
+
+
 from .const import (
     DOMAIN,
     ENABLE_SUPER_ENERGY_DEFAULT,
