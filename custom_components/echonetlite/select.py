@@ -158,31 +158,6 @@ class EchonetSelect(EchonetEntity, SelectEntity):
         """Return icon for current option with default fallback."""
         return self._icons.get(self.current_option, self._icon_default)
 
-    @property
-    def device_info(self):
-        return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self.coordinator._uid,
-                    self.coordinator._eojgc,
-                    self.coordinator._eojcc,
-                    self.coordinator._eojci,
-                )
-            },
-            "name": self._device_name,
-            "manufacturer": self.coordinator._manufacturer
-            + (
-                " " + self.coordinator._host_product_code
-                if self.coordinator._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self.coordinator._instance._eojgc][
-                self.coordinator._instance._eojcc
-            ],
-            # "sw_version": "",
-        }
-
     async def async_select_option(self, option: str):
         self._attr_current_option = option
         # self.async_schedule_update_ha_state()

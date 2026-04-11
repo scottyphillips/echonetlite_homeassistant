@@ -96,31 +96,6 @@ class EchonetTime(EchonetEntity, TimeEntity):
 
         return None
 
-    @property
-    def device_info(self):
-        """Return device information for Home Assistant."""
-        return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self.coordinator._uid,
-                    self.coordinator._eojgc,
-                    self.coordinator._eojcc,
-                    self.coordinator._eojci,
-                )
-            },
-            "name": self._device_name,
-            "manufacturer": self.coordinator._manufacturer
-            + (
-                " " + self.coordinator._host_product_code
-                if self.coordinator._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self.coordinator._instance._eojgc][
-                self.coordinator._instance._eojcc
-            ],
-        }
-
     async def async_set_value(self, value: time) -> None:
         """Update the current time value on the device.
 

@@ -19,10 +19,21 @@ class EchonetEntity(CoordinatorEntity):
         
         return {
             "identifiers": {
-                (DOMAIN, self.coordinator._uid, self.coordinator._eojgc, self.coordinator._eojcc, self.coordinator._eojci)
+                (
+                    DOMAIN,
+                    self.coordinator._uid,
+                    self.coordinator._eojgc,
+                    self.coordinator._eojcc,
+                    self.coordinator._eojci,
+                )
             },
-            "name": self.coordinator._entry_title if hasattr(self.coordinator, '_entry_title') else getattr(self, '_device_name', 'Device'),
-            "manufacturer": self.coordinator._manufacturer,
+            "name": self._device_name,
+            "manufacturer": self.coordinator._manufacturer
+            + (
+                " " + self.coordinator._host_product_code
+                if self.coordinator._host_product_code
+                else ""
+            ),
             "model": EOJX_CLASS[self.coordinator._eojgc][self.coordinator._eojcc],
         }
 

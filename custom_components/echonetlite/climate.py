@@ -158,30 +158,6 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
         self._enable_turn_on_off_backwards_compatibility = False
 
     @property
-    def device_info(self):
-        return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self.coordinator._uid,
-                    self.coordinator._eojgc,
-                    self.coordinator._eojcc,
-                    self.coordinator._eojci,
-                )
-            },
-            "name": self._device_name,
-            "manufacturer": self.coordinator._manufacturer
-            + (
-                " " + self.coordinator._host_product_code
-                if self.coordinator._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self.coordinator._instance._eojgc][
-                self.coordinator._instance._eojcc
-            ],
-        }
-
-    @property
     def current_temperature(self) -> float | None:
         """Return the current room temperature."""
         _val = self.coordinator.data.get(ENL_HVAC_ROOM_TEMP)

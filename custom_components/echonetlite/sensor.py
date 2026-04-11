@@ -271,29 +271,6 @@ class EchonetSensor(EchonetEntity, SensorEntity):
         #   self.update_option_listener()
 
     @property
-    def device_info(self):
-        return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self.coordinator._uid,
-                    self.coordinator._eojgc,
-                    self.coordinator._eojcc,
-                    self.coordinator._eojci,
-                )
-            },
-            "name": self._device_name,
-            "manufacturer": self.coordinator._manufacturer
-            + (
-                " " + self.coordinator._host_product_code
-                if self.coordinator._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self.coordinator._eojgc][self.coordinator._eojcc],
-            # "sw_version": "",
-        }
-
-    @property
     def native_value(self):
         """Return the state of the sensor."""
         return self.get_attr_native_value()

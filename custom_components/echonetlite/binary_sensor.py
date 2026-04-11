@@ -271,29 +271,6 @@ class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
         )
 
     @property
-    def device_info(self):
-        """Return device information for this entity."""
-        return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self.coordinator._uid,
-                    self.coordinator._eojgc,
-                    self.coordinator._eojcc,
-                    self.coordinator._eojci,
-                )
-            },
-            "name": self._device_name,
-            "manufacturer": self.coordinator._manufacturer
-            + (
-                " " + self.coordinator._host_product_code
-                if self.coordinator._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self.coordinator._eojgc][self.coordinator._eojcc],
-        }
-
-    @property
     def is_on(self) -> bool | None:
         """Return True if entity is on."""
         raw_val = self.coordinator.data.get(self._op_code)

@@ -175,29 +175,6 @@ class EchonetLight(EchonetEntity, LightEntity):
             self._light_color_level_max = 100
 
     @property
-    def device_info(self):
-        """Return device information for this entity."""
-        return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self.coordinator._uid,
-                    self.coordinator._eojgc,
-                    self.coordinator._eojcc,
-                    self.coordinator._eojci,
-                )
-            },
-            "name": self._device_name,
-            "manufacturer": self.coordinator._manufacturer
-            + (
-                f" {self.coordinator._host_product_code}"
-                if self.coordinator._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self.coordinator._eojgc][self.coordinator._eojcc],
-        }
-
-    @property
     def is_on(self) -> bool:
         """Return true if the device is on."""
         return (

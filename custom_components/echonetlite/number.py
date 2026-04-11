@@ -129,31 +129,6 @@ class EchonetNumber(EchonetEntity, NumberEntity):
                 return int(max_opc_value) - self._as_zero
         return self._conf_max - self._as_zero
 
-    @property
-    def device_info(self):
-        """Return device information."""
-        return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self.coordinator._uid,
-                    self.coordinator._eojgc,
-                    self.coordinator._eojcc,
-                    self.coordinator._eojci,
-                )
-            },
-            "name": self._device_name,
-            "manufacturer": self.coordinator._manufacturer
-            + (
-                " " + self.coordinator._host_product_code
-                if self.coordinator._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self.coordinator._instance._eojgc][
-                self.coordinator._instance._eojcc
-            ],
-        }
-
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
         if await self.coordinator._instance.setMessage(
