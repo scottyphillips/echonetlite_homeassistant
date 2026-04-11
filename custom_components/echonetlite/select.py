@@ -165,9 +165,9 @@ class EchonetSelect(EchonetEntity, SelectEntity):
                 (
                     DOMAIN,
                     self.coordinator._uid,
-                    self.coordinator._instance._eojgc,
-                    self.coordinator._instance._eojcc,
-                    self.coordinator._instance._eojci,
+                    self.coordinator._eojgc,
+                    self.coordinator._eojcc,
+                    self.coordinator._eojci,
                 )
             },
             "name": self._device_name,

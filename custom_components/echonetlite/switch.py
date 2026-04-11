@@ -181,17 +181,17 @@ class EchonetSwitch(EchonetEntity, SwitchEntity):
             "identifiers": {
                 (
                     DOMAIN,
-                    coordinator._uid,
+                    self.coordinator._uid,
                     self.coordinator._eojgc,
                     self.coordinator._eojcc,
                     self.coordinator._eojci,
                 )
             },
             "name": self._device_name,
-            "manufacturer": coordinator._manufacturer
+            "manufacturer": self.coordinator._manufacturer
             + (
-                " " + coordinator._host_product_code
-                if coordinator._host_product_code
+                " " + self.coordinator._host_product_code
+                if self.coordinator._host_product_code
                 else ""
             ),
             "model": EOJX_CLASS[self.coordinator._eojgc][self.coordinator._eojcc],
