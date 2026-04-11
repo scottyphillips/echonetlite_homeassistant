@@ -1273,7 +1273,7 @@ ENABLE_SUPER_ENERGY_DEFAULT = {
 }
 
 # Some entities that overlap with control entities are excluded from setup
-NON_SETUP_SINGLE_ENYITY = {
+NON_SETUP_SINGLE_ENTITY = {
     0x01: {
         # Home Air Conditioner
         0x30: {ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_SILENT_MODE},

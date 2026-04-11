@@ -21,7 +21,7 @@ from pychonet.lib.epc_functions import EPC_SUPER_FUNCTIONS
 
 from . import (
     get_name_by_epc_code,
-    get_unit_by_devise_class,
+    get_unit_by_device_class,
     get_device_name,
 )
 from .connectors import (
@@ -35,7 +35,7 @@ from .const import (
     CONF_STATE_CLASS,
     ENL_SUPER_CODES,
     ENL_SUPER_ENERGES,
-    NON_SETUP_SINGLE_ENYITY,
+    NON_SETUP_SINGLE_ENTITY,
     TYPE_SWITCH,
     TYPE_SELECT,
     TYPE_TIME,
@@ -84,7 +84,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         # For all other devices, sensors will be configured but customise if applicable.
         for op_code in list(
             set(entity["echonetlite"]._update_flags_full_list)
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
+            - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
             # Check DeviceClass or regist_as_binary_sensor()
             if isinstance(
@@ -254,7 +254,7 @@ class EchonetSensor(EchonetEntity, SensorEntity):
             CONF_UNIT_OF_MEASUREMENT
         )
         if not self._attr_native_unit_of_measurement:
-            self._attr_native_unit_of_measurement = get_unit_by_devise_class(
+            self._attr_native_unit_of_measurement = get_unit_by_device_class(
                 self._attr_device_class
             )
         self._attr_entity_registry_enabled_default = not bool(

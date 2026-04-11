@@ -17,7 +17,7 @@ from .const import (
     CONF_AS_ZERO,
     CONF_MAX_OPC,
     CONF_BYTE_LENGTH,
-    NON_SETUP_SINGLE_ENYITY,
+    NON_SETUP_SINGLE_ENTITY,
     TYPE_NUMBER,
 )
 
@@ -33,7 +33,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         # configure select entities by looking up full ENL_OP_CODE dict
         for op_code in list(
             set(entity["instance"]["setmap"])
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
+            - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
             if TYPE_NUMBER in _enl_op_codes.get(op_code, {}).keys():
                 entities.append(

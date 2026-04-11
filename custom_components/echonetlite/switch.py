@@ -11,7 +11,7 @@ from .const import (
     DOMAIN,
     CONF_ON_VALUE,
     CONF_OFF_VALUE,
-    NON_SETUP_SINGLE_ENYITY,
+    NON_SETUP_SINGLE_ENTITY,
     SWITCH_POWER,
     CONF_ENSURE_ON,
     TYPE_SWITCH,
@@ -34,7 +34,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         # Configure switch entities by looking up full ENL_OP_CODE dict
         for op_code in list(
             set(entity["instance"]["setmap"])
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
+            - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
             epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
                 op_code, None

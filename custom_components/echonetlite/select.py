@@ -16,7 +16,7 @@ from .const import (
     DOMAIN,
     CONF_ICONS,
     TYPE_SELECT,
-    NON_SETUP_SINGLE_ENYITY,
+    NON_SETUP_SINGLE_ENTITY,
 )
 from pychonet.lib.epc_functions import _swap_dict
 
@@ -29,13 +29,13 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
         _enl_op_codes = entity["echonetlite"]._enl_op_codes
-        _non_setup_single_entity = NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(
+        _non_setup_single_entity = NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(
             eojcc, set()
         )
         # configure select entities by looking up full ENL_OP_CODE dict
         for op_code in list(
             set(entity["instance"]["setmap"])
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
+            - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
             epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
                 op_code, None

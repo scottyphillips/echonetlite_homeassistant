@@ -40,7 +40,7 @@ from .const import (
     CONF_STATE_CLASS,
     ENL_SUPER_CODES,
     ENL_SUPER_ENERGES,
-    NON_SETUP_SINGLE_ENYITY,
+    NON_SETUP_SINGLE_ENTITY,
     TYPE_SWITCH,
     TYPE_SELECT,
     TYPE_TIME,
@@ -96,7 +96,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         # For all other devices, sensors will be configured but customise if applicable.
         for op_code in list(
             set(entity["echonetlite"]._update_flags_full_list)
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
+            - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
             # Check DeviceClass and regist_as_binary_sensor()
             if not isinstance(

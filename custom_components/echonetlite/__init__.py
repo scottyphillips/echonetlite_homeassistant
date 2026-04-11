@@ -133,7 +133,7 @@ def polling_update_debug_log(values: dict[int, Any], conn_instance: ECHONETConne
     return debug_log
 
 
-def get_unit_by_devise_class(device_class: str) -> str | None:
+def get_unit_by_device_class(device_class: str) -> str | None:
     if (
         device_class == SensorDeviceClass.TEMPERATURE
         or device_class == NumberDeviceClass.TEMPERATURE
