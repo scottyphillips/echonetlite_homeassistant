@@ -224,13 +224,10 @@ class EchonetSensor(EchonetEntity, SensorEntity):
         name = get_device_name(coordinator, config)
         self._op_code = epc_code
         self._sensor_attributes = attributes
-        self._eojgc = self.coordinator._eojgc
-        self._eojcc = self.coordinator._eojcc
-        self._eojci = self.coordinator._eojci
         self._attr_unique_id = (
             f"{self.coordinator._uidi}-{self._op_code}"
             if self.coordinator._uidi
-            else f"{self.coordinator._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}"
+            else f"{self.coordinator._uid}-{self.coordinator._eojgc}-{self.coordinator._eojcc}-{self.coordinator._eojci}-{self._op_code}"
         )
         self._device_name = name
         self._server_state = self.coordinator._api._state[
@@ -244,7 +241,7 @@ class EchonetSensor(EchonetEntity, SensorEntity):
         self._attr_state_class = self._sensor_attributes.get(CONF_STATE_CLASS)
 
         # Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
-        self._attr_name = f"{name} {get_name_by_epc_code(self._eojgc, self._eojcc, self._op_code, self._attr_device_class, self.coordinator._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
+        self._attr_name = f"{name} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._op_code, self._attr_device_class, self.coordinator._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
 
         if "dict_key" in _attr_keys:
             self._attr_unique_id += f'-{self._sensor_attributes["dict_key"]}'
@@ -292,7 +289,7 @@ class EchonetSensor(EchonetEntity, SensorEntity):
                 if self.coordinator._host_product_code
                 else ""
             ),
-            "model": EOJX_CLASS[self._eojgc][self._eojcc],
+            "model": EOJX_CLASS[self.coordinator._eojgc][self.coordinator._eojcc],
             # "sw_version": "",
         }
 
