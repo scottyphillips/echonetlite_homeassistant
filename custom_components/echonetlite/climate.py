@@ -124,17 +124,15 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
                 self.coordinator._instance.EPC_FUNCTIONS[ENL_SWING_MODE][1].values()
             ),
         }
-        if ENL_FANSPEED in list(self.coordinator._setPropertyMap):
+        if self.is_settable(ENL_FANSPEED):
             self._attr_supported_features = (
                 self._attr_supported_features | ClimateEntityFeature.FAN_MODE
             )
-        if ENL_AIR_VERT in list(
-            self.coordinator._setPropertyMap
-        ) or ENL_SWING_MODE in list(self.coordinator._setPropertyMap):
+        if self.is_settable(ENL_AIR_VERT) or self.is_settable(ENL_SWING_MODE):
             self._attr_supported_features = (
                 self._attr_supported_features | ClimateEntityFeature.SWING_MODE
             )
-        if ENL_HVAC_SILENT_MODE in list(self.coordinator._setPropertyMap):
+        if self.is_settable(ENL_HVAC_SILENT_MODE):
             self._attr_supported_features = (
                 self._attr_supported_features | ClimateEntityFeature.PRESET_MODE
             )

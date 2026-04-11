@@ -144,11 +144,11 @@ class EchonetLight(EchonetEntity, LightEntity):
             self._max_mireds = MAX_MIREDS
 
         # Determine supported color modes based on device capabilities
-        if options[ENL_COLOR_TEMP] in list(self.coordinator._setPropertyMap):
+        if self.is_settable(options[ENL_COLOR_TEMP]):
             self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
             self._attr_color_mode = ColorMode.COLOR_TEMP
 
-        if options[ENL_BRIGHTNESS] in list(self.coordinator._setPropertyMap):
+        if self.is_settable(options[ENL_BRIGHTNESS]):
             if not self._attr_supported_color_modes:
                 self._attr_supported_color_modes.add(ColorMode.BRIGHTNESS)
                 self._attr_color_mode = ColorMode.BRIGHTNESS

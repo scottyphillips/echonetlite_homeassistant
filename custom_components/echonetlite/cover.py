@@ -81,10 +81,10 @@ class EchonetCover(EchonetEntity, CoverEntity):
         self._support_flags = (
             CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
         )
-        if ENL_OPENING_LEVEL in list(self.coordinator._setPropertyMap):
+        if self.is_settable(ENL_OPENING_LEVEL):
             self._support_flags |= CoverEntityFeature.SET_POSITION
 
-        if ENL_BLIND_ANGLE in list(self.coordinator._setPropertyMap):
+        if self.is_settable(ENL_BLIND_ANGLE):
             self._support_flags |= (
                 CoverEntityFeature.OPEN_TILT
                 | CoverEntityFeature.CLOSE_TILT
