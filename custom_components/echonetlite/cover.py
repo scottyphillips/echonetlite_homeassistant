@@ -21,6 +21,7 @@ from homeassistant.components.cover import (
     CoverEntity,
     CoverEntityFeature,
 )
+from .base_entity import EchonetEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from pychonet.lib.eojx import EOJX_CLASS
@@ -64,7 +65,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     async_add_devices(entities, True)
 
 
-class EchonetCover(CoordinatorEntity, CoverEntity):
+class EchonetCover(EchonetEntity, CoverEntity):
     """Representation of an ECHONETLite cover device."""
 
     def __init__(self, coordinator, config):
@@ -74,7 +75,7 @@ class EchonetCover(CoordinatorEntity, CoverEntity):
             coordinator: The ECHONETConnector instance which is also a DataUpdateCoordinator.
             config: The config entry for this integration.
         """
-        super().__init__(coordinator)
+        super().__init__(coordinator, config)
         name = get_device_name(coordinator, config)
         self._attr_name = name
         self._device_name = name

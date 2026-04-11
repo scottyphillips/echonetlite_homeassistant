@@ -2,6 +2,7 @@ import logging
 from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import callback
+from .base_entity import EchonetEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from pychonet.HomeAirConditioner import (
     ENL_AIR_HORZ,
@@ -64,7 +65,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     async_add_entities(entities, True)
 
 
-class EchonetSelect(CoordinatorEntity, SelectEntity):
+class EchonetSelect(EchonetEntity, SelectEntity):
     _attr_translation_key = DOMAIN
 
     SELECT_USING_USER_OPTIONS = {
@@ -87,7 +88,7 @@ class EchonetSelect(CoordinatorEntity, SelectEntity):
 
     def __init__(self, coordinator, config, options, epc_code):
         """Initialize the select."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, config)
         name = get_device_name(coordinator, config)
         self._config = config
         self._code = epc_code

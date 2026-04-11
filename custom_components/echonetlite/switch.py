@@ -4,6 +4,7 @@ import asyncio
 import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA, CONF_NAME
 from homeassistant.components.switch import SwitchEntity
+from .base_entity import EchonetEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import get_name_by_epc_code, get_device_name
 from .const import (
@@ -98,7 +99,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     async_add_entities(entities, True)
 
 
-class EchonetSwitch(CoordinatorEntity[dict], SwitchEntity):
+class EchonetSwitch(EchonetEntity, SwitchEntity):
     """Representation of an ECHONETLite switch."""
 
     _attr_translation_key = DOMAIN
@@ -113,7 +114,7 @@ class EchonetSwitch(CoordinatorEntity[dict], SwitchEntity):
             options: Configuration options for this switch entity.
         """
         # Initialize coordinator first - must call parent before setting other properties
-        super().__init__(coordinator)
+        super().__init__(coordinator, config)
 
         self._code = epc_code
         self._options = options

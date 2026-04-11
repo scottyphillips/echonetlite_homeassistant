@@ -13,6 +13,7 @@ from pychonet.CeilingFan import (
 )
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.const import PRECISION_WHOLE
+from .base_entity import EchonetEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import get_device_name
@@ -45,12 +46,12 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     async_add_devices(entities, True)
 
 
-class EchonetFan(CoordinatorEntity[dict], FanEntity):
+class EchonetFan(EchonetEntity, FanEntity):
     """Representation of an ECHONETLite Fan device (eg Air purifier)."""
 
     def __init__(self, coordinator, config) -> None:
         """Initialize the fan entity."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, config)
 
         name = get_device_name(coordinator, config)
         self._attr_name = name

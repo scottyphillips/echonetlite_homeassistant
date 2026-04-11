@@ -14,6 +14,7 @@ from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
+from .base_entity import EchonetEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
@@ -205,7 +206,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     async_add_entities(entities, True)
 
 
-class EchonetSensor(CoordinatorEntity, SensorEntity):
+class EchonetSensor(EchonetEntity, SensorEntity):
     """Representation of an ECHONETLite Temperature Sensor."""
 
     _attr_translation_key = DOMAIN
@@ -220,7 +221,7 @@ class EchonetSensor(CoordinatorEntity, SensorEntity):
             attributes: Sensor configuration attributes.
             hass: Home Assistant instance (optional).
         """
-        super().__init__(coordinator)
+        super().__init__(coordinator, config)
 
         name = get_device_name(coordinator, config)
         self._op_code = epc_code

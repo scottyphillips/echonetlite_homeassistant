@@ -4,6 +4,7 @@ from datetime import time
 from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.components.time import TimeEntity
 from homeassistant.exceptions import InvalidStateError
+from .base_entity import EchonetEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import get_name_by_epc_code, get_device_name
 from .const import (
@@ -50,7 +51,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     async_add_entities(entities, True)
 
 
-class EchonetTime(CoordinatorEntity, TimeEntity):
+class EchonetTime(EchonetEntity, TimeEntity):
     """Representation of an ECHONET Lite Time entity."""
 
     _attr_translation_key = DOMAIN
@@ -64,7 +65,7 @@ class EchonetTime(CoordinatorEntity, TimeEntity):
             code: EPC operation code for this time entity.
             options: Entity configuration options including icon and name.
         """
-        super().__init__(coordinator)
+        super().__init__(coordinator, config)
 
         self._config = config
         self._code = epc_code

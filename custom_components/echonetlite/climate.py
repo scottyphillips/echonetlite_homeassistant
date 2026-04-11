@@ -86,9 +86,9 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     )
 
 
-class EchonetClimate(EchonetEntity):
+class EchonetClimate(EchonetEntity, ClimateEntity):
     """Representation of an ECHONETLite climate device."""
-    super().__init__(coordinator, config)
+    
     _attr_translation_key = DOMAIN
 
     def __init__(self, coordinator, config):

@@ -11,6 +11,7 @@ from homeassistant.const import (
     CONF_UNIT_OF_MEASUREMENT,
 )
 from homeassistant.helpers import config_validation as cv, entity_platform
+from .base_entity import EchonetEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.components.sensor import SensorDeviceClass
@@ -225,7 +226,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     async_add_entities(entities, True)
 
 
-class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
+class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
     """Representation of an ECHONETLite binary sensor."""
 
     _attr_translation_key = DOMAIN
@@ -233,7 +234,7 @@ class EchonetBinarySensor(CoordinatorEntity[dict], BinarySensorEntity):
     def __init__(self, coordinator, config, epc_code, attributes) -> None:
         """Initialize the sensor."""
         # Initialize coordinator first - must call parent before setting other properties
-        super().__init__(coordinator)
+        super().__init__(coordinator, config)
 
         name = get_device_name(coordinator, config)
         self._op_code = epc_code

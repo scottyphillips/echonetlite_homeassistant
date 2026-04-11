@@ -24,6 +24,7 @@ from homeassistant.components.light import (
     ATTR_COLOR_TEMP_KELVIN,
 )
 from homeassistant.core import callback
+from .base_entity import EchonetEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import get_device_name
@@ -108,7 +109,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     async_add_devices(entities, True)
 
 
-class EchonetLight(CoordinatorEntity, LightEntity):
+class EchonetLight(EchonetEntity, LightEntity):
     """Representation of a ECHONET light device."""
 
     _attr_translation_key = DOMAIN
@@ -121,7 +122,7 @@ class EchonetLight(CoordinatorEntity, LightEntity):
             config: The config entry for this integration.
             options: Custom configuration options for the light.
         """
-        super().__init__(coordinator)
+        super().__init__(coordinator, config)
         name = get_device_name(coordinator, config)
         self._attr_name = name
         self._device_name = name

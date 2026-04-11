@@ -9,6 +9,7 @@ from homeassistant.const import (
 )
 from homeassistant.exceptions import InvalidStateError
 from homeassistant.components.number import NumberEntity
+from .base_entity import EchonetEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from pychonet.lib.eojx import EOJX_CLASS
 from . import get_name_by_epc_code, get_unit_by_devise_class, get_device_name
@@ -49,12 +50,12 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     async_add_entities(entities, True)
 
 
-class EchonetNumber(CoordinatorEntity, NumberEntity):
+class EchonetNumber(EchonetEntity, NumberEntity):
     _attr_translation_key = DOMAIN
 
     def __init__(self, coordinator, config, options, epc_code):
         """Initialize the number."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, config)
         self._config = config
         self._code = epc_code
 
