@@ -19,7 +19,9 @@ from homeassistant.const import (
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_platform
 from pychonet.HomeAirConditioner import (
+    AIRFLOW_HORIZ,
     AIRFLOW_VERT,
+    ENL_AIR_HORZ,
     ENL_AIR_VERT,
     ENL_AUTO_DIRECTION,
     ENL_FANSPEED,
@@ -54,6 +56,7 @@ DEFAULT_HVAC_MODES = [
 DEFAULT_SWING_MODES = ["auto-vert"] + list(
     AIRFLOW_VERT.keys()
 )  # ["auto-vert","upper","upper-central","central","lower-central","lower"]
+DEFAULT_SWING_HORIZ_MODES = list(AIRFLOW_HORIZ.keys())
 DEFAULT_PRESET_MODES = list(SILENT_MODE.keys())  # ["normal", "high-speed", "silent"]
 
 SERVICE_SET_HUMIDIFER_DURING_HEATER = "set_humidifier_during_heater"
@@ -133,6 +136,12 @@ class EchonetClimate(ClimateEntity):
             self._attr_supported_features = (
                 self._attr_supported_features | ClimateEntityFeature.SWING_MODE
             )
+        if ENL_AIR_HORZ in list(self._connector._setPropertyMap):
+            if hasattr(ClimateEntityFeature, "SWING_HORIZONTAL_MODE"):
+                self._attr_supported_features = (
+                    self._attr_supported_features
+                    | ClimateEntityFeature.SWING_HORIZONTAL_MODE
+                )
         if ENL_HVAC_SILENT_MODE in list(self._connector._setPropertyMap):
             self._attr_supported_features = (
                 self._attr_supported_features | ClimateEntityFeature.PRESET_MODE
@@ -301,6 +310,12 @@ class EchonetClimate(ClimateEntity):
                 else None
             )
 
+        """horizontal swing mode setting."""
+        if ENL_AIR_HORZ in self._connector._setPropertyMap:
+            self._attr_swing_horizontal_mode = (
+                self._connector._update_data.get(ENL_AIR_HORZ)
+            )
+
         self._set_min_max_temp()
 
     async def async_set_fan_mode(self, fan_mode):
@@ -320,6 +335,10 @@ class EchonetClimate(ClimateEntity):
             await self._connector._instance.setSwingMode(swing_mode)
         else:
             await self._connector._instance.setAirflowVert(swing_mode)
+
+    async def async_set_swing_horizontal_mode(self, swing_horizontal_mode):
+        """Set new horizontal swing mode."""
+        await self._connector._instance.setAirflowHoriz(swing_horizontal_mode)
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
@@ -391,6 +410,14 @@ class EchonetClimate(ClimateEntity):
             self._attr_swing_modes = _modes
         else:
             self._attr_swing_modes = DEFAULT_SWING_MODES
+
+        """list of available horizontal swing modes."""
+        if ENL_AIR_HORZ in self._connector._setPropertyMap:
+            _modes = self._connector._user_options.get(ENL_AIR_HORZ)
+            if _modes:
+                self._attr_swing_horizontal_modes = _modes
+            else:
+                self._attr_swing_horizontal_modes = DEFAULT_SWING_HORIZ_MODES
 
         self._set_min_max_temp()
         if self.hass:
