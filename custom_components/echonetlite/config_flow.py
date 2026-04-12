@@ -426,10 +426,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         for del_key in [
                             "auto",
                             "non-auto",
-                            "auto-horiz",
                             "not-used",
-                            "horiz",
-                            "vert-horiz",
                         ]:
                             option_list.pop(del_key, None)
                     if self._config_entry.options.get(OPTION_HA_UI_SWING) is not None:
