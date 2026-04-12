@@ -311,10 +311,26 @@ class EchonetClimate(ClimateEntity):
             )
 
         """horizontal swing mode setting."""
-        if ENL_AIR_HORZ in self._connector._setPropertyMap:
-            self._attr_swing_horizontal_mode = (
-                self._connector._update_data.get(ENL_AIR_HORZ)
-            )
+        if hasattr(self, "_attr_swing_horizontal_modes"):
+            _horiz_modes = self._attr_swing_horizontal_modes or []
+            if (
+                self._connector._update_data.get(ENL_AUTO_DIRECTION)
+                in _horiz_modes
+            ):
+                self._attr_swing_horizontal_mode = self._connector._update_data.get(
+                    ENL_AUTO_DIRECTION
+                )
+            elif (
+                self._connector._update_data.get(ENL_SWING_MODE)
+                in _horiz_modes
+            ):
+                self._attr_swing_horizontal_mode = self._connector._update_data.get(
+                    ENL_SWING_MODE
+                )
+            else:
+                self._attr_swing_horizontal_mode = (
+                    self._connector._update_data.get(ENL_AIR_HORZ)
+                )
 
         self._set_min_max_temp()
 
@@ -338,7 +354,12 @@ class EchonetClimate(ClimateEntity):
 
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode):
         """Set new horizontal swing mode."""
-        await self._connector._instance.setAirflowHoriz(swing_horizontal_mode)
+        if swing_horizontal_mode in self._opc_data[ENL_AUTO_DIRECTION]:
+            await self._connector._instance.setAutoDirection(swing_horizontal_mode)
+        elif swing_horizontal_mode in self._opc_data[ENL_SWING_MODE]:
+            await self._connector._instance.setSwingMode(swing_horizontal_mode)
+        else:
+            await self._connector._instance.setAirflowHoriz(swing_horizontal_mode)
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
@@ -413,11 +434,21 @@ class EchonetClimate(ClimateEntity):
 
         """list of available horizontal swing modes."""
         if ENL_AIR_HORZ in self._connector._setPropertyMap:
+            horiz_modes = []
+            # Add horizontal oscillation modes from auto direction and swing mode
+            for mode in self._opc_data[ENL_AUTO_DIRECTION]:
+                if mode in ("auto-horiz",):
+                    horiz_modes.append(mode)
+            for mode in self._opc_data[ENL_SWING_MODE]:
+                if mode in ("horiz", "vert-horiz"):
+                    horiz_modes.append(mode)
+            # Add horizontal position modes
             _modes = self._connector._user_options.get(ENL_AIR_HORZ)
             if _modes:
-                self._attr_swing_horizontal_modes = _modes
+                horiz_modes.extend(_modes)
             else:
-                self._attr_swing_horizontal_modes = DEFAULT_SWING_HORIZ_MODES
+                horiz_modes.extend(DEFAULT_SWING_HORIZ_MODES)
+            self._attr_swing_horizontal_modes = horiz_modes
 
         self._set_min_max_temp()
         if self.hass:
