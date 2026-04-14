@@ -2,6 +2,9 @@
 
 import logging
 import voluptuous as vol
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Any, List, Optional
 
 from homeassistant.const import (
     CONF_ICON,
@@ -55,6 +58,126 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class ProcessingContext:
+    """Carries state through the value processing pipeline."""
+    raw_value: Any  # The original value from the coordinator
+    current_value: Any  # The value as it evolves through the pipeline
+    attributes: dict  # Sensor configuration attributes
+    coordinator: Any  # DataUpdateCoordinator
+    op_code: int
+
+
+class ValueProcessor(ABC):
+    """Base class for all pipeline stages."""
+
+    @abstractmethod
+    def process(self, context: ProcessingContext) -> ProcessingContext:
+        pass
+
+
+class ExtractionProcessor(ValueProcessor):
+    """Handles extracting the value from dicts or arrays."""
+
+    def process(self, context: ProcessingContext) -> ProcessingContext:
+        val = context.raw_value
+        attrs = context.attributes
+
+        if "dict_key" in attrs:
+            if hasattr(val, "get"):
+                context.current_value = val.get(attrs["dict_key"])
+            else:
+                context.current_value = None
+        elif "accessor_lambda" in attrs:
+            context.current_value = attrs["accessor_lambda"](
+                val, attrs["accessor_index"]
+            )
+        return context
+
+
+class MultiplierProcessor(ValueProcessor):
+    """Handles coefficient and multiplier logic."""
+
+    def process(self, context: ProcessingContext) -> ProcessingContext:
+        val = context.current_value
+        if not isinstance(val, (int, float)):
+            return context
+
+        attrs = context.attributes
+        res = val
+
+        # Direct Multiplier
+        if CONF_MULTIPLIER in attrs:
+            res *= attrs[CONF_MULTIPLIER]
+
+        # Opcode-based Multipliers
+        for key in [CONF_MULTIPLIER_OPCODE, CONF_MULTIPLIER_OPTIONAL_OPCODE]:
+            if key in attrs:
+                multiplier_opcode = attrs[key]
+                m_val = context.coordinator.data.get(multiplier_opcode)
+                if m_val is not None:
+                    res *= m_val
+                else:
+                    # If a required multiplier is missing, we invalidate the value
+                    context.current_value = None
+                    return context
+
+        context.current_value = res
+        return context
+
+
+class NormalizationProcessor(ValueProcessor):
+    """Handles device-specific edge cases and sensor class overrides."""
+
+    def process(self, context: ProcessingContext) -> ProcessingContext:
+        val = context.current_value
+        if val is None:
+            return context
+
+        attrs = context.attributes
+        device_class = attrs.get(CONF_TYPE)
+
+        # Temperature/Humidity edge cases (126/253)
+        if device_class in [SensorDeviceClass.TEMPERATURE, SensorDeviceClass.HUMIDITY]:
+            if val in [126, 253]:
+                context.current_value = None
+                return context
+
+        # Power underflow (65534 -> 1)
+        elif device_class == SensorDeviceClass.POWER:
+            if val == 65534:
+                context.current_value = 1
+                return context
+
+        # Generic safety check for other types
+        elif isinstance(val, (int, float)):
+            pass
+        elif len(str(val)) < 255:
+            pass
+        else:
+            context.current_value = None
+
+        return context
+
+
+class IconProcessor(ValueProcessor):
+    """Handles dynamic icon changes based on value."""
+
+    def process(self, context: ProcessingContext) -> ProcessingContext:
+        val = context.current_value
+        attrs = context.attributes
+
+        if val is not None and isinstance(val, (int, float)) and CONF_ICON_POSITIVE in attrs:
+            if val > 0:
+                attrs[CONF_ICON] = attrs[CONF_ICON_POSITIVE]
+            elif val < 0:
+                attrs[CONF_ICON] = attrs[CONF_ICON_NEGATIVE]
+            else:
+                attrs[CONF_ICON] = attrs[CONF_ICON_ZERO]
+
+        return context
 
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
@@ -271,105 +394,36 @@ class EchonetSensor(EchonetEntity, SensorEntity):
         return self.get_attr_native_value()
 
     def get_attr_native_value(self):
-        """Return the state of the sensor.
+        """Return the state of the sensor using a processing pipeline.
 
-        This method contains all transformation logic for computing the raw sensor value.
-        It is called by the native_value property getter.
+        This method orchestrates several processors to transform raw data into
+        the final sensor value.
         """
-        if self._op_code in self.coordinator.data:
-            new_val = self.coordinator.data[self._op_code]
+        if self._op_code not in self.coordinator.data:
+            return None
 
-            # Initialize extracted_value (will be set below based on attributes)
-            extracted_value = None
+        # 1. Initialize context
+        context = ProcessingContext(
+            raw_value=self.coordinator.data[self._op_code],
+            current_value=self.coordinator.data[self._op_code],
+            attributes=self._sensor_attributes,
+            coordinator=self.coordinator,
+            op_code=self._op_code,
+        )
 
-            # Extract value based on attributes (dict_key, accessor_lambda, or direct)
-            if "dict_key" in self._sensor_attributes:
-                if hasattr(new_val, "get"):
-                    extracted_value = new_val.get(self._sensor_attributes["dict_key"])
-                else:
-                    extracted_value = None
-            elif "accessor_lambda" in self._sensor_attributes:
-                extracted_value = self._sensor_attributes["accessor_lambda"](
-                    new_val, self._sensor_attributes["accessor_index"]
-                )
-            else:
-                extracted_value = new_val
+        # 2. Define the pipeline (could be moved to __init__ for performance)
+        pipeline: List[ValueProcessor] = [
+            ExtractionProcessor(),
+            MultiplierProcessor(),
+            NormalizationProcessor(),
+            IconProcessor(),
+        ]
 
-            if extracted_value is None:
-                return None
+        # 3. Execute the pipeline
+        for processor in pipeline:
+            context = processor.process(context)
 
-            # interactive icon
-            if CONF_ICON_POSITIVE in self._sensor_attributes:
-                if extracted_value > 0:
-                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
-                        CONF_ICON_POSITIVE
-                    ]
-                elif extracted_value < 0:
-                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
-                        CONF_ICON_NEGATIVE
-                    ]
-                else:
-                    self._sensor_attributes[CONF_ICON] = self._sensor_attributes[
-                        CONF_ICON_ZERO
-                    ]
-
-            # apply coefficients
-            if (
-                CONF_MULTIPLIER in self._sensor_attributes
-                or CONF_MULTIPLIER_OPCODE in self._sensor_attributes
-                or CONF_MULTIPLIER_OPTIONAL_OPCODE in self._sensor_attributes
-            ):
-                result_value = extracted_value
-                if CONF_MULTIPLIER in self._sensor_attributes:
-                    result_value = (
-                        result_value * self._sensor_attributes[CONF_MULTIPLIER]
-                    )
-                if CONF_MULTIPLIER_OPCODE in self._sensor_attributes:
-                    multiplier_opcode = self._sensor_attributes[CONF_MULTIPLIER_OPCODE]
-                    if (
-                        multiplier_opcode in self.coordinator.data
-                        and self.coordinator.data[multiplier_opcode] is not None
-                    ):
-                        result_value = (
-                            result_value * self.coordinator.data[multiplier_opcode]
-                        )
-                    else:
-                        return None
-                if CONF_MULTIPLIER_OPTIONAL_OPCODE in self._sensor_attributes:
-                    multiplier_opcode = self._sensor_attributes[
-                        CONF_MULTIPLIER_OPTIONAL_OPCODE
-                    ]
-                    if (
-                        multiplier_opcode in self.coordinator.data
-                        and self.coordinator.data[multiplier_opcode] is not None
-                    ):
-                        result_value = (
-                            result_value * self.coordinator.data[multiplier_opcode]
-                        )
-                return result_value
-
-            elif self._attr_device_class in [
-                SensorDeviceClass.TEMPERATURE,
-                SensorDeviceClass.HUMIDITY,
-            ]:
-                if extracted_value in [126, 253]:
-                    return None
-                else:
-                    return extracted_value
-            elif self._attr_device_class == SensorDeviceClass.POWER:
-                # Underflow (less than 1 W)
-                if extracted_value == 65534:
-                    return 1
-                else:
-                    return extracted_value
-            elif self._op_code in self.coordinator.data:
-                if isinstance(extracted_value, (int, float)):
-                    return extracted_value
-                if len(extracted_value) < 255:
-                    return extracted_value
-                else:
-                    return None
-        return None
+        return context.current_value
 
     async def async_set_on_timer_time(self, timer_time):
         val = str(timer_time).split(":")
