@@ -63,6 +63,7 @@ _LOGGER = logging.getLogger(__name__)
 @dataclass
 class ProcessingContext:
     """Carries state through the value processing pipeline."""
+
     raw_value: Any  # The original value from the coordinator
     current_value: Any  # The value as it evolves through the pipeline
     attributes: dict  # Sensor configuration attributes
@@ -169,7 +170,11 @@ class IconProcessor(ValueProcessor):
         val = context.current_value
         attrs = context.attributes
 
-        if val is not None and isinstance(val, (int, float)) and CONF_ICON_POSITIVE in attrs:
+        if (
+            val is not None
+            and isinstance(val, (int, float))
+            and CONF_ICON_POSITIVE in attrs
+        ):
             if val > 0:
                 attrs[CONF_ICON] = attrs[CONF_ICON_POSITIVE]
             elif val < 0:
