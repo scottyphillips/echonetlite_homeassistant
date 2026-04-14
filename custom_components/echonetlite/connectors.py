@@ -39,6 +39,7 @@ MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
+
 def regist_as_inputs(epc_function_data):
     """Check if EPC function data should be registered as input entity.
 
@@ -159,9 +160,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         self._setPropertyMap = instance["setmap"]
 
         # Operation codes mapping for this device type
-        self._enl_op_codes = ENL_OP_CODES.get(self._eojgc, {}).get(
-            self._eojcc, {}
-        )
+        self._enl_op_codes = ENL_OP_CODES.get(self._eojgc, {}).get(self._eojcc, {})
 
         # Update management - batch requests and flags
         self._update_flag_batches: list[list[int]] = []

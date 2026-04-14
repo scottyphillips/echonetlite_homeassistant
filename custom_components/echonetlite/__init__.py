@@ -462,6 +462,3 @@ async def update_listener(hass, entry):
             return await hass.config_entries.async_reload(entry.entry_id)
         else:
             return None
-
-
-

@@ -1412,12 +1412,36 @@ DEFAULT_CLIMATE_TEMPERATURES = {
 }
 
 TEMP_OPTIONS = {
-    "min_temp_heat": {"min": 10, "max": 25, "default": DEFAULT_CLIMATE_TEMPERATURES["heat"]["min"]},
-    "max_temp_heat": {"min": 18, "max": 30, "default": DEFAULT_CLIMATE_TEMPERATURES["heat"]["max"]},
-    "min_temp_cool": {"min": 15, "max": 25, "default": DEFAULT_CLIMATE_TEMPERATURES["cool"]["min"]},
-    "max_temp_cool": {"min": 18, "max": 30, "default": DEFAULT_CLIMATE_TEMPERATURES["cool"]["max"]},
-    "min_temp_auto": {"min": 15, "max": 25, "default": DEFAULT_CLIMATE_TEMPERATURES["auto"]["min"]},
-    "max_temp_auto": {"min": 18, "max": 30, "default": DEFAULT_CLIMATE_TEMPERATURES["auto"]["max"]},
+    "min_temp_heat": {
+        "min": 10,
+        "max": 25,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["heat"]["min"],
+    },
+    "max_temp_heat": {
+        "min": 18,
+        "max": 30,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["heat"]["max"],
+    },
+    "min_temp_cool": {
+        "min": 15,
+        "max": 25,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["cool"]["min"],
+    },
+    "max_temp_cool": {
+        "min": 18,
+        "max": 30,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["cool"]["max"],
+    },
+    "min_temp_auto": {
+        "min": 15,
+        "max": 25,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["auto"]["min"],
+    },
+    "max_temp_auto": {
+        "min": 18,
+        "max": 30,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["auto"]["max"],
+    },
 }
 
 MISC_OPTIONS = {

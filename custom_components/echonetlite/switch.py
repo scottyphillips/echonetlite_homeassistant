@@ -22,6 +22,7 @@ from pychonet.lib.eojx import EOJX_CLASS
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     """Set up the ECHONETLite switch platform."""
     entities = []
@@ -72,9 +73,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                 )
 
         # Auto configure of the power switch
-        # if (eojgc == 0x01 and eojcc in (0x30, 0x35)) or ( # temporary commented out so I can test on my air conditioner which has 0x01 class group code
-        if (eojgc == 0x01 and eojcc == 0x35) or (  # remove line when testing is done
-            eojgc == 0x02 and eojcc in (0x90, 0x91)
+        if (eojgc == 0x01 and eojcc in (0x30, 0x35)) or (  #
+            # if (eojgc == 0x01 and eojcc == 0x35) or (  # For testing if required
+            eojgc == 0x02
+            and eojcc in (0x90, 0x91)
         ):
             # Home air conditioner, Air cleaner, General Lighting, Single Function Lighting
             continue

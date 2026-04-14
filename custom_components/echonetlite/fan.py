@@ -32,8 +32,8 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         if entity["instance"]["eojgc"] == 0x01 and (
             entity["instance"]["eojcc"] == 0x35
-            or entity["instance"]["eojcc"]
-            == 0x30  # Temporary added back in for testing on my air conditioner which has 0x30 class code - remove when testing is done
+            # or entity["instance"]["eojcc"]
+            # == 0x30  # Uncomment for testing fan entity using air conditioner (0x01-0x30)
             or entity["instance"]["eojcc"] == 0x3A
         ):  # Home Air Cleaner or Ceiling Fan
             _LOGGER.debug(f"Configuring ECHONETLite fan {entity}")

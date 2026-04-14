@@ -91,14 +91,14 @@ class EchonetEntity(CoordinatorEntity):
 
     def is_settable(self, epc_code: int) -> bool:
         """Check if an EPC code is settable on this device.
-        
+
         Args:
             epc_code: The EPC operation code to check.
-            
+
         Returns:
             True if the EPC code exists in the device's setmap (setPropertyMap),
             False otherwise.
-            
+
         Example usage:
             if self.is_settable(ENL_FANSPEED):
                 self._attr_supported_features |= FanEntityFeature.PRESET_MODE

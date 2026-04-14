@@ -136,7 +136,8 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             )
         if self.is_settable(ENL_AIR_HORZ):
             self._attr_supported_features = (
-                self._attr_supported_features | ClimateEntityFeature.SWING_HORIZONTAL_MODE
+                self._attr_supported_features
+                | ClimateEntityFeature.SWING_HORIZONTAL_MODE
             )
         if self.is_settable(ENL_HVAC_SILENT_MODE):
             self._attr_supported_features = (
@@ -411,7 +412,7 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
 
     def update_option_listener(self):
         """Update list of available fan and swing modes from options."""
-        
+
         """list of available fan modes."""
         _modes = self.coordinator._user_options.get(ENL_FANSPEED)
         if _modes:
