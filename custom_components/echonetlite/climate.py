@@ -409,39 +409,39 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
         # Inform HA that the state needs writing to the UI.
         self.async_write_ha_state()
 
-def update_option_listener(self):
-    """Update list of available fan and swing modes from options."""
-    
-    """list of available fan modes."""
-    _modes = self.coordinator._user_options.get(ENL_FANSPEED)
-    if _modes:
-        self._attr_fan_modes = _modes
-    else:
-        self._attr_fan_modes = DEFAULT_FAN_MODES
-
-    """list of available swing modes (vertical)."""
-    # ⚠️ This only runs because feature detection already enabled SWING_MODE
-    _modes = self.coordinator._user_options.get(OPTION_HA_UI_SWING)
-    if _modes and len(_modes):
-        self._attr_swing_modes = _modes
-    elif _modes := self.coordinator._user_options.get(ENL_AIR_VERT):
-        self._attr_swing_modes = _modes
-    else:
-        self._attr_swing_modes = DEFAULT_SWING_MODES
-
-    """list of available horizontal swing modes."""
-    # ✅ This check IS needed (horizontal is optional)
-    if self.is_settable(ENL_AIR_HORZ):
-        _modes = self.coordinator._user_options.get(ENL_AIR_HORZ)
-        if _modes and len(_modes):
-            self._attr_swing_horizontal_modes = _modes
-        elif _modes := self.coordinator._user_options.get(OPTION_HA_UI_SWING):
-            self._attr_swing_horizontal_modes = _modes
+    def update_option_listener(self):
+        """Update list of available fan and swing modes from options."""
+        
+        """list of available fan modes."""
+        _modes = self.coordinator._user_options.get(ENL_FANSPEED)
+        if _modes:
+            self._attr_fan_modes = _modes
         else:
-            self._attr_swing_horizontal_modes = DEFAULT_SWING_HORIZ_MODES
+            self._attr_fan_modes = DEFAULT_FAN_MODES
 
-    if self.hass:
-        self.async_schedule_update_ha_state()
+        """list of available swing modes (vertical)."""
+        # ⚠️ This only runs because feature detection already enabled SWING_MODE
+        _modes = self.coordinator._user_options.get(OPTION_HA_UI_SWING)
+        if _modes and len(_modes):
+            self._attr_swing_modes = _modes
+        elif _modes := self.coordinator._user_options.get(ENL_AIR_VERT):
+            self._attr_swing_modes = _modes
+        else:
+            self._attr_swing_modes = DEFAULT_SWING_MODES
+
+        """list of available horizontal swing modes."""
+        # ✅ This check IS needed (horizontal is optional)
+        if self.is_settable(ENL_AIR_HORZ):
+            _modes = self.coordinator._user_options.get(ENL_AIR_HORZ)
+            if _modes and len(_modes):
+                self._attr_swing_horizontal_modes = _modes
+            elif _modes := self.coordinator._user_options.get(OPTION_HA_UI_SWING):
+                self._attr_swing_horizontal_modes = _modes
+            else:
+                self._attr_swing_horizontal_modes = DEFAULT_SWING_HORIZ_MODES
+
+        if self.hass:
+            self.async_schedule_update_ha_state()
 
     def _normalize_settemp(self, req: float | int | None) -> int | None:
         """
