@@ -315,10 +315,12 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             try:
                 return await self.poll_pychonet(no_request=False)
             except Exception as err:
+                _LOGGER.error("Failed to process ECHONETLite push notification: %s", err)
                 raise UpdateFailed(f"Retry failed after MPC adjustment: {err}")
 
         except DeviceTimeoutError as err:
             # This is the "Magic Clause": Raising UpdateFailed marks entities as Unavailable
+            _LOGGER.debug("Device Timeout for {self._host}: %s", err)
             raise UpdateFailed(f"Offline: {err}")
 
     async def async_update_callback(self, isPush: bool = False):
@@ -329,8 +331,9 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         """
         try:
             # Grab what the library currently knows (no network request)
+            _LOGGER.debug("Push notification for {self._host}: %s")
             new_data = await self.poll_pychonet(no_request=True)
-
+            _LOGGER.debug("Data from push notification}: %s", new_data)
             if new_data:
                 # Merge with existing coordinator data
                 # Use 'self.data or {}' in case this is the first update
