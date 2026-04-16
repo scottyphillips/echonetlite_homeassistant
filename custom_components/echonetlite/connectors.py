@@ -288,6 +288,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         """
         try:
             # Standard poll
+            _LOGGER.debug(f"Polling ECHONETLite Host {self._host}: %s")
             return await self.poll_pychonet(no_request=False)
 
         except EchonetMaxOpcError as ex:
@@ -315,7 +316,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             try:
                 return await self.poll_pychonet(no_request=False)
             except Exception as err:
-                _LOGGER.error("Failed to process ECHONETLite push notification: %s", err)
+                _LOGGER.error("Failed to process ECHONETLite polling notification: %s", err)
                 raise UpdateFailed(f"Retry failed after MPC adjustment: {err}")
 
         except DeviceTimeoutError as err:
