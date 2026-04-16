@@ -331,16 +331,17 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         """
         try:
             # Grab what the library currently knows (no network request)
-            _LOGGER.debug("Push notification for {self._host}: %s")
+            _LOGGER.debug(f"Push notification for {self._host}: %s")
             new_data = await self.poll_pychonet(no_request=True)
-            _LOGGER.debug("Data from push notification}: %s", new_data)
+            _LOGGER.debug(f"Data from push notification: {new_data}")
             if new_data:
                 # Merge with existing coordinator data
                 # Use 'self.data or {}' in case this is the first update
                 combined_data = {**(self.data or {}), **new_data}
 
                 # This triggers all entities to update their state immediately
-                self.async_set_updated_data(combined_data)
+                self.data = combined_data
+                self.async_update_listeners()
 
         except Exception as err:
             _LOGGER.error("Failed to process ECHONETLite push notification: %s", err)
