@@ -362,7 +362,7 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             await self.coordinator._instance.setOperationalTemperature(settemp)
 
     async def async_set_humidity(self, humidity: int) -> None:
-        await self.coordinator._instance.setOperationalTemperature(humidity)
+        await self.coordinator._instance.setOperationalHumidity(humidity)
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode (including off)"""
