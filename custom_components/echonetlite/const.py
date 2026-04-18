@@ -259,7 +259,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -277,7 +277,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -295,7 +295,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -313,7 +313,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -331,7 +331,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -349,7 +349,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -367,7 +367,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time

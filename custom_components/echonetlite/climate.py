@@ -145,7 +145,6 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             )
         self._attr_hvac_modes = DEFAULT_HVAC_MODES
         self._attr_preset_modes = DEFAULT_PRESET_MODES
-        self._olddata = {}
 
         self._last_mode = HVACMode.OFF
 
@@ -285,11 +284,6 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             return None
 
     @property
-    def swing_horizontal_mode(self) -> str | None:
-        """Return the current horizontal swing mode."""
-        return self.coordinator.data.get(ENL_AIR_HORZ)
-
-    @property
     def min_temp(self) -> float:
         """Return the minimum temperature based on current operation mode."""
         mode = self.hvac_mode
@@ -350,11 +344,11 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode):
         """Set new horizontal swing mode."""
         if swing_horizontal_mode in self._opc_data[ENL_AUTO_DIRECTION]:
-            await self._connector._instance.setAutoDirection(swing_horizontal_mode)
+            await self.coordinator._instance.setAutoDirection(swing_horizontal_mode)
         elif swing_horizontal_mode in self._opc_data[ENL_SWING_MODE]:
-            await self._connector._instance.setSwingMode(swing_horizontal_mode)
+            await self.coordinator._instance.setSwingMode(swing_horizontal_mode)
         else:
-            await self._connector._instance.setAirflowHoriz(swing_horizontal_mode)
+            await self.coordinator._instance.setAirflowHoriz(swing_horizontal_mode)
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
@@ -393,7 +387,6 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
         """Register callbacks."""
         await super().async_added_to_hass()
         self.coordinator.add_update_option_listener(self.update_option_listener)
-        # self.coordinator.register_async_update_callbacks(self.async_update_callback)
 
     @callback
     def _handle_coordinator_update(self) -> None:

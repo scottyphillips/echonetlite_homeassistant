@@ -391,8 +391,6 @@ class EchonetSensor(EchonetEntity, SensorEntity):
 
         self._attr_available = True
 
-        #   self.update_option_listener()
-
     @property
     def native_value(self):
         """Return the state of the sensor."""
