@@ -316,7 +316,9 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             try:
                 return await self.poll_pychonet(no_request=False)
             except Exception as err:
-                _LOGGER.error("Failed to process ECHONETLite polling notification: %s", err)
+                _LOGGER.error(
+                    "Failed to process ECHONETLite polling notification: %s", err
+                )
                 raise UpdateFailed(f"Retry failed after MPC adjustment: {err}")
 
         except DeviceTimeoutError as err:
@@ -379,11 +381,11 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 update_data[flags[0]] = batch_data
 
         return update_data
-    
+
     async def poll_pychonet_specific(self, epcs: list[int]) -> dict[int, Any]:
         """Fetch specific EPCs from the pychonet instance.
-        
-        This bypasses the standard batching logic to allow for rapid 
+
+        This bypasses the standard batching logic to allow for rapid
         verification of specific state changes.
         """
         _LOGGER.debug("Targeted poll for %s at %s", epcs, self._host)
@@ -394,7 +396,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         batch_data = await self._instance.update(epcs)
 
         if batch_data is False:
-            # We don't necessarily want to raise UpdateFailed here and mark 
+            # We don't necessarily want to raise UpdateFailed here and mark
             # the whole device unavailable just because a targeted sniff failed.
             _LOGGER.warning("Targeted poll failed for EPCs %s", epcs)
             return {}
@@ -402,7 +404,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         if isinstance(batch_data, dict):
             update_data.update(batch_data)
         elif len(epcs) == 1:
-            # Handle the case where pychonet returns a single value 
+            # Handle the case where pychonet returns a single value
             # instead of a dict for a single-EPC request
             update_data[epcs[0]] = batch_data
 
@@ -410,7 +412,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
     async def async_set_and_verify(self, epcs: list[int], value: Any, set_coro):
         """
-        Optimistically sets multiple EPCs to the same value, 
+        Optimistically sets multiple EPCs to the same value,
         executes the command, and schedules a targeted poll.
         """
         # 1. Optimistic Update for all related EPCs
