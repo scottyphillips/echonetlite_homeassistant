@@ -415,15 +415,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         Optimistically sets multiple EPCs to the same value,
         executes the command, and schedules a targeted poll.
         """
-        # 1. Optimistic Update for all related EPCs
-        for epc in epcs:
-            self.data[epc] = value
-        self.async_update_listeners()
-
-        # 2. Execute the set command
+        # 1. Execute the set command
         await set_coro
 
-        # 3. Targeted Background Verification
+        # 2. Targeted Background Verification
         async def verify():
             await asyncio.sleep(0.8)
             confirmed = await self.poll_pychonet_specific(epcs)

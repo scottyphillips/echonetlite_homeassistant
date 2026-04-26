@@ -326,14 +326,14 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode with snappy verification."""
         await self.coordinator.async_set_and_verify(
-            [0xA0], fan_mode, self.coordinator._instance.setFanSpeed(fan_mode)
+            [0xA0], self.coordinator._instance.setFanSpeed(fan_mode)
         )
 
     async def async_set_preset_mode(self, preset_mode):
         """Set new preset mode - This is normal/high-speed/silent"""
         # Assuming 0xB2 is the EPC for Silent/Preset mode
         await self.coordinator.async_set_and_verify(
-            0xB2, preset_mode, self.coordinator._instance.setSilentMode(preset_mode)
+            [0xB2], self.coordinator._instance.setSilentMode(preset_mode)
         )
 
     async def async_set_swing_mode(self, swing_mode):
@@ -353,7 +353,7 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             )
 
         # 2. Use the helper for the optimistic update and targeted poll
-        await self.coordinator.async_set_and_verify([epc], swing_mode, coro)
+        await self.coordinator.async_set_and_verify([epc], coro)
 
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode):
         """Set new horizontal swing mode with snappy verification."""
@@ -370,7 +370,7 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
                 swing_horizontal_mode
             )
 
-        await self.coordinator.async_set_and_verify([epc], swing_horizontal_mode, coro)
+        await self.coordinator.async_set_and_verify([epc], coro)
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures with snappy verification."""
@@ -387,7 +387,6 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             # Use the helper for the temp EPC (usually 0xB3)
             await self.coordinator.async_set_and_verify(
                 [ENL_HVAC_SET_TEMP],  # Replace with your actual EPC constant
-                settemp,
                 self.coordinator._instance.setOperationalTemperature(settemp),
             )
 
@@ -396,7 +395,6 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
         # Use the helper for the humidity EPC (usually 0xB4)
         await self.coordinator.async_set_and_verify(
             [ENL_HVAC_SET_HUMIDITY],  # Replace with your actual EPC constant
-            humidity,
             self.coordinator._instance.setOperationalHumidity(humidity),
         )
 
@@ -409,7 +407,7 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
         # We update both Power (0x80) and Mode (0xB0)
         # because 'off' changes 0x80, and 'heat' changes both.
         await self.coordinator.async_set_and_verify(
-            [0x80, 0xB0], hvac_mode, self.coordinator._instance.setMode(target_mode)
+            [0x80, 0xB0], self.coordinator._instance.setMode(target_mode)
         )
 
     async def async_turn_on(self):
@@ -417,15 +415,14 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
         # We target 0x80 (Power) and 0xB0 (Mode) to ensure
         # the UI lights up both the power toggle and the mode icon.
         await self.coordinator.async_set_and_verify(
-            [0x80, 0xB0],
-            "on",  # Or the appropriate internal state for 'on'
+            [0x80, 0xB0],  # Or the appropriate internal state for 'on'
             self.coordinator._instance.on(),
         )
 
     async def async_turn_off(self):
         """Turn off with snappy verification."""
         await self.coordinator.async_set_and_verify(
-            [0x80, 0xB0], "off", self.coordinator._instance.off()
+            [0x80, 0xB0], self.coordinator._instance.off()
         )
 
     async def async_set_humidifier_during_heater(self, state, humidity):
