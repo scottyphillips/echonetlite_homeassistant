@@ -410,7 +410,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         return update_data
 
-    async def async_set_and_verify(self, epcs: list[int], value: Any, set_coro):
+    async def async_set_and_verify(self, epcs: list[int], set_coro):
         """
         Optimistically sets multiple EPCs to the same value,
         executes the command, and schedules a targeted poll.
