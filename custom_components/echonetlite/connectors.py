@@ -379,6 +379,57 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 update_data[flags[0]] = batch_data
 
         return update_data
+    
+    async def poll_pychonet_specific(self, epcs: list[int]) -> dict[int, Any]:
+        """Fetch specific EPCs from the pychonet instance.
+        
+        This bypasses the standard batching logic to allow for rapid 
+        verification of specific state changes.
+        """
+        _LOGGER.debug("Targeted poll for %s at %s", epcs, self._host)
+        update_data = {}
+
+        # We call the library update directly with the specific list
+        # No 'no_request' logic here because the whole point is a fresh network hit
+        batch_data = await self._instance.update(epcs)
+
+        if batch_data is False:
+            # We don't necessarily want to raise UpdateFailed here and mark 
+            # the whole device unavailable just because a targeted sniff failed.
+            _LOGGER.warning("Targeted poll failed for EPCs %s", epcs)
+            return {}
+
+        if isinstance(batch_data, dict):
+            update_data.update(batch_data)
+        elif len(epcs) == 1:
+            # Handle the case where pychonet returns a single value 
+            # instead of a dict for a single-EPC request
+            update_data[epcs[0]] = batch_data
+
+        return update_data
+
+    async def async_set_and_verify(self, epcs: list[int], value: Any, set_coro):
+        """
+        Optimistically sets multiple EPCs to the same value, 
+        executes the command, and schedules a targeted poll.
+        """
+        # 1. Optimistic Update for all related EPCs
+        for epc in epcs:
+            self.data[epc] = value
+        self.async_update_listeners()
+
+        # 2. Execute the set command
+        await set_coro
+
+        # 3. Targeted Background Verification
+        async def verify():
+            await asyncio.sleep(0.8)
+            confirmed = await self.poll_pychonet_specific(epcs)
+            if confirmed:
+                self.data.update(confirmed)
+                self.async_update_listeners()
+
+        self.hass.async_create_task(verify())
 
     def _make_update_flags_full_list(self) -> bool:
         """Build the complete list of EPC codes to poll.

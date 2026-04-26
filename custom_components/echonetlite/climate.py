@@ -324,60 +324,105 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
                 self._last_mode = mode
 
     async def async_set_fan_mode(self, fan_mode):
-        """Set new fan mode."""
-        _LOGGER.debug(f"Updated fan mode is: {fan_mode}")
-        await self.coordinator._instance.setFanSpeed(fan_mode)
+        """Set new fan mode with snappy verification."""
+        await self.coordinator.async_set_and_verify(
+            [0xA0], 
+            fan_mode, 
+            self.coordinator._instance.setFanSpeed(fan_mode)
+        )
 
     async def async_set_preset_mode(self, preset_mode):
         """Set new preset mode - This is normal/high-speed/silent"""
-        await self.coordinator._instance.setSilentMode(preset_mode)
+        # Assuming 0xB2 is the EPC for Silent/Preset mode
+        await self.coordinator.async_set_and_verify(
+            0xB2, 
+            preset_mode, 
+            self.coordinator._instance.setSilentMode(preset_mode)
+        )
 
     async def async_set_swing_mode(self, swing_mode):
-        """Set new swing mode."""
+        """Set new swing mode with snappy verification."""
+        # 1. Determine which EPC we are actually targeting
         if swing_mode in self._opc_data[ENL_AUTO_DIRECTION]:
-            await self.coordinator._instance.setAutoDirection(swing_mode)
+            epc, coro = ENL_AUTO_DIRECTION, self.coordinator._instance.setAutoDirection(swing_mode)
         elif swing_mode in self._opc_data[ENL_SWING_MODE]:
-            await self.coordinator._instance.setSwingMode(swing_mode)
+            epc, coro = ENL_SWING_MODE, self.coordinator._instance.setSwingMode(swing_mode)
         else:
-            await self.coordinator._instance.setAirflowVert(swing_mode)
+            epc, coro = ENL_AIR_VERT, self.coordinator._instance.setAirflowVert(swing_mode)
+
+        # 2. Use the helper for the optimistic update and targeted poll
+        await self.coordinator.async_set_and_verify([epc], swing_mode, coro)
 
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode):
-        """Set new horizontal swing mode."""
+        """Set new horizontal swing mode with snappy verification."""
         if swing_horizontal_mode in self._opc_data[ENL_AUTO_DIRECTION]:
-            await self.coordinator._instance.setAutoDirection(swing_horizontal_mode)
+            epc, coro = ENL_AUTO_DIRECTION, self.coordinator._instance.setAutoDirection(swing_horizontal_mode)
         elif swing_horizontal_mode in self._opc_data[ENL_SWING_MODE]:
-            await self.coordinator._instance.setSwingMode(swing_horizontal_mode)
+            epc, coro = ENL_SWING_MODE, self.coordinator._instance.setSwingMode(swing_horizontal_mode)
         else:
-            await self.coordinator._instance.setAirflowHoriz(swing_horizontal_mode)
+            epc, coro = ENL_AIR_HORZ, self.coordinator._instance.setAirflowHoriz(swing_horizontal_mode)
+
+        await self.coordinator.async_set_and_verify([epc], swing_horizontal_mode, coro)
 
     async def async_set_temperature(self, **kwargs):
-        """Set new target temperatures."""
-        # Check has HVAC Mode
+        """Set new target temperatures with snappy verification."""
+        # 1. Handle HVAC Mode change if present
         hvac_mode = kwargs.get(ATTR_HVAC_MODE)
         if hvac_mode is not None:
+            # This will trigger its own async_set_and_verify within async_set_hvac_mode
             await self.async_set_hvac_mode(hvac_mode)
 
-        settemp = self._normalize_settemp(kwargs.get(ATTR_TEMPERATURE))
-        if kwargs.get(ATTR_TEMPERATURE) is not None:
-            await self.coordinator._instance.setOperationalTemperature(settemp)
+        # 2. Handle Temperature change
+        temp_val = kwargs.get(ATTR_TEMPERATURE)
+        if temp_val is not None:
+            settemp = self._normalize_settemp(temp_val)
+            # Use the helper for the temp EPC (usually 0xB3)
+            await self.coordinator.async_set_and_verify(
+                [ENL_HVAC_SET_TEMP], # Replace with your actual EPC constant
+                settemp,
+                self.coordinator._instance.setOperationalTemperature(settemp)
+            )
 
     async def async_set_humidity(self, humidity: int) -> None:
-        await self.coordinator._instance.setOperationalTemperature(humidity)
+        """Set new target humidity."""
+        # Use the helper for the humidity EPC (usually 0xB4)
+        await self.coordinator.async_set_and_verify(
+            [ENL_HVAC_SET_HUMIDITY], # Replace with your actual EPC constant
+            humidity,
+            self.coordinator._instance.setOperationalHumidity(humidity)
+        )
 
     async def async_set_hvac_mode(self, hvac_mode):
-        """Set new operation mode (including off)"""
-        if hvac_mode == "heat_cool":
-            await self.coordinator._instance.setMode("auto")
-        else:
-            await self.coordinator._instance.setMode(hvac_mode)
+        """Set new operation mode with dual-EPC verification."""
+        _LOGGER.debug(f"Setting HVAC mode to: {hvac_mode}")
+
+        target_mode = "auto" if hvac_mode == "heat_cool" else hvac_mode
+        
+        # We update both Power (0x80) and Mode (0xB0)
+        # because 'off' changes 0x80, and 'heat' changes both.
+        await self.coordinator.async_set_and_verify(
+            [0x80, 0xB0], 
+            hvac_mode, 
+            self.coordinator._instance.setMode(target_mode)
+        )
 
     async def async_turn_on(self):
-        """Turn on."""
-        await self.coordinator._instance.on()
+        """Turn on with snappy verification."""
+        # We target 0x80 (Power) and 0xB0 (Mode) to ensure 
+        # the UI lights up both the power toggle and the mode icon.
+        await self.coordinator.async_set_and_verify(
+            [0x80, 0xB0], 
+            "on", # Or the appropriate internal state for 'on'
+            self.coordinator._instance.on()
+        )
 
     async def async_turn_off(self):
-        """Turn off."""
-        await self.coordinator._instance.off()
+        """Turn off with snappy verification."""
+        await self.coordinator.async_set_and_verify(
+            [0x80, 0xB0], 
+            "off", 
+            self.coordinator._instance.off()
+        )
 
     async def async_set_humidifier_during_heater(self, state, humidity):
         """Handle boost heating service call."""
