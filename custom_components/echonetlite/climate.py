@@ -237,9 +237,27 @@ class EchonetClimate(ClimateEntity):
         self._attr_hvac_action = HVACAction.OFF
         if self._connector._update_data[ENL_STATUS] == DATA_STATE_ON:
             if self._connector._update_data[ENL_HVAC_MODE] == HVACMode.HEAT:
-                self._attr_hvac_action = HVACAction.HEATING
+                _room_temp = self._connector._update_data.get(ENL_HVAC_ROOM_TEMP)
+                _set_temp = self._connector._update_data.get(ENL_HVAC_SET_TEMP)
+                if (
+                    _room_temp is not None
+                    and _set_temp is not None
+                    and _room_temp >= _set_temp
+                ):
+                    self._attr_hvac_action = HVACAction.IDLE
+                else:
+                    self._attr_hvac_action = HVACAction.HEATING
             elif self._connector._update_data[ENL_HVAC_MODE] == HVACMode.COOL:
-                self._attr_hvac_action = HVACAction.COOLING
+                _room_temp = self._connector._update_data.get(ENL_HVAC_ROOM_TEMP)
+                _set_temp = self._connector._update_data.get(ENL_HVAC_SET_TEMP)
+                if (
+                    _room_temp is not None
+                    and _set_temp is not None
+                    and _room_temp <= _set_temp
+                ):
+                    self._attr_hvac_action = HVACAction.IDLE
+                else:
+                    self._attr_hvac_action = HVACAction.COOLING
             elif self._connector._update_data[ENL_HVAC_MODE] == HVACMode.DRY:
                 self._attr_hvac_action = HVACAction.DRYING
             elif self._connector._update_data[ENL_HVAC_MODE] == HVACMode.FAN_ONLY:
