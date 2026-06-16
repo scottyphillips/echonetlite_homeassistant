@@ -2,47 +2,45 @@
 
 from __future__ import annotations
 
-import logging
 import asyncio
+import logging
 from typing import Any
 
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigEntryState, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.selector import selector
-from pychonet.lib.const import (
-    ENL_STATMAP,
-    ENL_SETMAP,
-    ENL_GETMAP,
-    GET,
-)
-
-# from aioudp import UDPServer
-from pychonet.lib.udpserver import UDPServer
-from pychonet.lib.epc_functions import _null_padded_optional_string
 
 # from pychonet import Factory
 from pychonet import ECHONETAPIClient
-
 from pychonet.HomeAirConditioner import (
     ENL_AIR_VERT,
     ENL_AUTO_DIRECTION,
     ENL_SWING_MODE,
 )
+from pychonet.lib.const import (
+    ENL_GETMAP,
+    ENL_SETMAP,
+    ENL_STATMAP,
+    GET,
+)
+from pychonet.lib.epc_functions import _null_padded_optional_string
+
+# from aioudp import UDPServer
+from pychonet.lib.udpserver import UDPServer
 
 from .const import (
-    DOMAIN,
-    USER_OPTIONS,
-    TEMP_OPTIONS,
-    MISC_OPTIONS,
-    ENL_HVAC_MODE,
     CONF_OTHER_MODE,
+    DOMAIN,
+    ENL_HVAC_MODE,
+    MISC_OPTIONS,
     OPTION_HA_UI_SWING,
+    TEMP_OPTIONS,
+    USER_OPTIONS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -58,15 +56,15 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 _detected_hosts = {}
-_init_server = None
 
 
 async def enumerate_instances(
-    hass: HomeAssistant, host: str, newhost: bool = False
+    hass: HomeAssistant, host: str, newhost: bool = False, init_server=None
 ) -> list[dict[str, Any]]:
     """Validate the user input allows us to connect."""
     _LOGGER.debug(f"IP address is {host}")
     server = None
+    close_server = False
     if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug("API listener has already been setup previously..")
         server = hass.data[DOMAIN]["api"]
@@ -78,9 +76,9 @@ async def enumerate_instances(
                     if inst:
                         if inst.get("host") == host:
                             raise ErrorConnect("already_configured")
-    elif _init_server:
+    elif init_server:
         _LOGGER.debug("API listener has already been setup in init_discover()")
-        server = _init_server
+        server = init_server
     else:
         udp = UDPServer()
         udp.run("0.0.0.0", 3610, loop=hass.loop)
@@ -88,160 +86,197 @@ async def enumerate_instances(
         server._debug_flag = True
         server._logger = _LOGGER.debug
         server._message_timeout = 300
+        close_server = True
 
-    # make sure multicast is registered with the local IP used to reach this host
-    server._server.register_multicast_from_host(host)
+    try:
+        # make sure multicast is registered with the local IP used to reach this host
+        server._server.register_multicast_from_host(host)
 
-    instance_list = []
-    _LOGGER.debug("Beginning ECHONET node discovery")
-    await server.discover(host)
+        instance_list = []
+        _LOGGER.debug("Beginning ECHONET node discovery")
+        await server.discover(host)
 
-    # Timeout after 10 seconds
-    for x in range(0, 1000):
-        await asyncio.sleep(0.01)
-        if "discovered" in list(server._state[host]):
-            _LOGGER.debug("ECHONET Node Discovery Successful!")
-            break
-    if "discovered" not in list(server._state[host]):
-        _LOGGER.debug("ECHONET Node Discovery Failed!")
-        raise ErrorConnect("cannot_connect")
-    state = server._state[host]
-    uid = state["uid"]
-
-    # check ip addr changed
-    if newhost:
-        config_entry = None
-        old_host = None
-        entries = hass.config_entries.async_entries(DOMAIN)
-        entry = None
-        instances = None
-
-        for entry in entries:
-            instances = []
-            _data = entry.data
-            for _instance in _data.get("instances", []):
-                instance = _instance.copy()
-                if old_host or instance.get("uid") == uid:
-                    old_host = instance["host"]
-                    instance["host"] = host
-                instances.append(instance)
-            if old_host:
-                config_entry = entry
-                _LOGGER.debug(
-                    f"ECHONET registed node found uid is {uid}, conig entry id is {entry.entry_id}."
-                )
+        # Timeout after 10 seconds
+        for x in range(0, 1000):
+            await asyncio.sleep(0.01)
+            if "discovered" in list(server._state[host]):
+                _LOGGER.debug("ECHONET Node Discovery Successful!")
                 break
+        if "discovered" not in list(server._state[host]):
+            _LOGGER.debug("ECHONET Node Discovery Failed!")
+            raise ErrorConnect("cannot_connect")
+        state = server._state[host]
+        uid = state["uid"]
 
-        if old_host and entry and instances and config_entry:
-            _LOGGER.debug(
-                f"ECHONET registed node IP changed from {old_host} to {host}."
-            )
-            _LOGGER.debug(f"New instances data is {instances}")
-            if server._state.get(old_host):
-                server._state[host] = server._state.pop(old_host)
-            hass.config_entries.async_update_entry(
-                config_entry, data={"host": host, "instances": instances}
-            )
+        # check ip addr changed
+        if newhost:
+            config_entry = None
+            old_host = None
+            entries = hass.config_entries.async_entries(DOMAIN)
+            entry = None
+            instances = None
 
-            # Wait max 30 secs for entry loaded
-            for x in range(0, 300):
-                await asyncio.sleep(0.1)
-                if entry.state == ConfigEntryState.LOADED:
-                    await hass.config_entries.async_reload(entry.entry_id)
+            for entry in entries:
+                instances = []
+                _data = entry.data
+
+                for _instance in _data.get("instances", []):
+                    instance = _instance.copy()
+                    if old_host or instance.get("uid") == uid:
+                        old_host = instance["host"]
+                        instance["host"] = host
+
+                    instances.append(instance)
+
+                if old_host:
+                    config_entry = entry
                     break
 
-            raise ErrorIpChanged(host)
-
-    manufacturer = state["manufacturer"]
-    host_product_code = state.get("product_code")
-    if type(host_product_code) == str:
-        host_product_code = str.strip(host_product_code)
-    if not isinstance(manufacturer, str):
-        # If unable to resolve the manufacturer,
-        # the raw identification number will be passed as int.
-        _LOGGER.warn(
-            f"{host} - Unable to resolve the manufacturer name - {manufacturer}. "
-            + "Please report the manufacturer name of your device at the issue tracker on GitHub!"
-        )
-        manufacturer = f"Unknown({manufacturer})"
-
-    for eojgc in list(state["instances"].keys()):
-        for eojcc in list(state["instances"][eojgc].keys()):
-            for instance in list(state["instances"][eojgc][eojcc].keys()):
-                _LOGGER.debug(f"instance is {instance}")
-
-                cnt = 0
-                while (
-                    await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
-                    is False
-                ):
-                    cnt += 1
-                    if cnt > 2:
-                        raise ErrorConnect("cannot_get_property_maps")
-
+            if old_host and old_host != host and entry and instances and config_entry:
                 _LOGGER.debug(
-                    f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!"
+                    f"ECHONET registered node IP changed from {old_host} to {host}."
                 )
-                ntfmap = state["instances"][eojgc][eojcc][instance].get(ENL_STATMAP, [])
-                getmap = state["instances"][eojgc][eojcc][instance][ENL_GETMAP]
-                setmap = state["instances"][eojgc][eojcc][instance][ENL_SETMAP]
+                _LOGGER.debug(f"New instances data is {instances}")
 
-                uidi = f"{uid}-{eojgc}-{eojcc}-{instance}"
-                name = None
-                if host_product_code == "WTY2001" and eojcc == 0x91:
-                    # Panasonic WTY2001 Advanced Series Link Plus Wireless Adapter
-                    await server.echonetMessage(
-                        host,
-                        eojgc,
-                        eojcc,
-                        instance,
-                        GET,
-                        [{"EPC": 0xFD}, {"EPC": 0xFE}],
-                    )
-                    # Use Use HW ID because the instance number is uncertain
-                    # https://github.com/scottyphillips/echonetlite_homeassistant/issues/117#issuecomment-1929151918
-                    uidi = _null_padded_optional_string(
-                        state["instances"][eojgc][eojcc][instance][0xFE]
-                    )
-                    name = _null_padded_optional_string(
-                        state["instances"][eojgc][eojcc][instance][0xFD]
-                    )
+                # Do not move old_host state to host.
+                # host has just been discovered and should keep its fresh state.
+                server._state.pop(old_host, None)
 
-                instance_list.append(
-                    {
-                        "host": host,
-                        "name": name,
-                        "eojgc": eojgc,
-                        "eojcc": eojcc,
-                        "eojci": instance,
-                        "ntfmap": ntfmap,
-                        "getmap": getmap,
-                        "setmap": setmap,
-                        "uid": uid,  # Deprecated, for backwards compatibility
-                        "uidi": uidi,
-                        "manufacturer": manufacturer,
-                        "host_product_code": host_product_code,
-                    }
+                data = dict(config_entry.data)
+                data["host"] = host
+                data["instances"] = instances
+
+                hass.config_entries.async_update_entry(
+                    config_entry,
+                    data=data,
                 )
 
-    return instance_list
+                try:
+                    await hass.config_entries.async_reload(entry.entry_id)
+                except Exception:
+                    _LOGGER.exception(
+                        "Failed to reload ECHONET Lite config entry after IP change"
+                    )
+
+                raise ErrorIpChanged(host)
+
+        manufacturer = state["manufacturer"]
+        host_product_code = state.get("product_code")
+        if type(host_product_code) == str:
+            host_product_code = str.strip(host_product_code)
+        if not isinstance(manufacturer, str):
+            # If unable to resolve the manufacturer,
+            # the raw identification number will be passed as int.
+            _LOGGER.warn(
+                f"{host} - Unable to resolve the manufacturer name - {manufacturer}. "
+                + "Please report the manufacturer name of your device at the issue tracker on GitHub!"
+            )
+            manufacturer = f"Unknown({manufacturer})"
+
+        for eojgc in list(state["instances"].keys()):
+            for eojcc in list(state["instances"][eojgc].keys()):
+                for instance in list(state["instances"][eojgc][eojcc].keys()):
+                    _LOGGER.debug(f"instance is {instance}")
+
+                    cnt = 0
+                    while (
+                        await server.getAllPropertyMaps(host, eojgc, eojcc, instance)
+                        is False
+                    ):
+                        cnt += 1
+                        if cnt > 2:
+                            raise ErrorConnect("cannot_get_property_maps")
+
+                    _LOGGER.debug(
+                        f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!"
+                    )
+                    ntfmap = state["instances"][eojgc][eojcc][instance].get(
+                        ENL_STATMAP, []
+                    )
+                    getmap = state["instances"][eojgc][eojcc][instance][ENL_GETMAP]
+                    setmap = state["instances"][eojgc][eojcc][instance][ENL_SETMAP]
+
+                    uidi = f"{uid}-{eojgc}-{eojcc}-{instance}"
+                    name = None
+                    if host_product_code == "WTY2001" and eojcc == 0x91:
+                        # Panasonic WTY2001 Advanced Series Link Plus Wireless Adapter
+                        await server.echonetMessage(
+                            host,
+                            eojgc,
+                            eojcc,
+                            instance,
+                            GET,
+                            [{"EPC": 0xFD}, {"EPC": 0xFE}],
+                        )
+                        # Use Use HW ID because the instance number is uncertain
+                        # https://github.com/scottyphillips/echonetlite_homeassistant/issues/117#issuecomment-1929151918
+                        uidi = _null_padded_optional_string(
+                            state["instances"][eojgc][eojcc][instance][0xFE]
+                        )
+                        name = _null_padded_optional_string(
+                            state["instances"][eojgc][eojcc][instance][0xFD]
+                        )
+
+                    instance_list.append(
+                        {
+                            "host": host,
+                            "name": name,
+                            "eojgc": eojgc,
+                            "eojcc": eojcc,
+                            "eojci": instance,
+                            "ntfmap": ntfmap,
+                            "getmap": getmap,
+                            "setmap": setmap,
+                            "uid": uid,  # Deprecated, for backwards compatibility
+                            "uidi": uidi,
+                            "manufacturer": manufacturer,
+                            "host_product_code": host_product_code,
+                        }
+                    )
+
+        return instance_list
+    finally:
+        if close_server:
+            server._server._sock.close()
 
 
-async def async_discover_newhost(hass, host):
-    _LOGGER.debug(f"received newip discovery: {host}")
+async def async_discover_newhost(hass, host, init_server=None):
     if host not in _detected_hosts.keys():
         try:
-            instance_list = await enumerate_instances(hass, host, newhost=True)
-            _LOGGER.debug(f"ECHONET Node detected in {host}")
+            instance_list = await enumerate_instances(
+                hass,
+                host,
+                newhost=True,
+                init_server=init_server,
+            )
+            _LOGGER.debug("ECHONET Node detected in %s", host)
         except ErrorConnect as e:
-            _LOGGER.debug(f"ECHONET Node Error Connect ({e})")
+            _LOGGER.debug(
+                "[ECHONET IP-CHANGE] ErrorConnect while checking host=%s: %s",
+                host,
+                e,
+            )
         except ErrorIpChanged as e:
-            _LOGGER.debug(f"ECHONET Detected Node IP Changed to '{e}'")
+            _LOGGER.debug(
+                "[ECHONET IP-CHANGE] IP change handled. New host=%s",
+                e,
+            )
+        except Exception:
+            _LOGGER.exception(
+                "[ECHONET IP-CHANGE] unexpected error while checking host=%s",
+                host,
+            )
         else:
             if len(instance_list):
                 _detected_hosts.update({host: instance_list})
             else:
-                _LOGGER.debug(f"ECHONET Node not found in {host}")
+                _LOGGER.debug(
+                    "[ECHONET IP-CHANGE] no instances found for host=%s", host
+                )
+    else:
+        _LOGGER.debug(
+            "[ECHONET IP-CHANGE] host=%s already in _detected_hosts, ignored", host
+        )
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -255,15 +290,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def init_discover(self):
+        server = None
+        close_server = False
+
         async def discover_callback(host):
-            await async_discover_newhost(self.hass, host)
+            await async_discover_newhost(self.hass, host, init_server=server)
 
         if DOMAIN in self.hass.data:  # maybe set up by config entry?
             _LOGGER.debug("API listener has already been setup previously..")
             server = self.hass.data[DOMAIN]["api"]
-
-            _init_server = None
-
         else:
             udp = UDPServer()
             udp.run("0.0.0.0", 3610, loop=self.hass.loop)
@@ -271,23 +306,22 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             server._debug_flag = True
             server._logger = _LOGGER.debug
             server._message_timeout = 300
-            server._discover_callback = discover_callback
+            close_server = True
 
-            _init_server = server
+        server._discover_callback = discover_callback
 
-        await server.discover()
+        try:
+            await server.discover()
 
-        # Timeout after 30 seconds
-        for x in range(0, 3000):
-            await asyncio.sleep(0.01)
-            if len(_detected_hosts):
-                _LOGGER.debug("ECHONET Any Node Discovery Successful!")
-                break
-
-        if _init_server:
-            _init_server._server._sock.close()
-            del _init_server
-            _init_server = None
+            # Timeout after 30 seconds
+            for x in range(0, 3000):
+                await asyncio.sleep(0.01)
+                if len(_detected_hosts):
+                    _LOGGER.debug("ECHONET Any Node Discovery Successful!")
+                    break
+        finally:
+            if close_server:
+                server._server._sock.close()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None

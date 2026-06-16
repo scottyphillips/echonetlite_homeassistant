@@ -259,7 +259,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -277,7 +277,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -295,7 +295,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -313,7 +313,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -331,7 +331,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -349,7 +349,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -367,7 +367,7 @@ ENL_OP_CODES = {
             0xD2: {
                 CONF_UNIT_OF_MEASUREMENT: UnitOfTime.SECONDS,
                 TYPE_NUMBER: {
-                    CONF_MAXIMUM: 0x00,
+                    CONF_MINIMUM: 0x00,
                     CONF_MAXIMUM: 0xFD,
                 },
             },  # Operation time
@@ -1273,7 +1273,7 @@ ENABLE_SUPER_ENERGY_DEFAULT = {
 }
 
 # Some entities that overlap with control entities are excluded from setup
-NON_SETUP_SINGLE_ENYITY = {
+NON_SETUP_SINGLE_ENTITY = {
     0x01: {
         # Home Air Conditioner
         0x30: {ENL_HVAC_MODE, ENL_HVAC_SET_TEMP, ENL_HVAC_SILENT_MODE},
@@ -1405,13 +1405,43 @@ USER_OPTIONS = {
     OPTION_HA_UI_SWING: {"option": OPTION_HA_UI_SWING, "option_list": []},
 }
 
+DEFAULT_CLIMATE_TEMPERATURES = {
+    "heat": {"min": 16, "max": 30},
+    "cool": {"min": 18, "max": 27},
+    "auto": {"min": 16, "max": 30},
+}
+
 TEMP_OPTIONS = {
-    "min_temp_heat": {"min": 10, "max": 25, "default": 16},
-    "max_temp_heat": {"min": 18, "max": 30, "default": 30},
-    "min_temp_cool": {"min": 15, "max": 25, "default": 16},
-    "max_temp_cool": {"min": 18, "max": 30, "default": 30},
-    "min_temp_auto": {"min": 15, "max": 25, "default": 16},
-    "max_temp_auto": {"min": 18, "max": 30, "default": 30},
+    "min_temp_heat": {
+        "min": 10,
+        "max": 25,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["heat"]["min"],
+    },
+    "max_temp_heat": {
+        "min": 18,
+        "max": 30,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["heat"]["max"],
+    },
+    "min_temp_cool": {
+        "min": 15,
+        "max": 25,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["cool"]["min"],
+    },
+    "max_temp_cool": {
+        "min": 18,
+        "max": 30,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["cool"]["max"],
+    },
+    "min_temp_auto": {
+        "min": 15,
+        "max": 25,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["auto"]["min"],
+    },
+    "max_temp_auto": {
+        "min": 18,
+        "max": 30,
+        "default": DEFAULT_CLIMATE_TEMPERATURES["auto"]["max"],
+    },
 }
 
 MISC_OPTIONS = {

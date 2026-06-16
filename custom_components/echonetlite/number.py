@@ -5,20 +5,19 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_MINIMUM,
     CONF_MAXIMUM,
-    CONF_UNIT_OF_MEASUREMENT,
 )
 from homeassistant.exceptions import InvalidStateError
 from homeassistant.components.number import NumberEntity
+from .base_entity import EchonetEntity
 from pychonet.lib.eojx import EOJX_CLASS
-from . import get_name_by_epc_code, get_unit_by_devise_class, get_device_name
+from . import get_name_by_epc_code
 from .const import (
     CONF_DISABLED_DEFAULT,
     DOMAIN,
-    CONF_FORCE_POLLING,
     CONF_AS_ZERO,
     CONF_MAX_OPC,
     CONF_BYTE_LENGTH,
-    NON_SETUP_SINGLE_ENYITY,
+    NON_SETUP_SINGLE_ENTITY,
     TYPE_NUMBER,
 )
 
@@ -34,124 +33,98 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         # configure select entities by looking up full ENL_OP_CODE dict
         for op_code in list(
             set(entity["instance"]["setmap"])
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
+            - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
             if TYPE_NUMBER in _enl_op_codes.get(op_code, {}).keys():
                 entities.append(
                     EchonetNumber(
-                        hass,
                         entity["echonetlite"],
                         config,
-                        op_code,
                         _enl_op_codes[op_code],
+                        op_code,
                     )
                 )
 
     async_add_entities(entities, True)
 
 
-class EchonetNumber(NumberEntity):
-    _attr_translation_key = DOMAIN
+class EchonetNumber(EchonetEntity, NumberEntity):
 
-    def __init__(self, hass, connector, config, code, options):
+    def __init__(self, coordinator, config, options, epc_code):
         """Initialize the number."""
-        self._connector = connector
+        super().__init__(coordinator, config)
         self._config = config
-        self._code = code
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
+        self._code = epc_code
+
         self._attr_icon = options.get(CONF_ICON, None)
-        self._attr_name = f"{config.title} {get_name_by_epc_code(self._connector._eojgc, self._connector._eojcc, self._code, None, self._connector._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
-        self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._code}"
-        )
+        self._attr_name = f"{config.title} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._code, None, self.coordinator._enl_op_codes.get(self._code, {}).get(CONF_NAME))}"
+        self._attr_unique_id = self._build_unique_id(self._code)
 
         self._options = options[TYPE_NUMBER]
         self._as_zero = int(options[TYPE_NUMBER].get(CONF_AS_ZERO, 0))
         self._conf_max = int(options[TYPE_NUMBER][CONF_MAXIMUM])
         self._byte_length = int(options[TYPE_NUMBER].get(CONF_BYTE_LENGTH, 1))
 
-        self._device_name = get_device_name(connector, config)
         self._attr_device_class = self._options.get(
             CONF_TYPE, options.get(CONF_TYPE, None)
         )
-        self._attr_native_value = self.get_value()
-        self._attr_native_max_value = self.get_max_value()
-        self._attr_native_min_value = self._options.get(CONF_MINIMUM, 0) - self._as_zero
-        self._attr_native_unit_of_measurement = self._options.get(
-            CONF_UNIT_OF_MEASUREMENT, options.get(CONF_UNIT_OF_MEASUREMENT, None)
-        )
-        if not self._attr_native_unit_of_measurement:
-            self._attr_native_unit_of_measurement = get_unit_by_devise_class(
-                self._attr_device_class
-            )
-        self._attr_should_poll = True
-        self._attr_available = True
 
+        # Initialize values via properties - coordinator handles updates automatically
         self._attr_entity_registry_enabled_default = not bool(
             options.get(CONF_DISABLED_DEFAULT)
         )
 
-        self.update_option_listener()
+    @property
+    def native_value(self):
+        """Return the current value."""
+        if self.coordinator and self.coordinator.data:
+            value = self.coordinator.data.get(self._code)
+            if value is not None:
+                return int(value) - self._as_zero
+        # Fallback to connector data if coordinator data not available yet
+        value = self.coordinator._update_data.get(self._code)
+        if value is not None:
+            return int(value) - self._as_zero
+        return None
 
     @property
-    def device_info(self):
-        return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self._connector._uid,
-                    self._connector._instance._eojgc,
-                    self._connector._instance._eojcc,
-                    self._connector._instance._eojci,
-                )
-            },
-            "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self._connector._instance._eojgc][
-                self._connector._instance._eojcc
-            ],
-            # "sw_version": "",
-        }
+    def native_min_value(self):
+        """Return the minimum value."""
+        return self._options.get(CONF_MINIMUM, 0) - self._as_zero
 
-    def get_value(self):
-        value = self._connector._update_data.get(self._code)
-        if value != None:
-            return int(self._connector._update_data.get(self._code)) - self._as_zero
-        else:
-            return None
-
-    def get_max_value(self):
-        max_value = self.get_max_opc_value()
-        if max_value == None:
-            max_value = self._conf_max
-        return max_value - self._as_zero
-
-    def get_max_opc_value(self):
-        max_opc_value = None
+    @property
+    def native_max_value(self):
+        """Return the maximum value."""
+        # Calculate max OPC value inline from coordinator data
         max_opc = self._options.get(CONF_MAX_OPC)
         if max_opc:
             if isinstance(max_opc, list):
-                max_opc_value = self._connector._update_data.get(max_opc[0]).get(
-                    max_opc[1]
-                )
+                # Handle nested dictionary access
+                master_data = self.coordinator.data if self.coordinator else {}
+                outer_value = master_data.get(max_opc[0])
+                if outer_value and isinstance(outer_value, dict):
+                    max_opc_value = outer_value.get(max_opc[1])
+                else:
+                    # Fallback to connector data
+                    outer_value = self.coordinator._update_data.get(max_opc[0])
+                    if outer_value and isinstance(outer_value, dict):
+                        max_opc_value = outer_value.get(max_opc[1])
+                    else:
+                        return None
             else:
-                max_opc_value = self._connector._update_data.get(max_opc)
-            if max_opc_value != None:
-                max_opc_value = int(max_opc_value)
-        return max_opc_value
+                master_data = self.coordinator.data if self.coordinator else {}
+                max_opc_value = master_data.get(max_opc)
+                if max_opc_value is None:
+                    # Fallback to connector data
+                    max_opc_value = self.coordinator._update_data.get(max_opc)
+
+            if max_opc_value is not None:
+                return int(max_opc_value) - self._as_zero
+        return self._conf_max - self._as_zero
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
-        if await self._connector._instance.setMessage(
+        if await self.coordinator._instance.setMessage(
             self._code, int(value + self._as_zero), self._byte_length
         ):
             pass
@@ -159,44 +132,3 @@ class EchonetNumber(NumberEntity):
             raise InvalidStateError(
                 "The state setting is not supported or is an invalid value."
             )
-
-    async def async_update(self):
-        """Retrieve latest state."""
-        try:
-            await self._connector.async_update()
-        except TimeoutError:
-            pass
-
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
-
-    async def async_update_callback(self, isPush: bool = False):
-        new_val = self.get_value()
-        changed = (
-            self._attr_native_value != new_val
-            or self._attr_available != self._server_state["available"]
-            or self._attr_native_max_value != self.get_max_value()
-        )
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._attr_native_value = new_val
-            self._attr_native_max_value = self.get_max_value()
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.async_schedule_update_ha_state(_force)
-
-    def update_option_listener(self):
-        _should_poll = self._code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(
-            f"{self._device_name}({self._code}): _should_poll is {_should_poll}"
-        )

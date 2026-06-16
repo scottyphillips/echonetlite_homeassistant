@@ -8,13 +8,11 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_SERVICE,
     CONF_TYPE,
-    CONF_UNIT_OF_MEASUREMENT,
 )
 from homeassistant.helpers import config_validation as cv, entity_platform
+from .base_entity import EchonetEntity
 from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
 
 from pychonet.lib.eojx import EOJX_CLASS
 from pychonet.lib.epc_functions import (
@@ -27,11 +25,14 @@ from pychonet.lib.epc_functions import (
 
 from . import (
     get_name_by_epc_code,
-    get_unit_by_devise_class,
     get_device_name,
+)
+from .connectors import (
     regist_as_inputs,
     regist_as_binary_sensor,
 )
+
+
 from .const import (
     DOMAIN,
     ENABLE_SUPER_ENERGY_DEFAULT,
@@ -39,36 +40,42 @@ from .const import (
     CONF_STATE_CLASS,
     ENL_SUPER_CODES,
     ENL_SUPER_ENERGES,
-    NON_SETUP_SINGLE_ENYITY,
+    NON_SETUP_SINGLE_ENTITY,
     TYPE_SWITCH,
     TYPE_SELECT,
     TYPE_TIME,
     TYPE_NUMBER,
     SERVICE_SET_ON_TIMER_TIME,
     SERVICE_SET_INT_1B,
-    CONF_FORCE_POLLING,
     CONF_ENABLE_SUPER_ENERGY,
     TYPE_DATA_DICT,
     TYPE_DATA_ARRAY_WITH_SIZE_OPCODE,
     CONF_DISABLED_DEFAULT,
-    CONF_MULTIPLIER,
-    CONF_MULTIPLIER_OPCODE,
-    CONF_MULTIPLIER_OPTIONAL_OPCODE,
-    CONF_ICON_POSITIVE,
-    CONF_ICON_NEGATIVE,
-    CONF_ICON_ZERO,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+MAP_BINARY_STATE = {
+    True: True,
+    "1": True,
+    DATA_STATE_ON: True,
+    DATA_STATE_OPEN: True,
+    "yes": True,
+    False: False,
+    "0": False,
+    DATA_STATE_OFF: False,
+    DATA_STATE_CLOSE: False,
+    "no": False,
+}
 
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     entities = []
     platform = entity_platform.async_get_current_platform()
     for entity in hass.data[DOMAIN][config.entry_id]:
-        _LOGGER.debug(f"Configuring ECHONETLite sensor {entity}")
+        _LOGGER.debug(f"Configuring ECHONETLite binary sensor {entity}")
         _LOGGER.debug(
-            f"Update flags for this sensor are {entity['echonetlite']._update_flags_full_list}"
+            f"Update flags for this binary sensor are {entity['echonetlite']._update_flags_full_list}"
         )
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
@@ -89,7 +96,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         # For all other devices, sensors will be configured but customise if applicable.
         for op_code in list(
             set(entity["echonetlite"]._update_flags_full_list)
-            - NON_SETUP_SINGLE_ENYITY.get(eojgc, {}).get(eojcc, set())
+            - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
             # Check DeviceClass and regist_as_binary_sensor()
             if not isinstance(
@@ -160,7 +167,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                     config,
                                     op_code,
                                     _enl_op_codes.get(op_code) | {"dict_key": attr_key},
-                                    hass,
                                 )
                             )
                         continue
@@ -198,7 +204,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                 op_code,
                                 ENL_OP_CODES["default"] | {CONF_DISABLED_DEFAULT: True},
                             ),
-                            hass,
                         )
                     )
                 continue
@@ -208,37 +213,23 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                     config,
                     op_code,
                     ENL_OP_CODES["default"],
-                    hass,
                 )
             )
     async_add_entities(entities, True)
 
 
-class EchonetBinarySensor(BinarySensorEntity):
-    """Representation of an ECHONETLite Temperature Sensor."""
+class EchonetBinarySensor(EchonetEntity, BinarySensorEntity):
+    """Representation of an ECHONETLite binary sensor."""
 
-    _attr_translation_key = DOMAIN
-
-    def __init__(self, connector, config, op_code, attributes, hass=None) -> None:
+    def __init__(self, coordinator, config, epc_code, attributes) -> None:
         """Initialize the sensor."""
-        name = get_device_name(connector, config)
-        self._connector = connector
-        self._op_code = op_code
+        # Initialize coordinator first - must call parent before setting other properties
+        super().__init__(coordinator, config)
+
+        self._op_code = epc_code
         self._sensor_attributes = attributes
-        self._eojgc = self._connector._eojgc
-        self._eojcc = self._connector._eojcc
-        self._eojci = self._connector._eojci
-        self._attr_unique_id = (
-            f"{self._connector._uidi}-{self._op_code}"
-            if self._connector._uidi
-            else f"{self._connector._uid}-{self._eojgc}-{self._eojcc}-{self._eojci}-{self._op_code}"
-        )
-        self._device_name = name
+        self._attr_unique_id = self._build_unique_id(self._op_code)
         self._state_value = None
-        self._server_state = self._connector._api._state[
-            self._connector._instance._host
-        ]
-        self._hass = hass
 
         _attr_keys = self._sensor_attributes.keys()
 
@@ -247,7 +238,7 @@ class EchonetBinarySensor(BinarySensorEntity):
         self._attr_state_class = self._sensor_attributes.get(CONF_STATE_CLASS)
 
         # Create name based on sensor description from EPC codes, super class codes or fallback to using the sensor type
-        self._attr_name = f"{name} {get_name_by_epc_code(self._eojgc, self._eojcc, self._op_code, self._attr_device_class, self._connector._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
+        self._attr_name = f"{get_device_name(coordinator, config)} {get_name_by_epc_code(self.coordinator._eojgc, self.coordinator._eojcc, self._op_code, self._attr_device_class, self.coordinator._enl_op_codes.get(self._op_code, {}).get(CONF_NAME))}"
 
         if "dict_key" in _attr_keys:
             self._attr_unique_id += f'-{self._sensor_attributes["dict_key"]}'
@@ -265,113 +256,27 @@ class EchonetBinarySensor(BinarySensorEntity):
             self._sensor_attributes.get(CONF_DISABLED_DEFAULT)
         )
 
-        self._attr_should_poll = True
-        self._attr_available = True
+    @property
+    def is_on(self) -> bool | None:
+        """Return True if entity is on."""
+        raw_val = self.coordinator.data.get(self._op_code)
 
-        self.update_option_listener()
+        # Handle dictionary or array accessors
+        if "dict_key" in self._sensor_attributes:
+            raw_val = (
+                raw_val.get(self._sensor_attributes["dict_key"])
+                if hasattr(raw_val, "get")
+                else None
+            )
+        elif "accessor_lambda" in self._sensor_attributes:
+            raw_val = self._sensor_attributes["accessor_lambda"](
+                raw_val, self._sensor_attributes["accessor_index"]
+            )
+
+        return MAP_BINARY_STATE.get(raw_val)
 
     @property
-    def device_info(self):
-        return {
-            "identifiers": {
-                (
-                    DOMAIN,
-                    self._connector._uid,
-                    self._connector._eojgc,
-                    self._connector._eojcc,
-                    self._connector._eojci,
-                )
-            },
-            "name": self._device_name,
-            "manufacturer": self._connector._manufacturer
-            + (
-                " " + self._connector._host_product_code
-                if self._connector._host_product_code
-                else ""
-            ),
-            "model": EOJX_CLASS[self._eojgc][self._eojcc],
-            # "sw_version": "",
-        }
-
-    def get_attr_is_on(self):
-        """Return the state of the sensor."""
-        if self._op_code in self._connector._update_data:
-            new_val = self._connector._update_data[self._op_code]
-            if "dict_key" in self._sensor_attributes:
-                if hasattr(new_val, "get"):
-                    self._state_value = new_val.get(self._sensor_attributes["dict_key"])
-                else:
-                    self._state_value = None
-            elif "accessor_lambda" in self._sensor_attributes:
-                self._state_value = self._sensor_attributes["accessor_lambda"](
-                    new_val, self._sensor_attributes["accessor_index"]
-                )
-            else:
-                self._state_value = new_val
-
-            if self._state_value is None:
-                return None
-
-            _results = {
-                True: True,
-                "1": True,
-                DATA_STATE_ON: True,
-                DATA_STATE_OPEN: True,
-                "yes": True,
-                False: False,
-                "0": False,
-                DATA_STATE_OFF: False,
-                DATA_STATE_CLOSE: False,
-                "no": False,
-            }
-
-            return _results.get(self._state_value)
-
-    async def async_update(self):
-        """Retrieve latest state."""
-        try:
-            await self._connector.async_update()
-            self._attr_is_on = self.get_attr_is_on()
-        except TimeoutError:
-            pass
-
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        self._connector.add_update_option_listener(self.update_option_listener)
-        self._connector.register_async_update_callbacks(self.async_update_callback)
-
-    async def async_update_callback(self, isPush: bool = False):
-        new_val = self._connector._update_data.get(self._op_code)
-        if "dict_key" in self._sensor_attributes:
-            if hasattr(new_val, "get"):
-                new_val = new_val.get(self._sensor_attributes["dict_key"])
-            else:
-                new_val = None
-        if "accessor_lambda" in self._sensor_attributes:
-            new_val = self._sensor_attributes["accessor_lambda"](
-                new_val, self._sensor_attributes["accessor_index"]
-            )
-        changed = (
-            new_val is not None and self._state_value != new_val
-        ) or self._attr_available != self._server_state["available"]
-        if changed:
-            _force = bool(not self._attr_available and self._server_state["available"])
-            self._state_value = new_val
-            self._attr_is_on = self.get_attr_is_on()
-            if self._attr_available != self._server_state["available"]:
-                if self._server_state["available"]:
-                    self.update_option_listener()
-                else:
-                    self._attr_should_poll = True
-            self._attr_available = self._server_state["available"]
-            self.async_schedule_update_ha_state(_force)
-
-    def update_option_listener(self):
-        _should_poll = self._op_code not in self._connector._ntfPropertyMap
-        self._attr_should_poll = (
-            self._connector._user_options.get(CONF_FORCE_POLLING, False) or _should_poll
-        )
-        self._attr_extra_state_attributes = {"notify": "No" if _should_poll else "Yes"}
-        _LOGGER.debug(
-            f"{self._attr_name}({self._op_code}): _should_poll is {_should_poll}"
-        )
+    def extra_state_attributes(self) -> dict | None:
+        """Return device-specific state attributes."""
+        # Indicate that updates come from coordinator (both polling and push notifications)
+        return {"notify": "Yes"}
