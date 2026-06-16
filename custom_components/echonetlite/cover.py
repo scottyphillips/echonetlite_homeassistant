@@ -93,11 +93,27 @@ class EchonetCover(EchonetEntity, CoverEntity):
     @property
     def current_cover_position(self):
         """Return the current cover position."""
+        # ENL_OPENING_LEVEL is the most accurate way to determine position, but not all devices support it
         if (
             ENL_OPENING_LEVEL in self.coordinator.data
             and self.coordinator.data[ENL_OPENING_LEVEL] is not None
         ):
             return int(self.coordinator.data[ENL_OPENING_LEVEL])
+
+        # Fallback to OPENCLOSE_STATUS if no position data available. Less accurate, but at least gives us open/close status for devices that don't report position
+        if (
+            ENL_OPENCLOSE_STATUS in self.coordinator.data
+            and self.coordinator.data[ENL_OPENCLOSE_STATUS] is not None
+        ):
+            if self.coordinator.data[ENL_OPENCLOSE_STATUS] == DATA_STATE_CLOSE:
+                return 0
+            # echonetlite spec doesn't define a "partially open" state, but some devices report 0x45 "stopped in between" so we'll treat that as 50% open
+            elif self.coordinator.data[ENL_OPENCLOSE_STATUS] == DATA_STATE_STOP:
+                return 50
+            elif self.coordinator.data[ENL_OPENCLOSE_STATUS] == DATA_STATE_FULLY_OPEN:
+                return 100
+            else:
+                return 50
         return None
 
     @property
