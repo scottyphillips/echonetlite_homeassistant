@@ -62,11 +62,11 @@ async def enumerate_instances(
     hass: HomeAssistant, host: str, newhost: bool = False, init_server=None
 ) -> list[dict[str, Any]]:
     """Validate the user input allows us to connect."""
-    _LOGGER.debug(f"IP address is {host}")
+    _LOGGER.debug(f"Instance IP address is {host}")
     server = None
     close_server = False
     if DOMAIN in hass.data:  # maybe set up by config entry?
-        _LOGGER.debug("API listener has already been setup previously..")
+        _LOGGER.debug("API listener actively setup, reusing it for enumeration.")
         server = hass.data[DOMAIN]["api"]
         for key in hass.data[DOMAIN]:
             if key != "api":
@@ -93,17 +93,17 @@ async def enumerate_instances(
         server._server.register_multicast_from_host(host)
 
         instance_list = []
-        _LOGGER.debug("Beginning ECHONET node discovery")
+        _LOGGER.debug("Beginning ECHONETLite node discovery")
         await server.discover(host)
 
         # Timeout after 10 seconds
         for x in range(0, 1000):
             await asyncio.sleep(0.01)
             if "discovered" in list(server._state[host]):
-                _LOGGER.debug("ECHONET Node Discovery Successful!")
+                _LOGGER.debug("Node Discovery Successful!")
                 break
         if "discovered" not in list(server._state[host]):
-            _LOGGER.debug("ECHONET Node Discovery Failed!")
+            _LOGGER.debug("Node Discovery Failed!")
             raise ErrorConnect("cannot_connect")
         state = server._state[host]
         uid = state["uid"]
@@ -134,7 +134,7 @@ async def enumerate_instances(
 
             if old_host and old_host != host and entry and instances and config_entry:
                 _LOGGER.debug(
-                    f"ECHONET registered node IP changed from {old_host} to {host}."
+                    f"Registered node IP changed from {old_host} to {host}."
                 )
                 _LOGGER.debug(f"New instances data is {instances}")
 
@@ -155,7 +155,7 @@ async def enumerate_instances(
                     await hass.config_entries.async_reload(entry.entry_id)
                 except Exception:
                     _LOGGER.exception(
-                        "Failed to reload ECHONET Lite config entry after IP change"
+                        "Failed to reload ECHONETLite config entry after IP change"
                     )
 
                 raise ErrorIpChanged(host)
@@ -176,7 +176,7 @@ async def enumerate_instances(
         for eojgc in list(state["instances"].keys()):
             for eojcc in list(state["instances"][eojgc].keys()):
                 for instance in list(state["instances"][eojgc][eojcc].keys()):
-                    _LOGGER.debug(f"instance is {instance}")
+                    _LOGGER.debug(f"ECHONETLite Instance is {instance}")
 
                     cnt = 0
                     while (
@@ -188,7 +188,7 @@ async def enumerate_instances(
                             raise ErrorConnect("cannot_get_property_maps")
 
                     _LOGGER.debug(
-                        f"{host} - ECHONET Instance {eojgc}-{eojcc}-{instance} map attributes discovered!"
+                        f"{host} - Instance {eojgc}-{eojcc}-{instance} map attributes discovered!"
                     )
                     ntfmap = state["instances"][eojgc][eojcc][instance].get(
                         ENL_STATMAP, []
@@ -249,21 +249,21 @@ async def async_discover_newhost(hass, host, init_server=None):
                 newhost=True,
                 init_server=init_server,
             )
-            _LOGGER.debug("ECHONET Node detected in %s", host)
+            _LOGGER.debug("Node detected in %s", host)
         except ErrorConnect as e:
             _LOGGER.debug(
-                "[ECHONET IP-CHANGE] ErrorConnect while checking host=%s: %s",
+                "[IP-CHANGE] ErrorConnect while checking host=%s: %s",
                 host,
                 e,
             )
         except ErrorIpChanged as e:
             _LOGGER.debug(
-                "[ECHONET IP-CHANGE] IP change handled. New host=%s",
+                "[IP-CHANGE] IP change handled. New host=%s",
                 e,
             )
         except Exception:
             _LOGGER.exception(
-                "[ECHONET IP-CHANGE] unexpected error while checking host=%s",
+                "[IP-CHANGE] unexpected error while checking host=%s",
                 host,
             )
         else:
@@ -271,11 +271,11 @@ async def async_discover_newhost(hass, host, init_server=None):
                 _detected_hosts.update({host: instance_list})
             else:
                 _LOGGER.debug(
-                    "[ECHONET IP-CHANGE] no instances found for host=%s", host
+                    "[IP-CHANGE] no instances found for host=%s", host
                 )
     else:
         _LOGGER.debug(
-            "[ECHONET IP-CHANGE] host=%s already in _detected_hosts, ignored", host
+            "[IP-CHANGE] host=%s already in _detected_hosts, ignored", host
         )
 
 
@@ -297,7 +297,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await async_discover_newhost(self.hass, host, init_server=server)
 
         if DOMAIN in self.hass.data:  # maybe set up by config entry?
-            _LOGGER.debug("API listener has already been setup previously..")
+            _LOGGER.debug("Node API listener already setup, reusing it for discovery.")
             server = self.hass.data[DOMAIN]["api"]
         else:
             udp = UDPServer()
@@ -317,7 +317,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             for x in range(0, 3000):
                 await asyncio.sleep(0.01)
                 if len(_detected_hosts):
-                    _LOGGER.debug("ECHONET Any Node Discovery Successful!")
+                    _LOGGER.debug("Node discovery successful.")
                     break
         finally:
             if close_server:

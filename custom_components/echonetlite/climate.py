@@ -400,8 +400,6 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode with dual-EPC verification."""
-        _LOGGER.debug(f"Setting HVAC mode to: {hvac_mode}")
-
         target_mode = "auto" if hvac_mode == "heat_cool" else hvac_mode
 
         # We update both Power (0x80) and Mode (0xB0)

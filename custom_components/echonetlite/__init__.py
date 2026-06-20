@@ -194,7 +194,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     def unload_config_entry():
         if server != None:
             _LOGGER.debug(
-                f"Called unload_config_entry() try to remove {host} from server._state."
+                f"Called unload_config_entry() to try to remove {host} from server._state."
             )
             if server._state.get(host):
                 server._state.pop(host)
@@ -276,7 +276,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.config_entries.async_update_entry(
             entry, title=entry.title, data={"host": host, "instances": instances}
         )
-    _LOGGER.debug(entry.data["instances"])
+
     for instance in entry.data["instances"]:
         # auto update to new style
         if "ntfmap" not in instance:
@@ -398,7 +398,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 f"IP address change was detected during setup of {host}"
             ) from ex
 
-    _LOGGER.debug(f"Plaform entry data - {entry.data}")
+    _LOGGER.debug(f"ECHONETLite Platform entry data - {entry.data}")
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
