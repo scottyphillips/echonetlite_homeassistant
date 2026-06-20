@@ -11,6 +11,7 @@ from pychonet.lib.epc_functions import (
     DATA_STATE_STOP,
     DATA_STATE_OPENING,
     DATA_STATE_CLOSING,
+    DATA_STATE_FULLY_OPEN
 )
 from .const import DOMAIN
 
