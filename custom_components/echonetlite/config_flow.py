@@ -133,9 +133,7 @@ async def enumerate_instances(
                     break
 
             if old_host and old_host != host and entry and instances and config_entry:
-                _LOGGER.debug(
-                    f"Registered node IP changed from {old_host} to {host}."
-                )
+                _LOGGER.debug(f"Registered node IP changed from {old_host} to {host}.")
                 _LOGGER.debug(f"New instances data is {instances}")
 
                 # Do not move old_host state to host.
@@ -270,13 +268,9 @@ async def async_discover_newhost(hass, host, init_server=None):
             if len(instance_list):
                 _detected_hosts.update({host: instance_list})
             else:
-                _LOGGER.debug(
-                    "[IP-CHANGE] no instances found for host=%s", host
-                )
+                _LOGGER.debug("[IP-CHANGE] no instances found for host=%s", host)
     else:
-        _LOGGER.debug(
-            "[IP-CHANGE] host=%s already in _detected_hosts, ignored", host
-        )
+        _LOGGER.debug("[IP-CHANGE] host=%s already in _detected_hosts, ignored", host)
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
