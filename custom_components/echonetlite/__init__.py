@@ -65,10 +65,10 @@ PARALLEL_UPDATES = 0
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
-SETUP_BUDGET = 45.0
+SETUP_BUDGET = 90.0
 DISCOVERY_MAX_BUDGET = 20.0
 DISCOVERY_MIN_BUDGET = 8.0
-INSTANCE_MAX_BUDGET = 8.0
+INSTANCE_MAX_BUDGET = 20.0
 INSTANCE_MIN_BUDGET = 4.0
 INSTANCE_RETRY_DELAY = 0.3
 
@@ -221,7 +221,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         server = ECHONETAPIClient(udp)
         server._debug_flag = True  # Set pychonet debug flag to True to enable debug logging from the library
         server._logger = _LOGGER.warning
-        server._message_timeout = 300
+        server._message_timeout = 150
         server._discover_callback = discover_callback
         hass.data[DOMAIN].update({"api": server})
 
@@ -350,7 +350,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         echonetlite = ECHONETConnector(instance, hass, entry)
         await echonetlite.startup()
         # first refresh of data required by DataUpdateCoordinator to populate initial data and start polling.
-        await echonetlite.async_config_entry_first_refresh()
         try:
             # Since there is a small chance of failure, perform a few retries for each instance.
             for retry in range(1, 4):
@@ -364,12 +363,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
                 try:
                     await _run_with_timeout(
-                        # echonetlite.async_config_entry_first_refresh(),
                         echonetlite._async_update_data(),
                         per_try_budget,
-                    )
-                    hass.data[DOMAIN][entry.entry_id].append(
-                        {"instance": instance, "echonetlite": echonetlite}
                     )
                     break
 
@@ -397,6 +392,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise ConfigEntryNotReady(
                 f"IP address change was detected during setup of {host}"
             ) from ex
+
+        # Register coordinator with HA's refresh engine now that data is populated.
+        await echonetlite.async_config_entry_first_refresh()
+        hass.data[DOMAIN][entry.entry_id].append(
+            {"instance": instance, "echonetlite": echonetlite}
+        )
 
     _LOGGER.warning(f"ECHONETLite Platform entry data - {entry.data}")
 
