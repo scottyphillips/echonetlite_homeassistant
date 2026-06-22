@@ -279,6 +279,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry, title=entry.title, data={"host": host, "instances": instances}
         )
 
+    # Pass 1: fetch initial data for all instances without starting any polling
+    # schedulers. Keeping all coordinators unregistered during this phase means
+    # the _waiting[host] queue is only used by setup batches, preventing
+    # earlier instances from blocking later ones (especially important for
+    # devices like Panasonic SmartCosmo with many instances on a single IP).
+    coordinators: list[tuple[dict, ECHONETConnector]] = []
+
     for instance in entry.data["instances"]:
         # auto update to new style
         if "ntfmap" not in instance:
@@ -395,7 +402,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 f"IP address change was detected during setup of {host}"
             ) from ex
 
-        # Register coordinator with HA's refresh engine now that data is populated.
+        # Data fetched successfully — hold the coordinator until pass 2.
+        coordinators.append((instance, echonetlite))
+
+    # Pass 2: all instances have data — now register coordinators with HA's
+    # scheduling engine together. async_config_entry_first_refresh() will not
+    # re-fetch data (self.data is already populated) but will start the polling
+    # interval. Starting all schedulers together after setup avoids any
+    # inter-instance queue contention during pass 1.
+    for instance, echonetlite in coordinators:
         await echonetlite.async_config_entry_first_refresh()
         hass.data[DOMAIN][entry.entry_id].append(
             {"instance": instance, "echonetlite": echonetlite}
