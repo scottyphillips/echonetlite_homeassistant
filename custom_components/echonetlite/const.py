@@ -93,6 +93,7 @@ TYPE_TIME = "time"
 TYPE_NUMBER = "number"
 TYPE_DATA_DICT = "type_data_dict"
 TYPE_DATA_ARRAY_WITH_SIZE_OPCODE = "type_data_array_with_size_opcode"
+TYPE_DATA_ARRAY_WITH_DICT_ITEMS = "type_data_array_with_dict_items"
 TYPE_DATA_DICT_OVERRIDES = "type_data_dict_overrides"
 SERVICE_SET_ON_TIMER_TIME = "set_on_timer_time"
 SERVICE_SET_INT_1B = "set_value_int_1b"
@@ -155,6 +156,10 @@ TYPE_MEASUREMENT_CHANNEL = {
             CONF_TYPE: SensorDeviceClass.CURRENT,
         },
     },
+}
+
+TYPE_0287_CHANNEL_RANGE = {
+    TYPE_DATA_DICT: ["start_channel", "range"]
 }
 
 ENL_SUPER_ENERGES = {ENL_INSTANTANEOUS_POWER, ENL_CUMULATIVE_POWER}
@@ -965,6 +970,7 @@ ENL_OP_CODES = {
             0xC2: {
                 CONF_DISABLED_DEFAULT: True,
             },
+            0xB2: TYPE_0287_CHANNEL_RANGE,
             0xB3: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
@@ -972,10 +978,25 @@ ENL_OP_CODES = {
                 TYPE_DATA_ARRAY_WITH_SIZE_OPCODE: 0xB1,
                 CONF_MULTIPLIER_OPCODE: 0xC2,
             },
+            0xB6: TYPE_0287_CHANNEL_RANGE,
             0xB7: {
                 CONF_TYPE: SensorDeviceClass.POWER,
                 CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
                 TYPE_DATA_ARRAY_WITH_SIZE_OPCODE: 0xB1,
+            },
+            0xB9: TYPE_0287_CHANNEL_RANGE,
+            0xBA: {
+                    CONF_TYPE: SensorDeviceClass.ENERGY,
+                    CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
+                    CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
+                    CONF_DISABLED_DEFAULT: True,  # This will now work
+            },
+            0xBB: TYPE_0287_CHANNEL_RANGE,
+            0xBD: TYPE_0287_CHANNEL_RANGE,
+            0xBE: {
+                CONF_TYPE: SensorDeviceClass.POWER,
+                CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+                TYPE_DATA_ARRAY_WITH_SIZE_OPCODE: 0xB8,  # Number of measurement channels (duplex)
             },
             0xC0: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,

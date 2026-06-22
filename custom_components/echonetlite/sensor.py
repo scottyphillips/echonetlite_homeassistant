@@ -49,6 +49,7 @@ from .const import (
     TYPE_DATA_DICT,
     TYPE_DATA_DICT_OVERRIDES,
     TYPE_DATA_ARRAY_WITH_SIZE_OPCODE,
+    TYPE_DATA_ARRAY_WITH_DICT_ITEMS,
     CONF_DISABLED_DEFAULT,
     CONF_MULTIPLIER,
     CONF_MULTIPLIER_OPCODE,
@@ -321,6 +322,44 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             )
                         )
                     continue
+                if TYPE_DATA_ARRAY_WITH_DICT_ITEMS in _keys:  # NEW BLOCK STARTS HERE
+                    array_size_op_code = _enl_op_codes[op_code][
+                        TYPE_DATA_ARRAY_WITH_SIZE_OPCODE
+                    ]
+                    array_max_size = await entity["echonetlite"]._instance.update(
+                        array_size_op_code
+                    )
+                    type_data = _enl_op_codes.get(op_code, {}).get(TYPE_DATA_DICT)
+                    dict_overrides = _enl_op_codes.get(op_code, {}).get(
+                        TYPE_DATA_DICT_OVERRIDES, {}
+                    )
+                    for x in range(0, array_max_size):
+                        for attr_key in type_data:
+                            base_attrs = _enl_op_codes.get(op_code)
+                            # Apply override if defined for this specific dict key
+                            if attr_key in dict_overrides:
+                                entity_attrs = (
+                                    base_attrs | {"dict_key": attr_key} 
+                                    | dict_overrides[attr_key]
+                                )
+                            else:
+                                entity_attrs = base_attrs | {"dict_key": attr_key}
+                            # Set up accessor for nested array with dict items
+                            entity_attrs["accessor_index"] = x
+                            entity_attrs["accessor_lambda"] = lambda value, index, key=attr_key: (
+                                value["values"][index][key] 
+                                if index < value.get("range", 0) and value.get("values") and isinstance(value.get("values"), list) and index < len(value.get("values", []))
+                                else None
+                            )
+                            entities.append(
+                                EchonetSensor(
+                                    entity["echonetlite"],
+                                    config,
+                                    op_code,
+                                    entity_attrs,
+                                )
+                            )
+                    continue  # NEW BLOCK ENDS HERE
                 else:
                     entities.append(
                         EchonetSensor(
