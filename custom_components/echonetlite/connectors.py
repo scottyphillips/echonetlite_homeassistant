@@ -326,7 +326,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             _LOGGER.debug("Device Timeout for {self._host}: %s", err)
             raise UpdateFailed(f"Offline: {err}")
 
-async def async_update_callback(self, isPush: bool = False):
+    async def async_update_callback(self, isPush: bool = False):
         """Handle push notifications from the device.
  
         When the device sends an unsolicited INF packet, pychonet fires this
