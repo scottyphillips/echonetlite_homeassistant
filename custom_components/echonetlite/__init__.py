@@ -220,7 +220,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         udp.run("0.0.0.0", 3610, loop=hass.loop)
         server = ECHONETAPIClient(udp)
         server._debug_flag = True  # Set pychonet debug flag to True to enable debug logging from the library
-        server._logger = _LOGGER.debug
+        server._logger = _LOGGER.warning
         server._message_timeout = 300
         server._discover_callback = discover_callback
         hass.data[DOMAIN].update({"api": server})
