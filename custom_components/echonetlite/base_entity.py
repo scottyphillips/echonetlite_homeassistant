@@ -32,7 +32,7 @@ class EchonetEntity(CoordinatorEntity):
                 )
             },
             "name": self._device_name,
-            "manufacturer": self.coordinator._manufacturer
+            "manufacturer": (self.coordinator._manufacturer or "Unknown")
             + (
                 " " + self.coordinator._host_product_code
                 if self.coordinator._host_product_code

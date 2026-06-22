@@ -85,7 +85,7 @@ async def enumerate_instances(
         server = ECHONETAPIClient(server=udp)
         server._debug_flag = True
         server._logger = _LOGGER.debug
-        server._message_timeout = 300
+        server._message_timeout = 150
         close_server = True
 
     try:
@@ -165,7 +165,7 @@ async def enumerate_instances(
         if not isinstance(manufacturer, str):
             # If unable to resolve the manufacturer,
             # the raw identification number will be passed as int.
-            _LOGGER.warn(
+            _LOGGER.warning(
                 f"{host} - Unable to resolve the manufacturer name - {manufacturer}. "
                 + "Please report the manufacturer name of your device at the issue tracker on GitHub!"
             )
@@ -299,7 +299,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             server = ECHONETAPIClient(server=udp)
             server._debug_flag = True
             server._logger = _LOGGER.debug
-            server._message_timeout = 300
+            server._message_timeout = 150
             close_server = True
 
         server._discover_callback = discover_callback

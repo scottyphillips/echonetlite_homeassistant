@@ -46,7 +46,9 @@ from .const import (
 )
 from .connectors import (
     ECHONETConnector,
+    DeviceTimeoutError,
 )
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [
@@ -368,7 +370,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     )
                     break
 
-                except (TimeoutError, asyncio.TimeoutError) as ex:
+                except (TimeoutError, asyncio.TimeoutError, UpdateFailed) as ex:
                     _LOGGER.warning(
                         "Setting up ECHONET instance %s-%s-%s on %s timed out "
                         "(retry %s/3, remaining %.1fs)",
@@ -399,7 +401,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             {"instance": instance, "echonetlite": echonetlite}
         )
 
-    _LOGGER.warning(f"ECHONETLite Platform entry data - {entry.data}")
+    _LOGGER.debug(f"ECHONETLite Platform entry data - {entry.data}")
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
