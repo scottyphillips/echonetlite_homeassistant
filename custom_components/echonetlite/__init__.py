@@ -374,7 +374,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     break
 
                 except (TimeoutError, asyncio.TimeoutError) as ex:
-                    _LOGGER.debug(
+                    _LOGGER.warning(
                         "Setting up ECHONET instance %s-%s-%s on %s timed out "
                         "(retry %s/3, remaining %.1fs)",
                         eojgc,
@@ -398,7 +398,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 f"IP address change was detected during setup of {host}"
             ) from ex
 
-    _LOGGER.debug(f"ECHONETLite Platform entry data - {entry.data}")
+    _LOGGER.warning(f"ECHONETLite Platform entry data - {entry.data}")
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
