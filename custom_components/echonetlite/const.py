@@ -93,6 +93,7 @@ TYPE_TIME = "time"
 TYPE_NUMBER = "number"
 TYPE_DATA_DICT = "type_data_dict"
 TYPE_DATA_ARRAY_WITH_SIZE_OPCODE = "type_data_array_with_size_opcode"
+TYPE_DATA_DICT_OVERRIDES = "type_data_dict_overrides"
 SERVICE_SET_ON_TIMER_TIME = "set_on_timer_time"
 SERVICE_SET_INT_1B = "set_value_int_1b"
 OPEN = "open"
@@ -136,6 +137,23 @@ ENL_SUPER_CODES = {
     ENL_FAULT_DESCRIPTION: {
         CONF_TYPE: SensorDeviceClass.ENUM,
         TYPE_DATA_DICT: ["fault classification", "error code"],
+    },
+}
+
+TYPE_MEASUREMENT_CHANNEL = {
+    CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
+    TYPE_DATA_DICT: ["electric_energy_kwh", "current_r_phase_a", "current_t_phase_a"],
+    TYPE_DATA_DICT_OVERRIDES: {
+        "electric_energy_kwh": {
+            CONF_TYPE: SensorDeviceClass.ENERGY,
+            CONF_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
+        },
+        "current_r_phase_a": {
+            CONF_TYPE: SensorDeviceClass.CURRENT,
+        },
+        "current_t_phase_a": {
+            CONF_TYPE: SensorDeviceClass.CURRENT,
+        },
     },
 }
 
@@ -987,6 +1005,38 @@ ENL_OP_CODES = {
                 TYPE_DATA_DICT: ["r_sn_voltage", "sn_t_voltage"],
                 CONF_DISABLED_DEFAULT: True,
             },
+            0xD0: TYPE_MEASUREMENT_CHANNEL,
+            0xD1: TYPE_MEASUREMENT_CHANNEL,
+            0xD2: TYPE_MEASUREMENT_CHANNEL,
+            0xD3: TYPE_MEASUREMENT_CHANNEL,
+            0xD4: TYPE_MEASUREMENT_CHANNEL,
+            0xD5: TYPE_MEASUREMENT_CHANNEL,
+            0xD6: TYPE_MEASUREMENT_CHANNEL,
+            0xD7: TYPE_MEASUREMENT_CHANNEL,
+            0xD8: TYPE_MEASUREMENT_CHANNEL,
+            0xD9: TYPE_MEASUREMENT_CHANNEL,
+            0xDA: TYPE_MEASUREMENT_CHANNEL,
+            0xDB: TYPE_MEASUREMENT_CHANNEL,
+            0xDC: TYPE_MEASUREMENT_CHANNEL,
+            0xDD: TYPE_MEASUREMENT_CHANNEL,
+            0xDE: TYPE_MEASUREMENT_CHANNEL,
+            0xDF: TYPE_MEASUREMENT_CHANNEL,
+            0xE0: TYPE_MEASUREMENT_CHANNEL,
+            0xE1: TYPE_MEASUREMENT_CHANNEL,
+            0xE2: TYPE_MEASUREMENT_CHANNEL,
+            0xE3: TYPE_MEASUREMENT_CHANNEL,
+            0xE4: TYPE_MEASUREMENT_CHANNEL,
+            0xE5: TYPE_MEASUREMENT_CHANNEL,
+            0xE6: TYPE_MEASUREMENT_CHANNEL,
+            0xE7: TYPE_MEASUREMENT_CHANNEL,
+            0xE8: TYPE_MEASUREMENT_CHANNEL,
+            0xE9: TYPE_MEASUREMENT_CHANNEL,
+            0xEA: TYPE_MEASUREMENT_CHANNEL,
+            0xEB: TYPE_MEASUREMENT_CHANNEL,
+            0xEC: TYPE_MEASUREMENT_CHANNEL,
+            0xED: TYPE_MEASUREMENT_CHANNEL,
+            0xEE: TYPE_MEASUREMENT_CHANNEL,
+            0xEF: TYPE_MEASUREMENT_CHANNEL,
         },
         0x88: {  # Low voltage smart electric energy meter
             0xD3: {

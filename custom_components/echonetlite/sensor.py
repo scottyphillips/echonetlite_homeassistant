@@ -47,6 +47,7 @@ from .const import (
     SERVICE_SET_INT_1B,
     CONF_ENABLE_SUPER_ENERGY,
     TYPE_DATA_DICT,
+    TYPE_DATA_DICT_OVERRIDES,
     TYPE_DATA_ARRAY_WITH_SIZE_OPCODE,
     CONF_DISABLED_DEFAULT,
     CONF_MULTIPLIER,
@@ -274,14 +275,25 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
 
                 if TYPE_DATA_DICT in _keys:
                     type_data = _enl_op_codes.get(op_code, {}).get(TYPE_DATA_DICT)
+                    dict_overrides = _enl_op_codes.get(op_code, {}).get(
+                        TYPE_DATA_DICT_OVERRIDES, {}
+                    )
                     if isinstance(type_data, list):
                         for attr_key in type_data:
+                            base_attrs = _enl_op_codes.get(op_code)
+                            # Apply override if defined for this specific dict key
+                            if attr_key in dict_overrides:
+                                entity_attrs = (
+                                    base_attrs | {"dict_key": attr_key} | dict_overrides[attr_key]
+                                )
+                            else:
+                                entity_attrs = base_attrs | {"dict_key": attr_key}
                             entities.append(
                                 EchonetSensor(
                                     entity["echonetlite"],
                                     config,
                                     op_code,
-                                    _enl_op_codes.get(op_code) | {"dict_key": attr_key},
+                                    entity_attrs,
                                 )
                             )
                         continue
