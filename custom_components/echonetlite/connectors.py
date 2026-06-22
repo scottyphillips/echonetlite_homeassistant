@@ -326,25 +326,61 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             _LOGGER.debug("Device Timeout for {self._host}: %s", err)
             raise UpdateFailed(f"Offline: {err}")
 
-    async def async_update_callback(self, isPush: bool = False):
+async def async_update_callback(self, isPush: bool = False):
         """Handle push notifications from the device.
-
+ 
+        When the device sends an unsolicited INF packet, pychonet fires this
+        callback. Rather than reading the entire _state for this instance
+        (which may contain None for EPCs not yet fetched in the current poll
+        cycle), we restrict the read to EPCs listed in _ntfPropertyMap — the
+        set of EPCs the device declared it will proactively notify about.
+        This prevents mid-poll push notifications from overwriting good cached
+        data with None for EPCs that haven't been batched yet.
+ 
         Args:
             isPush: Whether this update was triggered by a push notification.
         """
+        if not self._ntfPropertyMap:
+            # Device declared no notification EPCs — nothing useful to merge.
+            return
+ 
         try:
-            # Grab what the library currently knows (no network request)
-            _LOGGER.debug(f"Push notification for {self._host}: %s")
-            new_data = await self.poll_pychonet(no_request=True)
-            _LOGGER.debug(f"Data from push notification: {new_data}")
-            if new_data:
-                # Merge with existing coordinator data
-                # Use 'self.data or {}' in case this is the first update
-                combined_data = {**(self.data or {}), **new_data}
-
-                # This triggers all entities to update their state immediately
-                self.data = combined_data
-                self.async_update_listeners()
+            _LOGGER.debug(
+                "Push notification for %s-%s-%s-%s, reading ntfmap EPCs: %s",
+                self._host, self._eojgc, self._eojcc, self._eojci,
+                self._ntfPropertyMap,
+            )
+ 
+            # Read only the EPCs the device declared it notifies about.
+            # _instance.update() with no_request=True reads from the library's
+            # internal _state cache — no network call is made.
+            raw = await self._instance.update(
+                list(self._ntfPropertyMap), no_request=True
+            )
+ 
+            if not raw:
+                return
+ 
+            # raw may be a dict (multiple EPCs) or a scalar (single EPC).
+            if isinstance(raw, dict):
+                new_data = raw
+            elif len(self._ntfPropertyMap) == 1:
+                new_data = {self._ntfPropertyMap[0]: raw}
+            else:
+                return
+ 
+            # Drop any None values — a device push should never produce None,
+            # but guard against it so we never overwrite good cached data.
+            new_data = {k: v for k, v in new_data.items() if v is not None}
+ 
+            if not new_data:
+                return
+ 
+            _LOGGER.debug("Push notification data for %s: %s", self._host, new_data)
+ 
+            # Merge into coordinator data and notify listeners.
+            self.data = {**(self.data or {}), **new_data}
+            self.async_update_listeners()
 
         except Exception as err:
             _LOGGER.error("Failed to process ECHONETLite push notification: %s", err)
