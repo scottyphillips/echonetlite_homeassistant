@@ -285,6 +285,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # earlier instances from blocking later ones (especially important for
     # devices like Panasonic SmartCosmo with many instances on a single IP).
     coordinators: list[tuple[dict, ECHONETConnector]] = []
+    instance_count = len(entry.data["instances"])
+    _LOGGER.debug(
+        "ECHONETLite setup Pass 1 starting: %d instance(s) to initialise",
+        instance_count,
+    )
 
     for instance in entry.data["instances"]:
         # auto update to new style
@@ -355,12 +360,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     }
                 }
             )
-        _LOGGER.debug("Instantiating ECHONETConnector.")
+        _LOGGER.debug(
+            "ECHONETLite Pass 1: instantiating %s-%s-%s at %s (budget remaining: %.1fs)",
+            eojgc, eojcc, eojci, host, _remaining_setup_budget(started),
+        )
         echonetlite = ECHONETConnector(instance, hass, entry)
         await echonetlite.startup()
-        # first refresh of data required by DataUpdateCoordinator to populate initial data and start polling.
+
         try:
-            # Since there is a small chance of failure, perform a few retries for each instance.
             for retry in range(1, 4):
                 remaining = _remaining_setup_budget(started)
                 if remaining < INSTANCE_MIN_BUDGET:
@@ -369,11 +376,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     )
 
                 per_try_budget = min(remaining, INSTANCE_MAX_BUDGET)
+                _LOGGER.debug(
+                    "ECHONETLite Pass 1: fetching data for %s-%s-%s at %s "
+                    "(attempt %s/3, budget %.1fs/%.1fs remaining)",
+                    eojgc, eojcc, eojci, host, retry, per_try_budget, remaining,
+                )
 
                 try:
                     await _run_with_timeout(
                         echonetlite.async_setup_data_fetch(),
                         per_try_budget,
+                    )
+                    _LOGGER.debug(
+                        "ECHONETLite Pass 1: data fetch succeeded for %s-%s-%s at %s",
+                        eojgc, eojcc, eojci, host,
                     )
                     break
 
@@ -403,15 +419,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ) from ex
 
         # Data fetched successfully — hold the coordinator until pass 2.
+        _LOGGER.debug(
+            "ECHONETLite Pass 1: %s-%s-%s at %s complete, holding for pass 2",
+            eojgc, eojcc, eojci, host,
+        )
         coordinators.append((instance, echonetlite))
 
-    # Pass 2: all instances have data — now register coordinators with HA's
-    # scheduling engine together. async_config_entry_first_refresh() will not
-    # re-fetch data (self.data is already populated) but will start the polling
-    # interval. Starting all schedulers together after setup avoids any
-    # inter-instance queue contention during pass 1.
+    _LOGGER.debug(
+        "ECHONETLite Pass 1 complete: %d/%d instance(s) ready, starting Pass 2",
+        len(coordinators), instance_count,
+    )
+
+    # Pass 2: all instances have data — register coordinators with HA's
+    # scheduling engine without triggering another network poll.
+    # async_config_entry_first_refresh() always calls _async_update_data()
+    # internally, which would re-poll each instance and cause queue contention
+    # between instances on the same IP. Instead we use async_set_updated_data()
+    # which marks the coordinator as successful, starts the polling scheduler,
+    # and notifies listeners — all without making any network requests.
     for instance, echonetlite in coordinators:
-        await echonetlite.async_config_entry_first_refresh()
+        _LOGGER.debug(
+            "ECHONETLite Pass 2: registering scheduler for %s-%s-%s at %s",
+            instance["eojgc"], instance["eojcc"], instance["eojci"], instance["host"],
+        )
+        echonetlite.async_set_updated_data(echonetlite.data)
+        _LOGGER.debug(
+            "ECHONETLite Pass 2: scheduler started for %s-%s-%s at %s",
+            instance["eojgc"], instance["eojcc"], instance["eojci"], instance["host"],
+        )
         hass.data[DOMAIN][entry.entry_id].append(
             {"instance": instance, "echonetlite": echonetlite}
         )
