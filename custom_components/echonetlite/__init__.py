@@ -46,6 +46,7 @@ from .const import (
 )
 from .connectors import (
     ECHONETConnector,
+    ECHONETHostCoordinator,
     DeviceTimeoutError,
 )
 from homeassistant.helpers.update_coordinator import UpdateFailed
@@ -430,25 +431,47 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         len(coordinators), instance_count,
     )
 
-    # Pass 2: all instances have data — register coordinators with HA's
-    # scheduling engine without triggering another network poll.
-    # async_config_entry_first_refresh() always calls _async_update_data()
-    # internally, which would re-poll each instance and cause queue contention
-    # between instances on the same IP. Instead we use async_set_updated_data()
-    # which marks the coordinator as successful, starts the polling scheduler,
-    # and notifies listeners — all without making any network requests.
+    # Pass 2: group instances by host and create one ECHONETHostCoordinator
+    # per host. All instances on the same IP share a single 30-second poll
+    # timer and are polled sequentially, eliminating _waiting queue saturation.
+    host_coordinators: dict[str, ECHONETHostCoordinator] = {}
+
     for instance, echonetlite in coordinators:
+        host = instance["host"]
         _LOGGER.debug(
-            "ECHONETLite Pass 2: registering scheduler for %s-%s-%s at %s",
-            instance["eojgc"], instance["eojcc"], instance["eojci"], instance["host"],
+            "ECHONETLite Pass 2: registering %s-%s-%s at %s with host coordinator",
+            instance["eojgc"], instance["eojcc"], instance["eojci"], host,
         )
-        echonetlite.async_set_updated_data(echonetlite.data)
-        _LOGGER.debug(
-            "ECHONETLite Pass 2: scheduler started for %s-%s-%s at %s",
-            instance["eojgc"], instance["eojcc"], instance["eojci"], instance["host"],
-        )
+
+        # Create host coordinator on first instance for this host
+        if host not in host_coordinators:
+            host_coordinators[host] = ECHONETHostCoordinator(host, hass, entry)
+            _LOGGER.debug(
+                "ECHONETLite Pass 2: created host coordinator for %s", host,
+            )
+
+        host_coordinator = host_coordinators[host]
+        host_coordinator.register_connector(echonetlite)
+        echonetlite._host_coordinator = host_coordinator
+
         hass.data[DOMAIN][entry.entry_id].append(
             {"instance": instance, "echonetlite": echonetlite}
+        )
+
+    # Start all host coordinators — one refresh timer per host.
+    # We use async_set_updated_data({}) to start the scheduler without
+    # triggering a network poll — data was already fetched in pass 1.
+    # Each connector is marked available and its listeners notified.
+    for host, host_coordinator in host_coordinators.items():
+        _LOGGER.debug(
+            "ECHONETLite Pass 2: starting host coordinator for %s", host,
+        )
+        for connector in host_coordinator._connectors:
+            connector.last_update_success = True
+        # Start the 30s poll scheduler without re-fetching data
+        host_coordinator.async_set_updated_data({})
+        _LOGGER.debug(
+            "ECHONETLite Pass 2: host coordinator started for %s", host,
         )
 
     _LOGGER.debug(f"ECHONETLite Platform entry data - {entry.data}")

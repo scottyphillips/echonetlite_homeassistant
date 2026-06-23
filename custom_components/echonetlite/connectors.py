@@ -5,11 +5,11 @@ import logging
 import os
 from functools import partial
 from importlib import import_module
-from typing import Any
+from typing import Any, Callable
 from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from pychonet import ECHONETAPIClient
@@ -41,14 +41,7 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 
 def regist_as_inputs(epc_function_data):
-    """Check if EPC function data should be registered as input entity.
-
-    Args:
-        epc_function_data: The EPC function data to check.
-
-    Returns:
-        True if the EPC should be registered as an input (Switch, Select, or Time).
-    """
+    """Check if EPC function data should be registered as input entity."""
     if epc_function_data:
         if type(epc_function_data) == list:
             if type(epc_function_data[1]) == dict and len(epc_function_data[1]) > 1:
@@ -61,14 +54,7 @@ def regist_as_inputs(epc_function_data):
 
 
 def regist_as_binary_sensor(epc_function_data):
-    """Check if EPC function data should be registered as binary sensor.
-
-    Args:
-        epc_function_data: The EPC function data to check.
-
-    Returns:
-        True if the EPC should be registered as a binary sensor.
-    """
+    """Check if EPC function data should be registered as binary sensor."""
     from pychonet.lib.epc_functions import (
         DICT_30_ON_OFF,
         DICT_30_OPEN_CLOSED,
@@ -90,50 +76,100 @@ def regist_as_binary_sensor(epc_function_data):
 
 class DeviceTimeoutError(Exception):
     """Exception to indicate the device did not respond."""
-
     pass
 
 
-class ECHONETConnector(DataUpdateCoordinator[dict]):
-    """EchonetAPIConnector is used to centralise API calls for Echonet devices.
+class ECHONETHostCoordinator(DataUpdateCoordinator[dict]):
+    """Per-host coordinator that polls all instances on a single IP sequentially.
 
-    API calls are aggregated per instance (not per node!)
+    Multiple ECHONET instances on the same IP share a single _waiting queue
+    in pychonet. If each instance has its own DataUpdateCoordinator with a
+    30-second timer, all timers fire simultaneously and the queue becomes
+    saturated — each request waits up to message_timeout seconds behind the
+    previous one.
 
-    This class extends DataUpdateCoordinator to manage ECHONET device data updates,
-    providing built-in polling and caching capabilities while maintaining all
-    existing bespoke logic for batch requests, quirks, and callbacks.
+    This coordinator owns a single 30-second poll timer for an entire host.
+    It polls each registered ECHONETConnector in sequence, one after another,
+    with no concurrent requests. Each connector's listeners are notified as
+    soon as its slice of data is updated.
     """
 
-    def __init__(self, instance: dict, hass: HomeAssistant, entry: ConfigEntry):
-        """Initialize the ECHONETConnector coordinator.
-
-        Args:
-            instance: The ECHONET device instance configuration dictionary.
-            hass: The Home Assistant instance.
-            entry: The config entry for this integration.
-        """
-        import pychonet as echonet
-
-        # Calculate a unique name for this coordinator using string formatting
-        # to avoid nested quote issues in f-strings
-        display_name = self._get_display_name(instance)
-
-        # Initialize as an DataUpdateCoordinator - the base class handles polling and caching
+    def __init__(self, host: str, hass: HomeAssistant, entry: ConfigEntry):
+        """Initialise the host coordinator."""
         super().__init__(
             hass,
             _LOGGER,
-            name=display_name,
-            update_method=self._async_update_data,
-            update_interval=MIN_TIME_BETWEEN_UPDATES,  # Set via startup() based on MIN_TIME_BETWEEN_UPDATES
+            name=f"ECHONET host {host}",
+            update_interval=MIN_TIME_BETWEEN_UPDATES,
+        )
+        self._host = host
+        self._entry = entry
+        self._connectors: list["ECHONETConnector"] = []
+
+    def register_connector(self, connector: "ECHONETConnector") -> None:
+        """Register an instance connector with this host coordinator."""
+        self._connectors.append(connector)
+        _LOGGER.debug(
+            "ECHONETHostCoordinator: registered %s-%s-%s for host %s (%d total)",
+            connector._eojgc, connector._eojcc, connector._eojci,
+            self._host, len(self._connectors),
         )
 
-        # Store original instance config for reference
-        self._instance_data = instance
+    async def _async_update_data(self) -> dict:
+        """Poll all registered connectors sequentially.
 
-        # Initialize self.data for DataUpdateCoordinator with correct type hinting - this will be populated with EPC code keys in _make_update_flags_full_list()
-        self.data: dict[int, Any] = {}
+        Returns a combined dict (not used directly — each connector manages
+        its own data and notifies its own listeners).
+        """
+        _LOGGER.debug(
+            "ECHONETHostCoordinator: polling %d instance(s) on %s",
+            len(self._connectors), self._host,
+        )
+        combined = {}
+        for connector in self._connectors:
+            try:
+                data = await connector._do_poll()
+                combined[connector._eojci] = data
+            except DeviceTimeoutError as err:
+                _LOGGER.debug(
+                    "ECHONETHostCoordinator: timeout on %s-%s-%s at %s: %s",
+                    connector._eojgc, connector._eojcc, connector._eojci,
+                    self._host, err,
+                )
+                # Mark this connector unavailable and notify its listeners
+                connector.last_update_success = False
+                connector.async_update_listeners()
+            except Exception as err:
+                _LOGGER.error(
+                    "ECHONETHostCoordinator: error polling %s-%s-%s at %s: %s",
+                    connector._eojgc, connector._eojcc, connector._eojci,
+                    self._host, err,
+                )
+                connector.last_update_success = False
+                connector.async_update_listeners()
+            else:
+                # Update connector data and notify its listeners
+                connector.data = {**(connector.data or {}), **data}
+                connector.last_update_success = True
+                connector.async_update_listeners()
 
-        # Core connector attributes - preserved from original implementation
+        return combined
+
+
+class ECHONETConnector:
+    """Per-instance ECHONET connector.
+
+    Manages data, batching, quirks, and push notifications for a single
+    ECHONET instance. Entities subscribe to this connector's listener system.
+    Polling is driven by ECHONETHostCoordinator rather than an independent
+    DataUpdateCoordinator timer, which prevents _waiting queue saturation
+    when multiple instances share the same host IP.
+    """
+
+    def __init__(self, instance: dict, hass: HomeAssistant, entry: ConfigEntry):
+        """Initialise the connector."""
+        import pychonet as echonet
+
         self.hass = hass
         self._entry = entry
 
@@ -162,17 +198,30 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         # Operation codes mapping for this device type
         self._enl_op_codes = ENL_OP_CODES.get(self._eojgc, {}).get(self._eojcc, {})
 
-        # Update management - batch requests and flags
+        # Update management
         self._update_flag_batches: list[list[int]] = []
         self._update_flags_full_list: list[int] = []
-        self._singleton_poll_epcs: list[int] = []  # EPCs polled individually due to quirk
+        self._singleton_poll_epcs: list[int] = []
 
-        # Callbacks for push notifications and option updates
+        # Callbacks for option updates
         self._update_callbacks: list[callable] = []
         self._update_option_func: list[callable] = []
 
-        # User configurable options (fan modes, swing modes, temperature ranges, etc.)
+        # User configurable options
         self._user_options: dict[str, Any] = {}
+
+        # Data and availability state — mirrors DataUpdateCoordinator interface
+        # so entities don't need to change.
+        self.data: dict[int, Any] = {}
+        self.last_update_success: bool = True
+        self.name: str = self._get_display_name(instance)
+
+        # Listener registry — mirrors DataUpdateCoordinator interface
+        self._listeners: dict[int, tuple[callable, object | None]] = {}
+        self._last_listener_id: int = 0
+
+        # Reference to host coordinator (set after creation)
+        self._host_coordinator: ECHONETHostCoordinator | None = None
 
         # Get API instance from Home Assistant data store
         self._api: ECHONETAPIClient = hass.data[DOMAIN]["api"]
@@ -192,14 +241,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         )
 
     def _get_display_name(self, instance: dict) -> str:
-        """Generate a display name for the coordinator.
-
-        Args:
-            instance: The ECHONET device instance configuration dictionary.
-
-        Returns:
-            A formatted display name for the coordinator.
-        """
+        """Generate a display name."""
         if instance.get("name"):
             return f"ECHONET {instance['name']}"
         return (
@@ -207,14 +249,45 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             f"-{instance['eojcc']}-{instance['eojci']}"
         )
 
-    async def startup(self):
-        """Complete initialization of the connector/coordinator.
+    @callback
+    def async_add_listener(
+        self, update_callback: callable, context: Any = None
+    ) -> callable:
+        """Register a listener — mirrors DataUpdateCoordinator interface.
 
-        This method performs one-time setup including:
-        - Loading device-specific quirks
-        - Initializing user options from config entry
-        - Building update flag lists and batch configurations
+        Called by CoordinatorEntity.async_added_to_hass. The first listener
+        does NOT schedule a refresh here — polling is driven by the host
+        coordinator instead.
         """
+        self._last_listener_id += 1
+        self._listeners[self._last_listener_id] = (update_callback, context)
+        listener_id = self._last_listener_id
+
+        def remove_listener():
+            self._listeners.pop(listener_id, None)
+
+        return remove_listener
+
+    @callback
+    def async_update_listeners(self) -> None:
+        """Notify all registered listeners."""
+        for update_callback, _ in list(self._listeners.values()):
+            try:
+                update_callback()
+            except Exception:
+                _LOGGER.exception(
+                    "Unexpected error updating listener for %s", self.name
+                )
+
+    @callback
+    def async_contexts(self):
+        """Return all registered contexts — mirrors DataUpdateCoordinator interface."""
+        yield from (
+            context for _, context in self._listeners.values() if context is not None
+        )
+
+    async def startup(self):
+        """Complete initialisation of the connector."""
         import pychonet as echonet
         from homeassistant.const import PERCENTAGE
         from pychonet.HomeAirConditioner import (
@@ -236,7 +309,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         # Load device-specific quirks
         await self._load_quirk()
 
-        # Initialize default user options for fan and swing modes
+        # Initialize default user options
         self._user_options = {
             ENL_FANSPEED: False,
             ENL_AUTO_DIRECTION: False,
@@ -245,7 +318,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             ENL_AIR_HORZ: False,
         }
 
-        # Apply user-configurable options from config entry
         for option in USER_OPTIONS.keys():
             if entry.options.get(USER_OPTIONS[option]["option"]) is not None:
                 option_value = entry.options.get(USER_OPTIONS[option]["option"])
@@ -254,23 +326,19 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 else:
                     self._user_options[option] = False
 
-        # Apply temperature range options from TEMP_OPTIONS defaults (or config values)
         for option in TEMP_OPTIONS.keys():
             if entry.options.get(option) is not None:
                 self._user_options[option] = entry.options.get(option)
             else:
                 self._user_options[option] = TEMP_OPTIONS[option].get("default")
 
-        # Apply miscellaneous options
         for key, option in MISC_OPTIONS.items():
             if entry.options.get(key) is not None:
                 self._user_options[key] = entry.options.get(key, option.get("default"))
 
-        # Build the full list of EPC codes to update
         self._make_update_flags_full_list()
         self._update_option_func.append(self._make_update_flags_full_list)
 
-        # Configure batch request flags for efficient polling
         self._make_batch_request_flags()
         self._update_option_func.append(self._make_batch_request_flags)
 
@@ -279,42 +347,27 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
 
     async def async_setup_data_fetch(self) -> dict[int, Any]:
-        """Fetch initial data during setup using best-effort mode.
-
-        Unlike _async_update_data, this method skips batches that time out
-        rather than raising DeviceTimeoutError. This allows setup to complete
-        even when a device silently drops requests for certain EPCs, trusting
-        the coordinator's regular polling to fill in the gaps.
-
-        Returns:
-            A dictionary of EPC codes and their current values.
-        """
+        """Fetch initial data during setup using best-effort mode."""
         _LOGGER.debug(
             "Setup data fetch (best_effort) for %s-%s-%s-%s",
-            self._host,
-            self._eojgc,
-            self._eojcc,
-            self._eojci,
+            self._host, self._eojgc, self._eojcc, self._eojci,
         )
         return await self.poll_pychonet(no_request=False, best_effort=True)
 
-    async def _async_update_data(self) -> dict[int, Any]:
-        """Fetch the latest data from the ECHONET device.
+    async def _do_poll(self) -> dict[int, Any]:
+        """Poll this instance — called by ECHONETHostCoordinator.
 
-        Returns:
-            A dictionary of EPC codes and their current values.
-
-        Raises:
-            UpdateFailed: If device is offline or update fails.
+        Raises DeviceTimeoutError if all batches fail (device offline).
         """
         try:
-            # Standard poll
-            _LOGGER.debug(f"Polling ECHONETLite Host {self._host}: %s")
+            _LOGGER.debug(
+                "Polling ECHONETLite %s-%s-%s at %s",
+                self._eojgc, self._eojcc, self._eojci, self._host,
+            )
             return await self.poll_pychonet(no_request=False)
 
         except EchonetMaxOpcError as ex:
-            # Memory Pressure Control (MPC): Device rejected batch size, adjust and retry
-            # 1. Adjust batch size
+            # MPC: device rejected batch size, adjust and retry
             batch_size_max = self._user_options.get(
                 CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
             )
@@ -325,59 +378,33 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                     f"MPC Error: Device at {self._host} rejected batch even at minimum size."
                 )
 
-            # 2. Persist new batch size
             self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
             self.hass.config_entries.async_update_entry(
                 self._entry,
                 options={**self._entry.options, CONF_BATCH_SIZE_MAX: batch_data_len},
             )
-
-            # 3. Rebuild and Retry
             self._make_batch_request_flags()
+
             try:
                 return await self.poll_pychonet(no_request=False)
             except Exception as err:
                 _LOGGER.error(
-                    "Failed to process ECHONETLite polling notification: %s", err
+                    "Failed after MPC adjustment for %s: %s", self._host, err
                 )
-                raise UpdateFailed(f"Retry failed after MPC adjustment: {err}")
-
-        except DeviceTimeoutError as err:
-            # This is the "Magic Clause": Raising UpdateFailed marks entities as Unavailable
-            _LOGGER.debug("Device Timeout for {self._host}: %s", err)
-            raise UpdateFailed(f"Offline: {err}")
+                raise DeviceTimeoutError(f"Retry failed after MPC adjustment: {err}")
 
     async def async_update_callback(self, isPush: bool = False):
-        """Handle push notifications from the device.
-
-        When the device sends an unsolicited INF packet, pychonet fires this
-        callback. Rather than reading the entire _state for this instance
-        (which may contain None for EPCs not yet fetched in the current poll
-        cycle), we restrict the read to EPCs listed in _ntfPropertyMap — the
-        set of EPCs the device declared it will proactively notify about.
-        This prevents mid-poll push notifications from overwriting good cached
-        data with None for EPCs that haven't been batched yet.
-
-        Args:
-            isPush: Whether this update was triggered by a push notification.
-        """
+        """Handle push notifications from the device."""
         if not self._ntfPropertyMap:
-            # Device declared no notification EPCs — nothing useful to merge.
             return
 
         try:
             _LOGGER.debug(
                 "Push notification for %s-%s-%s-%s, reading ntfmap EPCs: %s",
-                self._host,
-                self._eojgc,
-                self._eojcc,
-                self._eojci,
+                self._host, self._eojgc, self._eojcc, self._eojci,
                 self._ntfPropertyMap,
             )
 
-            # Read only the EPCs the device declared it notifies about.
-            # _instance.update() with no_request=True reads from the library's
-            # internal _state cache — no network call is made.
             raw = await self._instance.update(
                 list(self._ntfPropertyMap), no_request=True
             )
@@ -385,7 +412,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             if not raw:
                 return
 
-            # raw may be a dict (multiple EPCs) or a scalar (single EPC).
             if isinstance(raw, dict):
                 new_data = raw
             elif len(self._ntfPropertyMap) == 1:
@@ -393,8 +419,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             else:
                 return
 
-            # Drop any None values — a device push should never produce None,
-            # but guard against it so we never overwrite good cached data.
             new_data = {k: v for k, v in new_data.items() if v is not None}
 
             if not new_data:
@@ -402,7 +426,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
             _LOGGER.debug("Push notification data for %s: %s", self._host, new_data)
 
-            # Merge into coordinator data and notify listeners.
             self.data = {**(self.data or {}), **new_data}
             self.async_update_listeners()
 
@@ -412,20 +435,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
     async def poll_pychonet(
         self, no_request: bool = False, best_effort: bool = False
     ) -> dict[int, Any]:
-        """Fetch data from pychonet instance.
-
-        Args:
-            no_request: If True, only return cached data without network request.
-            best_effort: If True, skip batches that time out rather than raising
-                DeviceTimeoutError. Used during initial setup so that slow or
-                partially-unresponsive devices (e.g. devices that silently drop
-                requests for certain EPCs) can still complete setup with whatever
-                data they return. Regular polling uses best_effort=False so that
-                a completely unresponsive device correctly marks entities unavailable.
-
-        Returns:
-            A dictionary of EPC codes and their current values.
-        """
+        """Fetch data from pychonet instance."""
         update_data = {}
         timed_out_batches = []
 
@@ -433,24 +443,19 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             if i > 0 and not no_request:
                 await asyncio.sleep(0.1)
 
-            # Hit the library. Returns False if a network request fails.
             batch_data = await self._instance.update(flags, no_request)
 
             if batch_data is False:
-                if no_request:  # Should not happen with local cache access
+                if no_request:
                     continue
                 if best_effort:
-                    # Skip this batch and continue — device may be slow or
-                    # silently dropping requests for certain EPCs.
                     _LOGGER.warning(
                         "Device at %s did not respond to EPCs %s — skipping batch "
                         "(best_effort mode)",
-                        self._host,
-                        flags,
+                        self._host, flags,
                     )
                     timed_out_batches.append(flags)
                     continue
-                # Raise custom error so _async_update_data can catch it
                 raise DeviceTimeoutError(
                     f"Device at {self._host} failed to respond to EPCs {flags}"
                 )
@@ -460,19 +465,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             elif len(flags) == 1:
                 update_data[flags[0]] = batch_data
 
-        if best_effort and timed_out_batches:
-            _LOGGER.warning(
-                "Device at %s: %d batch(es) timed out during setup and were skipped: %s. "
-                "Affected EPCs will be retried on the next scheduled poll.",
-                self._host,
-                len(timed_out_batches),
-                timed_out_batches,
-            )
-
-        # Poll singleton EPCs individually after normal batches.
-        # These EPCs are excluded from batching via quirks due to device
-        # firmware limitations (e.g. buffer overflow when combined with
-        # other large-payload EPCs).
+        # Poll singleton EPCs individually
         for epc in self._singleton_poll_epcs:
             if epc not in self._update_flags_full_list:
                 continue
@@ -489,44 +482,36 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             else:
                 update_data[epc] = singleton_data
 
+        if best_effort and timed_out_batches:
+            _LOGGER.warning(
+                "Device at %s: %d batch(es) timed out during setup and were skipped: %s. "
+                "Affected EPCs will be retried on the next scheduled poll.",
+                self._host, len(timed_out_batches), timed_out_batches,
+            )
+
         return update_data
 
     async def poll_pychonet_specific(self, epcs: list[int]) -> dict[int, Any]:
-        """Fetch specific EPCs from the pychonet instance.
-
-        This bypasses the standard batching logic to allow for rapid
-        verification of specific state changes.
-        """
+        """Fetch specific EPCs — bypasses standard batching."""
         _LOGGER.debug("Targeted poll for %s at %s", epcs, self._host)
         update_data = {}
-
-        # We call the library update directly with the specific list
-        # No 'no_request' logic here because the whole point is a fresh network hit
         batch_data = await self._instance.update(epcs)
 
         if batch_data is False:
-            # We don't necessarily want to raise UpdateFailed here and mark
-            # the whole device unavailable just because a targeted sniff failed.
             _LOGGER.warning("Targeted poll failed for EPCs %s", epcs)
             return {}
 
         if isinstance(batch_data, dict):
             update_data.update(batch_data)
         elif len(epcs) == 1:
-            # Handle the case where pychonet returns a single value
-            # instead of a dict for a single-EPC request
             update_data[epcs[0]] = batch_data
 
         return update_data
 
     async def async_set_and_verify(self, epcs: list[int], set_coro):
-        """
-        Executes the pychonet setter command, and schedules a targeted poll.
-        """
-        # 1. Execute the set command
+        """Execute a set command and schedule a targeted verification poll."""
         await set_coro
 
-        # 2. Targeted Background Verification
         async def verify():
             await asyncio.sleep(0.8)
             confirmed = await self.poll_pychonet_specific(epcs)
@@ -537,20 +522,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         self.hass.async_create_task(verify())
 
     def _make_update_flags_full_list(self) -> bool:
-        """Build the complete list of EPC codes to poll.
-
-        This method constructs the full list of property codes that should be updated
-        during polling, including super energy codes and device-specific properties.
-
-        Returns:
-            True if the list has changed, False otherwise (for change detection).
-        """
+        """Build the complete list of EPC codes to poll."""
         _prev_update_flags_full_list = self._update_flags_full_list.copy()
-
-        # Reset the update flags list
         self._update_flags_full_list = []
 
-        # Include super energy codes if enabled
         _enabled_super_energy = self._user_options.get(
             CONF_ENABLE_SUPER_ENERGY,
             ENABLE_SUPER_ENERGY_DEFAULT.get(self._eojgc, {}).get(self._eojcc, True),
@@ -563,21 +538,18 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 k: v for k, v in ENL_SUPER_CODES.items() if k not in ENL_SUPER_ENERGES
             }
 
-        flags = list(_enl_super_codes)  # PR 246
+        flags = list(_enl_super_codes)
 
-        # Add supported EPC_FUNCTIONS from the pychonet object class
         _epc_keys = set(self._instance.EPC_FUNCTIONS.keys()) - set(EPC_SUPER.keys())
         for item in self._getPropertyMap:
             if item in _epc_keys:
                 flags.append(item)
 
-        # Build final list with None initialization
         for value in flags:
             if value in self._getPropertyMap:
                 self._update_flags_full_list.append(value)
-                self.data[value] = (
-                    None  # This should instantiate self.data with the correct keys for DataUpdateCoordinator
-                )
+                self.data[value] = None
+
         _LOGGER.debug(
             f"Echonet device {self._host}-{self._eojgc}-{self._eojcc}-{self._eojci} "
             f"update_flags_full_list: {self._update_flags_full_list}"
@@ -586,20 +558,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         return _prev_update_flags_full_list != self._update_flags_full_list
 
     def _make_batch_request_flags(self):
-        """Split the update flags list into batched requests.
-
-        The ECHONET protocol has limits on how many properties can be requested
-        in a single message. This method splits the full list into manageable batches.
-        EPCs marked as SINGLETON_POLL in quirks are excluded from batches and
-        polled individually to avoid device firmware buffer overflow issues.
-
-        Args:
-            CONF_BATCH_SIZE_MAX: User-configurable maximum batch size (default 10).
-        """
+        """Split the update flags list into batched requests."""
         self._update_flag_batches = []
         start_index = 0
 
-        # Exclude singleton EPCs from the normal batch list
         batch_list = [
             epc for epc in self._update_flags_full_list
             if epc not in self._singleton_poll_epcs
@@ -616,7 +578,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             )
             start_index += batch_size_max
 
-        # Add remaining flags as final batch
         self._update_flag_batches.append(
             batch_list[start_index:full_list_length]
         )
@@ -627,33 +588,15 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         )
 
     def register_async_update_callbacks(self, update_func: callable):
-        """Register a callback function to be called on data updates.
-
-        This method allows entities and other components to receive notifications
-        when device data changes via push notifications or polling.
-
-        Args:
-            update_func: Async callable that will be invoked with (isPush) parameter.
-        """
+        """Register a callback for data updates."""
         self._update_callbacks.append(update_func)
 
     def add_update_option_listener(self, update_func: callable):
-        """Register a listener for option change notifications.
-
-        This method allows components to react when user options are changed
-        and require rebuilding of flag lists or batch configurations.
-
-        Args:
-            update_func: Callable that returns True if a reload is needed.
-        """
+        """Register a listener for option changes."""
         self._update_option_func.append(update_func)
 
     async def _load_quirk(self):
-        """Load device-specific quirks for manufacturer-specific behavior.
-
-        Quirks are used to handle devices with non-standard EPC implementations
-        or proprietary extensions that require special handling.
-        """
+        """Load device-specific quirks."""
 
         def update(extention: Any):
             """Apply quirk definitions to the instance."""
@@ -673,7 +616,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             _LOGGER.debug(f"Echonet EPC_FUNCTIONS is: {self._instance.EPC_FUNCTIONS}")
             _LOGGER.debug(f"Echonet _enl_op_codes is: {self._enl_op_codes}")
 
-        # Check for manufacturer-specific quirks
         if self._manufacturer:
             check = [
                 "quirks",
@@ -692,7 +634,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 )
                 update(extention)
 
-            # Check for product-code-specific quirks
             if self._host_product_code:
                 check = [
                     "quirks",
