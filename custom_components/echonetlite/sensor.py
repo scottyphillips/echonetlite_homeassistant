@@ -285,7 +285,9 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             # Apply override if defined for this specific dict key
                             if attr_key in dict_overrides:
                                 entity_attrs = (
-                                    base_attrs | {"dict_key": attr_key} | dict_overrides[attr_key]
+                                    base_attrs
+                                    | {"dict_key": attr_key}
+                                    | dict_overrides[attr_key]
                                 )
                             else:
                                 entity_attrs = base_attrs | {"dict_key": attr_key}
@@ -339,17 +341,23 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                             # Apply override if defined for this specific dict key
                             if attr_key in dict_overrides:
                                 entity_attrs = (
-                                    base_attrs | {"dict_key": attr_key} 
+                                    base_attrs
+                                    | {"dict_key": attr_key}
                                     | dict_overrides[attr_key]
                                 )
                             else:
                                 entity_attrs = base_attrs | {"dict_key": attr_key}
                             # Set up accessor for nested array with dict items
                             entity_attrs["accessor_index"] = x
-                            entity_attrs["accessor_lambda"] = lambda value, index, key=attr_key: (
-                                value["values"][index][key] 
-                                if index < value.get("range", 0) and value.get("values") and isinstance(value.get("values"), list) and index < len(value.get("values", []))
-                                else None
+                            entity_attrs["accessor_lambda"] = (
+                                lambda value, index, key=attr_key: (
+                                    value["values"][index][key]
+                                    if index < value.get("range", 0)
+                                    and value.get("values")
+                                    and isinstance(value.get("values"), list)
+                                    and index < len(value.get("values", []))
+                                    else None
+                                )
                             )
                             entities.append(
                                 EchonetSensor(
