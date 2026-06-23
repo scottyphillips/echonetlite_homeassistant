@@ -6,12 +6,20 @@ simplex) is batched with other EPCs that also return multi-byte payloads.
 The device silently drops the entire batch frame rather than returning a
 partial response or GET_SNA.
 
-0xB7 responds correctly when polled individually (88 bytes for 22 channels),
-so we declare it as SINGLETON_POLL to ensure it always gets its own request.
+Affected EPCs (both return ~118 bytes for 29 channels):
+  0xB3 - Measured cumulative amount of electric power consumption list (simplex)
+  0xB7 - Measured instantaneous power consumption list (simplex)
+ 
+Both EPCs respond correctly when polled individually, so we declare them as
+SINGLETON_POLL to ensure they always get their own dedicated request.
 """
-
+ 
 QUIRKS = {
+    0xB3: {
+        "SINGLETON_POLL": True,
+    },
     0xB7: {
         "SINGLETON_POLL": True,
     },
 }
+ 
