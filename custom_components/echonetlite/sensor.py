@@ -94,8 +94,12 @@ class ExtractionProcessor(ValueProcessor):
             else:
                 context.current_value = None
         elif "accessor_lambda" in attrs:
-            context.current_value = attrs["accessor_lambda"](
-                val, attrs["accessor_index"]
+            # Guard against None — EPC data may be absent if a batch was
+            # skipped during setup or a poll returned partial results.
+            context.current_value = (
+                attrs["accessor_lambda"](val, attrs["accessor_index"])
+                if val is not None
+                else None
             )
         return context
 

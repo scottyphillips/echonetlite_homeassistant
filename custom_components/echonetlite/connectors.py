@@ -295,7 +295,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             self._eojcc,
             self._eojci,
         )
-        return await self.poll_pychonet(no_request=False, best_effort=True)
+        return await self.poll_pychonet(no_request=False)
 
     async def _async_update_data(self) -> dict[int, Any]:
         """Fetch the latest data from the ECHONET device.
@@ -409,21 +409,22 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             _LOGGER.error("Failed to process ECHONETLite push notification: %s", err)
 
     async def poll_pychonet(
-        self, no_request: bool = False, best_effort: bool = False
+        self, no_request: bool = False
     ) -> dict[int, Any]:
         """Fetch data from pychonet instance.
 
         Args:
             no_request: If True, only return cached data without network request.
-            best_effort: If True, skip batches that time out rather than raising
-                DeviceTimeoutError. Used during initial setup so that slow or
-                partially-unresponsive devices (e.g. devices that silently drop
-                requests for certain EPCs) can still complete setup with whatever
-                data they return. Regular polling uses best_effort=False so that
-                a completely unresponsive device correctly marks entities unavailable.
 
         Returns:
             A dictionary of EPC codes and their current values.
+
+        Raises:
+            DeviceTimeoutError: If all batches fail to respond, indicating the
+                device is genuinely offline. Individual batch failures are skipped
+                and logged as warnings, serving cached data for affected EPCs.
+                This matches the behaviour of 3.9.0 while still detecting genuine
+                device unavailability.
         """
         update_data = {}
         timed_out_batches = []
@@ -438,31 +439,30 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             if batch_data is False:
                 if no_request:  # Should not happen with local cache access
                     continue
-                if best_effort:
-                    # Skip this batch and continue — device may be slow or
-                    # silently dropping requests for certain EPCs.
-                    _LOGGER.warning(
-                        "Device at %s did not respond to EPCs %s — skipping batch "
-                        "(best_effort mode)",
-                        self._host,
-                        flags,
-                    )
-                    timed_out_batches.append(flags)
-                    continue
-                # Raise custom error so _async_update_data can catch it
-                raise DeviceTimeoutError(
-                    f"Device at {self._host} failed to respond to EPCs {flags}"
+                # Skip this batch and continue — device may be slow or
+                # silently dropping requests for certain EPCs.
+                _LOGGER.warning(
+                    "Device at %s did not respond to EPCs %s — skipping batch",
+                    self._host,
+                    flags,
                 )
+                timed_out_batches.append(flags)
+                continue
 
             if isinstance(batch_data, dict):
                 update_data.update(batch_data)
             elif len(flags) == 1:
                 update_data[flags[0]] = batch_data
 
-        if best_effort and timed_out_batches:
+        if timed_out_batches:
+            if not update_data:
+                # Every batch failed — device is genuinely offline.
+                raise DeviceTimeoutError(
+                    f"Device at {self._host} failed to respond to any EPCs"
+                )
             _LOGGER.warning(
-                "Device at %s: %d batch(es) timed out during setup and were skipped: %s. "
-                "Affected EPCs will be retried on the next scheduled poll.",
+                "Device at %s: %d batch(es) timed out and were skipped: %s. "
+                "Serving cached data for affected EPCs.",
                 self._host,
                 len(timed_out_batches),
                 timed_out_batches,
