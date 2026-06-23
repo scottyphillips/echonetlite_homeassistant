@@ -37,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 # Batch size constants for ECHONET protocol
 MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)  # 60s gives device more breathing room (was 30s)
 
 
 def regist_as_inputs(epc_function_data):
@@ -308,9 +308,11 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             UpdateFailed: If device is offline or update fails.
         """
         try:
-            # Standard poll
+            # Standard poll — best_effort skips dropped batches rather than
+            # raising DeviceTimeoutError, so entities stay available with
+            # cached data when the device drops frames under network load.
             _LOGGER.debug(f"Polling ECHONETLite Host {self._host}: %s")
-            return await self.poll_pychonet(no_request=False)
+            return await self.poll_pychonet(no_request=False, best_effort=True)
 
         except EchonetMaxOpcError as ex:
             # Memory Pressure Control (MPC): Device rejected batch size, adjust and retry
@@ -335,7 +337,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             # 3. Rebuild and Retry
             self._make_batch_request_flags()
             try:
-                return await self.poll_pychonet(no_request=False)
+                return await self.poll_pychonet(no_request=False, best_effort=True)
             except Exception as err:
                 _LOGGER.error(
                     "Failed to process ECHONETLite polling notification: %s", err
@@ -460,10 +462,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             elif len(flags) == 1:
                 update_data[flags[0]] = batch_data
 
-        if best_effort and timed_out_batches:
+        if timed_out_batches:
             _LOGGER.warning(
-                "Device at %s: %d batch(es) timed out during setup and were skipped: %s. "
-                "Affected EPCs will be retried on the next scheduled poll.",
+                "Device at %s: %d batch(es) timed out and were skipped: %s. "
+                "Serving cached data for affected EPCs.",
                 self._host,
                 len(timed_out_batches),
                 timed_out_batches,
@@ -488,6 +490,13 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 update_data.update(singleton_data)
             else:
                 update_data[epc] = singleton_data
+
+        # Only raise DeviceTimeoutError if we got nothing back at all —
+        # meaning the device is genuinely offline, not just dropping frames.
+        if timed_out_batches and not update_data:
+            raise DeviceTimeoutError(
+                f"Device at {self._host} failed to respond to any EPCs"
+            )
 
         return update_data
 
