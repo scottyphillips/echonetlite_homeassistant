@@ -970,7 +970,7 @@ ENL_OP_CODES = {
             0xC2: {
                 CONF_DISABLED_DEFAULT: True,
             },
-            0xB2: TYPE_0287_CHANNEL_RANGE,
+            # 0xB2: TYPE_0287_CHANNEL_RANGE,
             0xB3: {
                 CONF_TYPE: SensorDeviceClass.ENERGY,
                 CONF_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
