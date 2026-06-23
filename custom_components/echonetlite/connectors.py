@@ -277,6 +277,23 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         if self._uid is None:
             self._uid = f"{self._host}-{self._eojgc}-{self._eojcc}-{self._eojci}"
 
+    async def async_setup_data_fetch(self) -> dict[int, Any]:
+        """Fetch initial data during setup using best-effort mode.
+
+        Unlike _async_update_data, this method skips batches that time out
+        rather than raising DeviceTimeoutError. This allows setup to complete
+        even when a device silently drops requests for certain EPCs, trusting
+        the coordinator's regular polling to fill in the gaps.
+
+        Returns:
+            A dictionary of EPC codes and their current values.
+        """
+        _LOGGER.debug(
+            "Setup data fetch (best_effort) for %s-%s-%s-%s",
+            self._host, self._eojgc, self._eojcc, self._eojci,
+        )
+        return await self.poll_pychonet(no_request=False, best_effort=True)
+
     async def _async_update_data(self) -> dict[int, Any]:
         """Fetch the latest data from the ECHONET device.
 
@@ -328,7 +345,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
     async def async_update_callback(self, isPush: bool = False):
         """Handle push notifications from the device.
- 
+
         When the device sends an unsolicited INF packet, pychonet fires this
         callback. Rather than reading the entire _state for this instance
         (which may contain None for EPCs not yet fetched in the current poll
@@ -336,31 +353,31 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         set of EPCs the device declared it will proactively notify about.
         This prevents mid-poll push notifications from overwriting good cached
         data with None for EPCs that haven't been batched yet.
- 
+
         Args:
             isPush: Whether this update was triggered by a push notification.
         """
         if not self._ntfPropertyMap:
             # Device declared no notification EPCs — nothing useful to merge.
             return
- 
+
         try:
             _LOGGER.debug(
                 "Push notification for %s-%s-%s-%s, reading ntfmap EPCs: %s",
                 self._host, self._eojgc, self._eojcc, self._eojci,
                 self._ntfPropertyMap,
             )
- 
+
             # Read only the EPCs the device declared it notifies about.
             # _instance.update() with no_request=True reads from the library's
             # internal _state cache — no network call is made.
             raw = await self._instance.update(
                 list(self._ntfPropertyMap), no_request=True
             )
- 
+
             if not raw:
                 return
- 
+
             # raw may be a dict (multiple EPCs) or a scalar (single EPC).
             if isinstance(raw, dict):
                 new_data = raw
@@ -368,16 +385,16 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 new_data = {self._ntfPropertyMap[0]: raw}
             else:
                 return
- 
+
             # Drop any None values — a device push should never produce None,
             # but guard against it so we never overwrite good cached data.
             new_data = {k: v for k, v in new_data.items() if v is not None}
- 
+
             if not new_data:
                 return
- 
+
             _LOGGER.debug("Push notification data for %s: %s", self._host, new_data)
- 
+
             # Merge into coordinator data and notify listeners.
             self.data = {**(self.data or {}), **new_data}
             self.async_update_listeners()
@@ -385,16 +402,25 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         except Exception as err:
             _LOGGER.error("Failed to process ECHONETLite push notification: %s", err)
 
-    async def poll_pychonet(self, no_request: bool = False) -> dict[int, Any]:
+    async def poll_pychonet(
+        self, no_request: bool = False, best_effort: bool = False
+    ) -> dict[int, Any]:
         """Fetch data from pychonet instance.
 
         Args:
             no_request: If True, only return cached data without network request.
+            best_effort: If True, skip batches that time out rather than raising
+                DeviceTimeoutError. Used during initial setup so that slow or
+                partially-unresponsive devices (e.g. devices that silently drop
+                requests for certain EPCs) can still complete setup with whatever
+                data they return. Regular polling uses best_effort=False so that
+                a completely unresponsive device correctly marks entities unavailable.
 
         Returns:
             A dictionary of EPC codes and their current values.
         """
         update_data = {}
+        timed_out_batches = []
 
         for i, flags in enumerate(self._update_flag_batches):
             if i > 0 and not no_request:
@@ -406,6 +432,17 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             if batch_data is False:
                 if no_request:  # Should not happen with local cache access
                     continue
+                if best_effort:
+                    # Skip this batch and continue — device may be slow or
+                    # silently dropping requests for certain EPCs.
+                    _LOGGER.warning(
+                        "Device at %s did not respond to EPCs %s — skipping batch "
+                        "(best_effort mode)",
+                        self._host,
+                        flags,
+                    )
+                    timed_out_batches.append(flags)
+                    continue
                 # Raise custom error so _async_update_data can catch it
                 raise DeviceTimeoutError(
                     f"Device at {self._host} failed to respond to EPCs {flags}"
@@ -415,6 +452,15 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 update_data.update(batch_data)
             elif len(flags) == 1:
                 update_data[flags[0]] = batch_data
+
+        if best_effort and timed_out_batches:
+            _LOGGER.warning(
+                "Device at %s: %d batch(es) timed out during setup and were skipped: %s. "
+                "Affected EPCs will be retried on the next scheduled poll.",
+                self._host,
+                len(timed_out_batches),
+                timed_out_batches,
+            )
 
         return update_data
 

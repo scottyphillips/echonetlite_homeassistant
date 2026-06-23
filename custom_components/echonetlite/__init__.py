@@ -372,7 +372,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
                 try:
                     await _run_with_timeout(
-                        echonetlite._async_update_data(),
+                        echonetlite.async_setup_data_fetch(),
                         per_try_budget,
                     )
                     break
