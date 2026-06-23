@@ -165,6 +165,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         # Update management - batch requests and flags
         self._update_flag_batches: list[list[int]] = []
         self._update_flags_full_list: list[int] = []
+        self._singleton_poll_epcs: list[int] = []  # EPCs polled individually due to quirk
 
         # Callbacks for push notifications and option updates
         self._update_callbacks: list[callable] = []
@@ -468,6 +469,26 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 timed_out_batches,
             )
 
+        # Poll singleton EPCs individually after normal batches.
+        # These EPCs are excluded from batching via quirks due to device
+        # firmware limitations (e.g. buffer overflow when combined with
+        # other large-payload EPCs).
+        for epc in self._singleton_poll_epcs:
+            if epc not in self._update_flags_full_list:
+                continue
+            if not no_request:
+                await asyncio.sleep(0.1)
+            singleton_data = await self._instance.update([epc], no_request)
+            if singleton_data is False:
+                _LOGGER.warning(
+                    "Device at %s did not respond to singleton EPC %s",
+                    self._host, hex(epc),
+                )
+            elif isinstance(singleton_data, dict):
+                update_data.update(singleton_data)
+            else:
+                update_data[epc] = singleton_data
+
         return update_data
 
     async def poll_pychonet_specific(self, epcs: list[int]) -> dict[int, Any]:
@@ -569,13 +590,21 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         The ECHONET protocol has limits on how many properties can be requested
         in a single message. This method splits the full list into manageable batches.
+        EPCs marked as SINGLETON_POLL in quirks are excluded from batches and
+        polled individually to avoid device firmware buffer overflow issues.
 
         Args:
             CONF_BATCH_SIZE_MAX: User-configurable maximum batch size (default 10).
         """
         self._update_flag_batches = []
         start_index = 0
-        full_list_length = len(self._update_flags_full_list)
+
+        # Exclude singleton EPCs from the normal batch list
+        batch_list = [
+            epc for epc in self._update_flags_full_list
+            if epc not in self._singleton_poll_epcs
+        ]
+        full_list_length = len(batch_list)
 
         batch_size_max = self._user_options.get(
             CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
@@ -583,13 +612,13 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         while start_index + batch_size_max < full_list_length:
             self._update_flag_batches.append(
-                self._update_flags_full_list[start_index : start_index + batch_size_max]
+                batch_list[start_index : start_index + batch_size_max]
             )
             start_index += batch_size_max
 
         # Add remaining flags as final batch
         self._update_flag_batches.append(
-            self._update_flags_full_list[start_index:full_list_length]
+            batch_list[start_index:full_list_length]
         )
 
         _LOGGER.debug(
@@ -633,6 +662,14 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                     self._instance.EPC_FUNCTIONS.update({epc: func})
                     if op_code := extention.QUIRKS[epc].get("ENL_OP_CODE"):
                         self._enl_op_codes.update({epc: op_code})
+                if extention.QUIRKS[epc].get("SINGLETON_POLL"):
+                    if epc not in self._singleton_poll_epcs:
+                        self._singleton_poll_epcs.append(epc)
+                        _LOGGER.debug(
+                            "Echonet quirk: EPC %s will be polled individually "
+                            "(SINGLETON_POLL) for %s-%s-%s at %s",
+                            hex(epc), self._eojgc, self._eojcc, self._eojci, self._host,
+                        )
             _LOGGER.debug(f"Echonet EPC_FUNCTIONS is: {self._instance.EPC_FUNCTIONS}")
             _LOGGER.debug(f"Echonet _enl_op_codes is: {self._enl_op_codes}")
 
