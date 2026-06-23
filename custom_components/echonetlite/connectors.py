@@ -290,7 +290,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         """
         _LOGGER.debug(
             "Setup data fetch (best_effort) for %s-%s-%s-%s",
-            self._host, self._eojgc, self._eojcc, self._eojci,
+            self._host,
+            self._eojgc,
+            self._eojcc,
+            self._eojci,
         )
         return await self.poll_pychonet(no_request=False, best_effort=True)
 
@@ -364,7 +367,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         try:
             _LOGGER.debug(
                 "Push notification for %s-%s-%s-%s, reading ntfmap EPCs: %s",
-                self._host, self._eojgc, self._eojcc, self._eojci,
+                self._host,
+                self._eojgc,
+                self._eojcc,
+                self._eojci,
                 self._ntfPropertyMap,
             )
 
