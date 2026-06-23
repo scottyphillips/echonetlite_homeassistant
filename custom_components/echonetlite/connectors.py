@@ -37,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 # Batch size constants for ECHONET protocol
 MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)  # 60s gives device more breathing room (was 30s)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 
 def regist_as_inputs(epc_function_data):
@@ -416,15 +416,21 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         Args:
             no_request: If True, only return cached data without network request.
-            best_effort: If True, skip batches that time out rather than raising
-                DeviceTimeoutError. Used during initial setup so that slow or
-                partially-unresponsive devices (e.g. devices that silently drop
-                requests for certain EPCs) can still complete setup with whatever
-                data they return. Regular polling uses best_effort=False so that
-                a completely unresponsive device correctly marks entities unavailable.
+            best_effort: If True, skip genuine device timeouts rather than raising
+                DeviceTimeoutError. Used during initial setup.
 
         Returns:
             A dictionary of EPC codes and their current values.
+
+        Note on pychonet return values:
+            False  — request was sent but device did not respond (genuine timeout)
+            None   — pychonet _waiting queue was busy, request was not sent
+            dict   — success with EPC data
+            other  — success with single EPC value
+
+        None (queue busy) is treated as a cache-serve rather than an error,
+        matching the silent-skip behaviour of 3.9.0's @Throttle which also
+        silently returned stale data when the device was busy.
         """
         update_data = {}
         timed_out_batches = []
@@ -433,24 +439,28 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             if i > 0 and not no_request:
                 await asyncio.sleep(0.1)
 
-            # Hit the library. Returns False if a network request fails.
             batch_data = await self._instance.update(flags, no_request)
 
+            if batch_data is None:
+                # pychonet _waiting queue was busy — another request in flight.
+                # Serve cached data silently, matching 3.9.0 @Throttle behaviour.
+                _LOGGER.debug(
+                    "Device at %s queue busy for EPCs %s — serving cached data",
+                    self._host, flags,
+                )
+                continue
+
             if batch_data is False:
-                if no_request:  # Should not happen with local cache access
+                if no_request:
                     continue
                 if best_effort:
-                    # Skip this batch and continue — device may be slow or
-                    # silently dropping requests for certain EPCs.
                     _LOGGER.warning(
                         "Device at %s did not respond to EPCs %s — skipping batch "
                         "(best_effort mode)",
-                        self._host,
-                        flags,
+                        self._host, flags,
                     )
                     timed_out_batches.append(flags)
                     continue
-                # Raise custom error so _async_update_data can catch it
                 raise DeviceTimeoutError(
                     f"Device at {self._host} failed to respond to EPCs {flags}"
                 )
@@ -470,16 +480,18 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             )
 
         # Poll singleton EPCs individually after normal batches.
-        # These EPCs are excluded from batching via quirks due to device
-        # firmware limitations (e.g. buffer overflow when combined with
-        # other large-payload EPCs).
         for epc in self._singleton_poll_epcs:
             if epc not in self._update_flags_full_list:
                 continue
             if not no_request:
                 await asyncio.sleep(0.1)
             singleton_data = await self._instance.update([epc], no_request)
-            if singleton_data is False:
+            if singleton_data is None:
+                _LOGGER.debug(
+                    "Device at %s queue busy for singleton EPC %s — serving cached data",
+                    self._host, hex(epc),
+                )
+            elif singleton_data is False:
                 _LOGGER.warning(
                     "Device at %s did not respond to singleton EPC %s",
                     self._host, hex(epc),
