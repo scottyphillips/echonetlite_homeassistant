@@ -39,6 +39,15 @@ MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
+# Per-host semaphore to serialise poll cycles across all ECHONETConnector
+# instances sharing the same host IP. Embedded ECHONET devices have limited
+# UDP stacks and can drop frames if polled concurrently. A semaphore(1) ensures
+# only one instance polls a given host at a time — others wait their turn rather
+# than piling up requests. This gives embedded firmware breathing room and
+# naturally staggers requests without any fixed time delays.
+# Shared across all ECHONETConnector instances via a module-level dict.
+_host_semaphores: dict[str, asyncio.Semaphore] = {}
+
 
 def regist_as_inputs(epc_function_data):
     """Check if EPC function data should be registered as input entity.
@@ -307,45 +316,52 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         Raises:
             UpdateFailed: If device is offline or update fails.
         """
-        try:
-            # Standard poll
-            _LOGGER.debug(f"Polling ECHONETLite Host {self._host}: %s")
-            return await self.poll_pychonet(no_request=False)
+        # Acquire the per-host semaphore before polling. This ensures only one
+        # ECHONETConnector instance polls a given host at a time, giving embedded
+        # devices breathing room between requests. Other instances on the same host
+        # wait their turn rather than sending concurrent bursts.
+        if self._host not in _host_semaphores:
+            _host_semaphores[self._host] = asyncio.Semaphore(1)
 
-        except EchonetMaxOpcError as ex:
-            # Memory Pressure Control (MPC): Device rejected batch size, adjust and retry
-            # 1. Adjust batch size
-            batch_size_max = self._user_options.get(
-                CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
-            )
-            batch_data_len = max(ex.args[0], MIN_UPDATE_BATCH_SIZE, batch_size_max - 1)
-
-            if batch_data_len >= batch_size_max:
-                raise UpdateFailed(
-                    f"MPC Error: Device at {self._host} rejected batch even at minimum size."
-                )
-
-            # 2. Persist new batch size
-            self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
-            self.hass.config_entries.async_update_entry(
-                self._entry,
-                options={**self._entry.options, CONF_BATCH_SIZE_MAX: batch_data_len},
-            )
-
-            # 3. Rebuild and Retry
-            self._make_batch_request_flags()
+        async with _host_semaphores[self._host]:
             try:
+                _LOGGER.debug(f"Polling ECHONETLite Host {self._host}: %s")
                 return await self.poll_pychonet(no_request=False)
-            except Exception as err:
-                _LOGGER.error(
-                    "Failed to process ECHONETLite polling notification: %s", err
-                )
-                raise UpdateFailed(f"Retry failed after MPC adjustment: {err}")
 
-        except DeviceTimeoutError as err:
-            # This is the "Magic Clause": Raising UpdateFailed marks entities as Unavailable
-            _LOGGER.debug("Device Timeout for {self._host}: %s", err)
-            raise UpdateFailed(f"Offline: {err}")
+            except EchonetMaxOpcError as ex:
+                # Memory Pressure Control (MPC): Device rejected batch size, adjust and retry
+                # 1. Adjust batch size
+                batch_size_max = self._user_options.get(
+                    CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
+                )
+                batch_data_len = max(ex.args[0], MIN_UPDATE_BATCH_SIZE, batch_size_max - 1)
+
+                if batch_data_len >= batch_size_max:
+                    raise UpdateFailed(
+                        f"MPC Error: Device at {self._host} rejected batch even at minimum size."
+                    )
+
+                # 2. Persist new batch size
+                self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
+                self.hass.config_entries.async_update_entry(
+                    self._entry,
+                    options={**self._entry.options, CONF_BATCH_SIZE_MAX: batch_data_len},
+                )
+
+                # 3. Rebuild and retry — semaphore still held
+                self._make_batch_request_flags()
+                try:
+                    return await self.poll_pychonet(no_request=False)
+                except Exception as err:
+                    _LOGGER.error(
+                        "Failed to process ECHONETLite polling notification: %s", err
+                    )
+                    raise UpdateFailed(f"Retry failed after MPC adjustment: {err}")
+
+            except DeviceTimeoutError as err:
+                # Raising UpdateFailed marks entities as Unavailable
+                _LOGGER.debug("Device Timeout for {self._host}: %s", err)
+                raise UpdateFailed(f"Offline: {err}")
 
     async def async_update_callback(self, isPush: bool = False):
         """Handle push notifications from the device.
