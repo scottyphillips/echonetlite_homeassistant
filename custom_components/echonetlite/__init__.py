@@ -393,7 +393,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     )
                     break
 
-                except (TimeoutError, asyncio.TimeoutError, UpdateFailed) as ex:
+                except (TimeoutError, asyncio.TimeoutError, UpdateFailed, DeviceTimeoutError) as ex:
                     _LOGGER.warning(
                         "Setting up ECHONET instance %s-%s-%s on %s timed out "
                         "(retry %s/3, remaining %.1fs)",
