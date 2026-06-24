@@ -306,7 +306,38 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             self._eojcc,
             self._eojci,
         )
-        return await self.poll_pychonet(no_request=False, best_effort=True)
+        # Temporarily use the full EPC list (including STATMAP EPCs) for setup.
+        # _update_flag_batches may have STATMAP EPCs pruned for ongoing polling,
+        # but we need all EPCs fetched at least once to populate self.data
+        # and warm pychonet's _state cache before push notifications take over.
+        saved_batches = self._update_flag_batches
+        self._update_flag_batches = self._make_full_batches()
+        try:
+            return await self.poll_pychonet(no_request=False, best_effort=True)
+        finally:
+            self._update_flag_batches = saved_batches
+
+    def _make_full_batches(self) -> list[list[int]]:
+        """Build batch list from full EPC list, ignoring push-prune.
+
+        Used during setup to ensure all EPCs are fetched at least once,
+        warming pychonet's _state cache so push notification reads work.
+        """
+        batch_size_max = self._user_options.get(
+            CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
+        )
+        full_list = [
+            epc for epc in self._update_flags_full_list
+            if epc not in self._singleton_poll_epcs
+        ]
+        batches = []
+        start = 0
+        while start + batch_size_max < len(full_list):
+            batches.append(full_list[start:start + batch_size_max])
+            start += batch_size_max
+        if full_list[start:]:
+            batches.append(full_list[start:])
+        return batches
 
     async def _async_update_data(self) -> dict[int, Any]:
         """Fetch the latest data from the ECHONET device.
@@ -412,6 +443,13 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 self._eojci,
                 self._ntfPropertyMap,
             )
+
+            # Yield to the event loop to ensure echonetMessageReceived has
+            # finished writing the INF packet data to _state before we read it.
+            # Both run on the same asyncio event loop — a single yield is enough
+            # to guarantee ordering since pychonet fires callbacks concurrently
+            # with _state updates via ensure_future.
+            await asyncio.sleep(0)
 
             # Read only the EPCs the device declared it notifies about.
             # _instance.update() with no_request=True reads from the library's
