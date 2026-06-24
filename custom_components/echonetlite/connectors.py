@@ -363,6 +363,21 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 _LOGGER.debug("Device Timeout for {self._host}: %s", err)
                 raise UpdateFailed(f"Offline: {err}")
 
+            except UpdateFailed:
+                raise
+
+            except Exception as err:
+                # Catch-all to surface unexpected exceptions with full traceback.
+                # Without this, unhandled exceptions silently set last_update_success=False
+                # with no indication of what went wrong.
+                import traceback
+                _LOGGER.error(
+                    "Unexpected error polling %s-%s-%s at %s: %s\n%s",
+                    self._eojgc, self._eojcc, self._eojci, self._host,
+                    err, traceback.format_exc(),
+                )
+                raise UpdateFailed(f"Unexpected error: {err}") from err
+
     async def async_update_callback(self, isPush: bool = False):
         """Handle push notifications from the device.
 
