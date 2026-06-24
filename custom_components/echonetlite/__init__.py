@@ -222,8 +222,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         udp.run("0.0.0.0", 3610, loop=hass.loop)
         server = ECHONETAPIClient(udp)
         server._debug_flag = True  # Set pychonet debug flag to True to enable debug logging from the library
-        server._logger = _LOGGER.warning
-        server._message_timeout = 50  # 50 ticks x 0.1s = 5s per dropped frame (was 150 = 15s)
+        server._logger = _LOGGER.debug
+        server._message_timeout = (
+            50  # 50 ticks x 0.1s = 5s per dropped frame (was 150 = 15s)
+        )
         server._discover_callback = discover_callback
         hass.data[DOMAIN].update({"api": server})
 
@@ -362,7 +364,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         _LOGGER.debug(
             "ECHONETLite Pass 1: instantiating %s-%s-%s at %s (budget remaining: %.1fs)",
-            eojgc, eojcc, eojci, host, _remaining_setup_budget(started),
+            eojgc,
+            eojcc,
+            eojci,
+            host,
+            _remaining_setup_budget(started),
         )
         echonetlite = ECHONETConnector(instance, hass, entry)
         await echonetlite.startup()
@@ -379,7 +385,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.debug(
                     "ECHONETLite Pass 1: fetching data for %s-%s-%s at %s "
                     "(attempt %s/3, budget %.1fs/%.1fs remaining)",
-                    eojgc, eojcc, eojci, host, retry, per_try_budget, remaining,
+                    eojgc,
+                    eojcc,
+                    eojci,
+                    host,
+                    retry,
+                    per_try_budget,
+                    remaining,
                 )
 
                 try:
@@ -389,11 +401,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     )
                     _LOGGER.debug(
                         "ECHONETLite Pass 1: data fetch succeeded for %s-%s-%s at %s",
-                        eojgc, eojcc, eojci, host,
+                        eojgc,
+                        eojcc,
+                        eojci,
+                        host,
                     )
                     break
 
-                except (TimeoutError, asyncio.TimeoutError, UpdateFailed, DeviceTimeoutError) as ex:
+                except (
+                    TimeoutError,
+                    asyncio.TimeoutError,
+                    UpdateFailed,
+                    DeviceTimeoutError,
+                ) as ex:
                     _LOGGER.warning(
                         "Setting up ECHONET instance %s-%s-%s on %s timed out "
                         "(retry %s/3, remaining %.1fs)",
@@ -421,13 +441,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Data fetched successfully — hold the coordinator until pass 2.
         _LOGGER.debug(
             "ECHONETLite Pass 1: %s-%s-%s at %s complete, holding for pass 2",
-            eojgc, eojcc, eojci, host,
+            eojgc,
+            eojcc,
+            eojci,
+            host,
         )
         coordinators.append((instance, echonetlite))
 
-    _LOGGER.debug(
-        "ECHONETLite Pass 1 complete: %d/%d instance(s) ready, starting Pass 2",
-        len(coordinators), instance_count,
+    _LOGGER.info(
+        "ECHONETLite: %d/%d instance(s) initialised, starting scheduler registration",
+        len(coordinators),
+        instance_count,
     )
 
     # Pass 2: all instances have data — register coordinators with HA's
@@ -440,18 +464,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     for instance, echonetlite in coordinators:
         _LOGGER.debug(
             "ECHONETLite Pass 2: registering scheduler for %s-%s-%s at %s",
-            instance["eojgc"], instance["eojcc"], instance["eojci"], instance["host"],
+            instance["eojgc"],
+            instance["eojcc"],
+            instance["eojci"],
+            instance["host"],
         )
         echonetlite.async_set_updated_data(echonetlite.data)
         _LOGGER.debug(
             "ECHONETLite Pass 2: scheduler started for %s-%s-%s at %s",
-            instance["eojgc"], instance["eojcc"], instance["eojci"], instance["host"],
+            instance["eojgc"],
+            instance["eojcc"],
+            instance["eojci"],
+            instance["host"],
         )
         hass.data[DOMAIN][entry.entry_id].append(
             {"instance": instance, "echonetlite": echonetlite}
         )
 
     _LOGGER.debug(f"ECHONETLite Platform entry data - {entry.data}")
+
+    # Summarise what was loaded at INFO level so it's visible without debug logging
+    hosts = {}
+    for instance, _ in coordinators:
+        hosts.setdefault(instance["host"], []).append(
+            f"{instance['eojgc']}-{instance['eojcc']}-{instance['eojci']}"
+        )
+    for h, inst_list in hosts.items():
+        _LOGGER.info(
+            "ECHONETLite: loaded %d instance(s) on %s: %s",
+            len(inst_list),
+            h,
+            ", ".join(inst_list),
+        )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
