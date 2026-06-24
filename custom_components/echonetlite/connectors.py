@@ -469,31 +469,37 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             if batch_data is False:
                 if no_request:
                     continue
-                if best_effort:
-                    _LOGGER.warning(
-                        "Device at %s did not respond to EPCs %s — skipping batch "
-                        "(best_effort mode)",
-                        self._host, flags,
-                    )
-                    timed_out_batches.append(flags)
-                    continue
-                raise DeviceTimeoutError(
-                    f"Device at {self._host} failed to respond to EPCs {flags}"
+                # Track timed out batches regardless of best_effort.
+                # If we got some data from other batches we return what we
+                # have rather than raising — partial data is better than
+                # marking all entities unavailable. DeviceTimeoutError is
+                # only raised if every batch failed (device genuinely offline).
+                _LOGGER.warning(
+                    "Device at %s did not respond to EPCs %s — skipping batch",
+                    self._host, flags,
                 )
+                timed_out_batches.append(flags)
+                continue
 
             if isinstance(batch_data, dict):
                 update_data.update(batch_data)
             elif len(flags) == 1:
                 update_data[flags[0]] = batch_data
 
-        if best_effort and timed_out_batches:
+        if timed_out_batches:
             _LOGGER.warning(
-                "Device at %s: %d batch(es) timed out during setup and were skipped: %s. "
-                "Affected EPCs will be retried on the next scheduled poll.",
+                "Device at %s: %d batch(es) timed out and were skipped: %s.",
                 self._host,
                 len(timed_out_batches),
                 timed_out_batches,
             )
+            # Only raise DeviceTimeoutError if ALL batches failed — meaning
+            # the device is genuinely offline. Partial failures serve cached
+            # data for the missing EPCs rather than marking everything unavailable.
+            if not update_data and len(timed_out_batches) == len(self._update_flag_batches):
+                raise DeviceTimeoutError(
+                    f"Device at {self._host} failed to respond to any EPCs"
+                )
 
         # Poll singleton EPCs individually after normal batches.
         for epc in self._singleton_poll_epcs:
