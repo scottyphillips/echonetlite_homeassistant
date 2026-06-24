@@ -49,7 +49,7 @@ compatible ECHONETLite Devices:
 | OMRON               | Home Solar Power Generation                    |                              | Switch, Sensor                   | Full support for Home Assistant Energy Dashboard including solar production and grid consumption. |
 | JDM Electric Meters | Low voltage smart meter (B route service)      |                              | Sensor                           | Require Wi-SUN <-> Ethernet/Wifi bridge. <br> [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite)  |
 | Noritz              | Bathtub and floor heating system               | HotWaterGenerator            | Sensor, Switch                   |                                                                                                   |
-| KDK                 | ECHONETLite enabled Ceiling Fans               | CeilingFan, GeneralLighting  | Fan, Light, Sensor               | Rebranded Panasonic Ceiling Fan.                                                                  |
+| KDK                 | ECHONETLite enabled Ceiling Fans               | CeilingFan, GeneralLighting  | Fan, Light, Sensor               | Rebranded Panasonic Ceiling, confirmed working with E48GP, H56G, F40GP ceiling fans                                                                  |
 | Sony                | 'MoekadenRoom' ECHONETLite Simulator           |                              | Climate, Select, Switch, Sensor  | https://github.com/SonyCSL/MoekadenRoom.                                                          |
 
 * Mitsubishi MAC-568IF-E WiFi Adaptor connected to the following systems:
@@ -77,7 +77,7 @@ compatible ECHONETLite Devices:
 
 * Mitsubishi MAC-577IF2-E WiFi Adaptor connected to the following systems:
      * MSZ-BT35VGK
-     
+
 * Mitsubishi MAC-578IF2-E WiFi Adaptor connected to the following systems:
   * AP Series
      * MSZ-AP22VGD
