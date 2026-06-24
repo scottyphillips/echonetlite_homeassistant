@@ -583,13 +583,15 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Manage the options."""
         data_schema_structure = {}
 
-        # for key, option in MISC_OPTIONS.items():
-        #     data_schema_structure.update({
-        #         vol.Required(
-        #             CONF_FORCE_POLLING,
-        #             default=self._config_entry.options.get(key, option['default'])
-        #         ): option['type']
-        #     })
+        for key, option in MISC_OPTIONS.items():
+            data_schema_structure.update(
+                {
+                    vol.Optional(
+                        key,
+                        default=self._config_entry.options.get(key, option["default"]),
+                    ): option["type"]
+                }
+            )
 
         if user_input is not None:
             self._data.update(user_input)

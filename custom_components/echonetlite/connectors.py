@@ -19,6 +19,7 @@ from pychonet.lib.epc_functions import _hh_mm
 
 from .const import (
     CONF_BATCH_SIZE_MAX,
+    CONF_FORCE_POLLING,
     CONF_ENABLE_SUPER_ENERGY,
     DOMAIN,
     ENABLE_SUPER_ENERGY_DEFAULT,
@@ -238,15 +239,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         entry = self._entry
 
-        _LOGGER.info(
-            "ECHONETLite: initialising %s %s-%s-%s (manufacturer: %s, product: %s) at %s",
-            self._instance.__class__.__name__,
-            self._eojgc,
-            self._eojcc,
-            self._eojci,
-            self._manufacturer or "unknown",
-            self._host_product_code or "unknown",
-            self._host,
+        _LOGGER.debug(
+            f"Starting ECHONETLite {self._instance.__class__.__name__} instance for "
+            f"{self._eojgc}-{self._eojcc}-{self._eojci}, manufacturer: {self._manufacturer}, "
+            f"host_product_code: {self._host_product_code} at {self._host}"
         )
 
         # Load device-specific quirks
@@ -332,13 +328,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         async with _host_semaphores[self._host]:
             try:
-                _LOGGER.debug(
-                    "Polling ECHONETLite %s-%s-%s at %s",
-                    self._eojgc,
-                    self._eojcc,
-                    self._eojci,
-                    self._host,
-                )
+                _LOGGER.debug(f"Polling ECHONETLite Host {self._host}: %s")
                 new_data = await self.poll_pychonet(no_request=False)
                 # Merge with existing data so skipped batches retain their
                 # cached values rather than disappearing from coordinator.data.
@@ -384,7 +374,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
             except DeviceTimeoutError as err:
                 # Raising UpdateFailed marks entities as Unavailable
-                _LOGGER.debug("Device timeout for %s: %s", self._host, err)
+                _LOGGER.debug("Device Timeout for {self._host}: %s", err)
                 raise UpdateFailed(f"Offline: {err}")
 
             except UpdateFailed:
@@ -691,11 +681,36 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         flags = list(_enl_super_codes)  # PR 246
 
-        # Add supported EPC_FUNCTIONS from the pychonet object class
+        # Add supported EPC_FUNCTIONS from the pychonet object class.
+        # If CONF_FORCE_POLLING is False (default), prune EPCs that are in
+        # STATMAP — those will be served via push notifications instead,
+        # reducing unnecessary polling load on embedded devices.
+        # If CONF_FORCE_POLLING is True (fallback for unreliable multicast),
+        # poll everything in GETMAP regardless of STATMAP.
+        _force_polling = self._user_options.get(CONF_FORCE_POLLING, False)
+        _ntf_set = set(self._ntfPropertyMap) if not _force_polling else set()
+
         _epc_keys = set(self._instance.EPC_FUNCTIONS.keys()) - set(EPC_SUPER.keys())
         for item in self._getPropertyMap:
-            if item in _epc_keys:
+            if item in _epc_keys and item not in _ntf_set:
                 flags.append(item)
+
+        if _ntf_set:
+            _pruned = [
+                e
+                for e in self._ntfPropertyMap
+                if e in _epc_keys and e in self._getPropertyMap
+            ]
+            if _pruned:
+                _LOGGER.debug(
+                    "ECHONETLite %s-%s-%s: pruned %d EPC(s) from poll list "
+                    "(served via push): %s",
+                    self._eojgc,
+                    self._eojcc,
+                    self._eojci,
+                    len(_pruned),
+                    [hex(e) for e in _pruned],
+                )
 
         # Build final list with None initialization
         for value in flags:
@@ -799,14 +814,8 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                             self._eojci,
                             self._host,
                         )
-            _LOGGER.debug(
-                "Echonet quirk applied: %d EPC_FUNCTIONS, %d op_codes for %s-%s-%s",
-                len(self._instance.EPC_FUNCTIONS),
-                len(self._enl_op_codes),
-                self._eojgc,
-                self._eojcc,
-                self._eojci,
-            )
+            _LOGGER.debug(f"Echonet EPC_FUNCTIONS is: {self._instance.EPC_FUNCTIONS}")
+            _LOGGER.debug(f"Echonet _enl_op_codes is: {self._enl_op_codes}")
 
         # Check for manufacturer-specific quirks
         if self._manufacturer:
