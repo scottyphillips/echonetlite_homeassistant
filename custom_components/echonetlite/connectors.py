@@ -470,7 +470,20 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             if i > 0 and not no_request:
                 await asyncio.sleep(0.1)
 
-            batch_data = await self._instance.update(flags, no_request)
+            try:
+                batch_data = await self._instance.update(flags, no_request)
+            except TimeoutError:
+                # pychonet raises TimeoutError("Pychonet UDP request timeout.")
+                # when echonetMessage() returns False (genuine device non-response).
+                # Treat the same as a False return — skip this batch and continue.
+                if no_request:
+                    continue
+                _LOGGER.warning(
+                    "Device at %s did not respond to EPCs %s — skipping batch",
+                    self._host, flags,
+                )
+                timed_out_batches.append(flags)
+                continue
 
             if batch_data is None:
                 # pychonet _waiting queue was busy — another request in flight.
@@ -522,7 +535,14 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 continue
             if not no_request:
                 await asyncio.sleep(0.1)
-            singleton_data = await self._instance.update([epc], no_request)
+            try:
+                singleton_data = await self._instance.update([epc], no_request)
+            except TimeoutError:
+                _LOGGER.warning(
+                    "Device at %s did not respond to singleton EPC %s",
+                    self._host, hex(epc),
+                )
+                continue
             if singleton_data is None:
                 _LOGGER.debug(
                     "Device at %s queue busy for singleton EPC %s — serving cached data",
