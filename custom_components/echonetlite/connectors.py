@@ -175,9 +175,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         # Update management - batch requests and flags
         self._update_flag_batches: list[list[int]] = []
         self._update_flags_full_list: list[int] = []
-        self._singleton_poll_epcs: list[int] = (
-            []
-        )  # EPCs polled individually due to quirk
+        self._singleton_poll_epcs: list[int] = []  # EPCs polled individually due to quirk
 
         # Callbacks for push notifications and option updates
         self._update_callbacks: list[callable] = []
@@ -342,9 +340,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 batch_size_max = self._user_options.get(
                     CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
                 )
-                batch_data_len = max(
-                    ex.args[0], MIN_UPDATE_BATCH_SIZE, batch_size_max - 1
-                )
+                batch_data_len = max(ex.args[0], MIN_UPDATE_BATCH_SIZE, batch_size_max - 1)
 
                 if batch_data_len >= batch_size_max:
                     raise UpdateFailed(
@@ -355,10 +351,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 self._user_options[CONF_BATCH_SIZE_MAX] = batch_data_len
                 self.hass.config_entries.async_update_entry(
                     self._entry,
-                    options={
-                        **self._entry.options,
-                        CONF_BATCH_SIZE_MAX: batch_data_len,
-                    },
+                    options={**self._entry.options, CONF_BATCH_SIZE_MAX: batch_data_len},
                 )
 
                 # 3. Rebuild and retry — semaphore still held
@@ -385,15 +378,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 # Without this, unhandled exceptions silently set last_update_success=False
                 # with no indication of what went wrong.
                 import traceback
-
                 _LOGGER.error(
                     "Unexpected error polling %s-%s-%s at %s: %s\n%s",
-                    self._eojgc,
-                    self._eojcc,
-                    self._eojci,
-                    self._host,
-                    err,
-                    traceback.format_exc(),
+                    self._eojgc, self._eojcc, self._eojci, self._host,
+                    err, traceback.format_exc(),
                 )
                 raise UpdateFailed(f"Unexpected error: {err}") from err
 
@@ -501,8 +489,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                     continue
                 _LOGGER.warning(
                     "Device at %s did not respond to EPCs %s — skipping batch",
-                    self._host,
-                    flags,
+                    self._host, flags,
                 )
                 timed_out_batches.append(flags)
                 continue
@@ -512,8 +499,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 # Serve cached data silently, matching 3.9.0 @Throttle behaviour.
                 _LOGGER.debug(
                     "Device at %s queue busy for EPCs %s — serving cached data",
-                    self._host,
-                    flags,
+                    self._host, flags,
                 )
                 continue
 
@@ -527,8 +513,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 # only raised if every batch failed (device genuinely offline).
                 _LOGGER.warning(
                     "Device at %s did not respond to EPCs %s — skipping batch",
-                    self._host,
-                    flags,
+                    self._host, flags,
                 )
                 timed_out_batches.append(flags)
                 continue
@@ -548,9 +533,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             # Only raise DeviceTimeoutError if ALL batches failed — meaning
             # the device is genuinely offline. Partial failures serve cached
             # data for the missing EPCs rather than marking everything unavailable.
-            if not update_data and len(timed_out_batches) == len(
-                self._update_flag_batches
-            ):
+            if not update_data and len(timed_out_batches) == len(self._update_flag_batches):
                 raise DeviceTimeoutError(
                     f"Device at {self._host} failed to respond to any EPCs"
                 )
@@ -575,29 +558,25 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                         _LOGGER.debug(
                             "Device at %s did not respond to singleton EPC %s "
                             "— retrying after pause",
-                            self._host,
-                            hex(epc),
+                            self._host, hex(epc),
                         )
                         await asyncio.sleep(0.2)
                     else:
                         _LOGGER.warning(
                             "Device at %s did not respond to singleton EPC %s "
                             "after retry — serving cached data",
-                            self._host,
-                            hex(epc),
+                            self._host, hex(epc),
                         )
 
             if singleton_data is None:
                 _LOGGER.debug(
                     "Device at %s queue busy for singleton EPC %s — serving cached data",
-                    self._host,
-                    hex(epc),
+                    self._host, hex(epc),
                 )
             elif singleton_data is False:
                 _LOGGER.warning(
                     "Device at %s did not respond to singleton EPC %s",
-                    self._host,
-                    hex(epc),
+                    self._host, hex(epc),
                 )
             else:
                 # Always store singleton result under its EPC key.
@@ -682,35 +661,14 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         flags = list(_enl_super_codes)  # PR 246
 
         # Add supported EPC_FUNCTIONS from the pychonet object class.
-        # If CONF_FORCE_POLLING is False (default), prune EPCs that are in
-        # STATMAP — those will be served via push notifications instead,
-        # reducing unnecessary polling load on embedded devices.
-        # If CONF_FORCE_POLLING is True (fallback for unreliable multicast),
-        # poll everything in GETMAP regardless of STATMAP.
-        _force_polling = self._user_options.get(CONF_FORCE_POLLING, False)
-        _ntf_set = set(self._ntfPropertyMap) if not _force_polling else set()
-
+        # _update_flags_full_list always includes ALL supported GETMAP EPCs
+        # so the initial setup fetch populates self.data with real values for
+        # every EPC including those in STATMAP. The push-prune only applies
+        # to _make_batch_request_flags which drives ongoing polling.
         _epc_keys = set(self._instance.EPC_FUNCTIONS.keys()) - set(EPC_SUPER.keys())
         for item in self._getPropertyMap:
-            if item in _epc_keys and item not in _ntf_set:
+            if item in _epc_keys:
                 flags.append(item)
-
-        if _ntf_set:
-            _pruned = [
-                e
-                for e in self._ntfPropertyMap
-                if e in _epc_keys and e in self._getPropertyMap
-            ]
-            if _pruned:
-                _LOGGER.debug(
-                    "ECHONETLite %s-%s-%s: pruned %d EPC(s) from poll list "
-                    "(served via push): %s",
-                    self._eojgc,
-                    self._eojcc,
-                    self._eojci,
-                    len(_pruned),
-                    [hex(e) for e in _pruned],
-                )
 
         # Build final list with None initialization
         for value in flags:
@@ -734,17 +692,42 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         EPCs marked as SINGLETON_POLL in quirks are excluded from batches and
         polled individually to avoid device firmware buffer overflow issues.
 
+        If CONF_FORCE_POLLING is False (default), EPCs in STATMAP are also
+        excluded from ongoing batches — they are served via push notifications.
+        The initial setup fetch still polls all EPCs to populate self.data.
+        If CONF_FORCE_POLLING is True (fallback for unreliable multicast),
+        all GETMAP EPCs are polled regardless of STATMAP.
+
         Args:
             CONF_BATCH_SIZE_MAX: User-configurable maximum batch size (default 10).
         """
         self._update_flag_batches = []
         start_index = 0
 
-        # Exclude singleton EPCs from the normal batch list
+        # Prune STATMAP EPCs from ongoing poll batches if force_polling is off.
+        # These EPCs are covered by push notifications so polling them is redundant.
+        _force_polling = self._user_options.get(CONF_FORCE_POLLING, False)
+        _ntf_set = set(self._ntfPropertyMap) if not _force_polling else set()
+
+        if _ntf_set:
+            _pruned = [
+                e for e in self._ntfPropertyMap
+                if e in self._update_flags_full_list
+                and e not in self._singleton_poll_epcs
+            ]
+            if _pruned:
+                _LOGGER.debug(
+                    "ECHONETLite %s-%s-%s: pruning %d EPC(s) from poll batches "
+                    "(served via push): %s",
+                    self._eojgc, self._eojcc, self._eojci,
+                    len(_pruned), [hex(e) for e in _pruned],
+                )
+
+        # Exclude singleton EPCs and (optionally) STATMAP EPCs from batch list
         batch_list = [
-            epc
-            for epc in self._update_flags_full_list
+            epc for epc in self._update_flags_full_list
             if epc not in self._singleton_poll_epcs
+            and epc not in _ntf_set
         ]
         full_list_length = len(batch_list)
 
@@ -759,7 +742,9 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             start_index += batch_size_max
 
         # Add remaining flags as final batch
-        self._update_flag_batches.append(batch_list[start_index:full_list_length])
+        self._update_flag_batches.append(
+            batch_list[start_index:full_list_length]
+        )
 
         _LOGGER.debug(
             f"Echonet device {self._host}-{self._eojgc}-{self._eojcc}-{self._eojci} "
@@ -808,11 +793,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                         _LOGGER.debug(
                             "Echonet quirk: EPC %s will be polled individually "
                             "(SINGLETON_POLL) for %s-%s-%s at %s",
-                            hex(epc),
-                            self._eojgc,
-                            self._eojcc,
-                            self._eojci,
-                            self._host,
+                            hex(epc), self._eojgc, self._eojcc, self._eojci, self._host,
                         )
             _LOGGER.debug(f"Echonet EPC_FUNCTIONS is: {self._instance.EPC_FUNCTIONS}")
             _LOGGER.debug(f"Echonet _enl_op_codes is: {self._enl_op_codes}")
