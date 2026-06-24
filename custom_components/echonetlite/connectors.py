@@ -512,9 +512,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                     "Device at %s did not respond to singleton EPC %s",
                     self._host, hex(epc),
                 )
-            elif isinstance(singleton_data, dict):
-                update_data.update(singleton_data)
             else:
+                # Always store singleton result under its EPC key.
+                # update() returns the value directly (not wrapped in {epc: value})
+                # when called with a single EPC, so we must key it explicitly.
                 update_data[epc] = singleton_data
 
         return update_data
