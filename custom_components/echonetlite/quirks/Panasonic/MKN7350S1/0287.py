@@ -9,11 +9,11 @@ partial response or GET_SNA.
 Affected EPCs (both return ~118 bytes for 29 channels):
   0xB3 - Measured cumulative amount of electric power consumption list (simplex)
   0xB7 - Measured instantaneous power consumption list (simplex)
- 
+
 Both EPCs respond correctly when polled individually, so we declare them as
 SINGLETON_POLL to ensure they always get their own dedicated request.
 """
- 
+
 QUIRKS = {
     0xB3: {
         "SINGLETON_POLL": True,
@@ -22,4 +22,3 @@ QUIRKS = {
         "SINGLETON_POLL": True,
     },
 }
- 
