@@ -306,38 +306,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             self._eojcc,
             self._eojci,
         )
-        # Temporarily use the full EPC list (including STATMAP EPCs) for setup.
-        # _update_flag_batches may have STATMAP EPCs pruned for ongoing polling,
-        # but we need all EPCs fetched at least once to populate self.data
-        # and warm pychonet's _state cache before push notifications take over.
-        saved_batches = self._update_flag_batches
-        self._update_flag_batches = self._make_full_batches()
-        try:
-            return await self.poll_pychonet(no_request=False, best_effort=True)
-        finally:
-            self._update_flag_batches = saved_batches
-
-    def _make_full_batches(self) -> list[list[int]]:
-        """Build batch list from full EPC list, ignoring push-prune.
-
-        Used during setup to ensure all EPCs are fetched at least once,
-        warming pychonet's _state cache so push notification reads work.
-        """
-        batch_size_max = self._user_options.get(
-            CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
-        )
-        full_list = [
-            epc for epc in self._update_flags_full_list
-            if epc not in self._singleton_poll_epcs
-        ]
-        batches = []
-        start = 0
-        while start + batch_size_max < len(full_list):
-            batches.append(full_list[start:start + batch_size_max])
-            start += batch_size_max
-        if full_list[start:]:
-            batches.append(full_list[start:])
-        return batches
+        # Pass include_ntf=True so poll_pychonet uses the full EPC list
+        # including STATMAP EPCs. This warms pychonet's _state cache for all
+        # EPCs so push notification reads via no_request=True return real values.
+        return await self.poll_pychonet(no_request=False, best_effort=True, include_ntf=True)
 
     async def _async_update_data(self) -> dict[int, Any]:
         """Fetch the latest data from the ECHONET device.
@@ -444,16 +416,12 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 self._ntfPropertyMap,
             )
 
-            # Yield to the event loop to ensure echonetMessageReceived has
-            # finished writing the INF packet data to _state before we read it.
-            # Both run on the same asyncio event loop — a single yield is enough
-            # to guarantee ordering since pychonet fires callbacks concurrently
-            # with _state updates via ensure_future.
-            await asyncio.sleep(0)
-
             # Read only the EPCs the device declared it notifies about.
             # _instance.update() with no_request=True reads from the library's
             # internal _state cache — no network call is made.
+            # Note: _state is written by echonetMessageReceived BEFORE the
+            # callback is awaited (sequential within the same coroutine), so
+            # there is no race condition here.
             raw = await self._instance.update(
                 list(self._ntfPropertyMap), no_request=True
             )
@@ -486,7 +454,8 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             _LOGGER.error("Failed to process ECHONETLite push notification: %s", err)
 
     async def poll_pychonet(
-        self, no_request: bool = False, best_effort: bool = False
+        self, no_request: bool = False, best_effort: bool = False,
+        include_ntf: bool = False
     ) -> dict[int, Any]:
         """Fetch data from pychonet instance.
 
@@ -494,6 +463,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             no_request: If True, only return cached data without network request.
             best_effort: If True, skip genuine device timeouts rather than raising
                 DeviceTimeoutError. Used during initial setup.
+            include_ntf: If True, include STATMAP EPCs in the poll even when
+                CONF_FORCE_POLLING is False. Used during setup to warm pychonet's
+                _state cache so push notification reads via no_request=True
+                return real values rather than None.
 
         Returns:
             A dictionary of EPC codes and their current values.
@@ -511,7 +484,23 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         update_data = {}
         timed_out_batches = []
 
-        for i, flags in enumerate(self._update_flag_batches):
+        # Use full batch list for setup (include_ntf=True) so all EPCs including
+        # STATMAP ones are fetched at least once. For regular polling use the
+        # pruned list (STATMAP EPCs served via push).
+        batches = self._update_flag_batches
+        if include_ntf:
+            # Build full batch list bypassing STATMAP prune
+            batch_size_max = self._user_options.get(CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE)
+            full_list = [e for e in self._update_flags_full_list if e not in self._singleton_poll_epcs]
+            batches = []
+            start = 0
+            while start + batch_size_max < len(full_list):
+                batches.append(full_list[start:start + batch_size_max])
+                start += batch_size_max
+            if full_list[start:]:
+                batches.append(full_list[start:])
+
+        for i, flags in enumerate(batches):
             if i > 0 and not no_request:
                 # Back off longer after a timeout — device may need more time
                 # to recover between requests than after a successful response.
