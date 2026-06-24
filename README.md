@@ -75,6 +75,9 @@ compatible ECHONETLite Devices:
   * Bulkhead
      * SEZ-M71DA
 
+* Mitsubishi MAC-577IF2-E WiFi Adaptor connected to the following systems:
+     * MSZ-BT35VGK
+     
 * Mitsubishi MAC-578IF2-E WiFi Adaptor connected to the following systems:
   * AP Series
      * MSZ-AP22VGD
