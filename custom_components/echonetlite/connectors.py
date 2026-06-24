@@ -326,7 +326,12 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         async with _host_semaphores[self._host]:
             try:
                 _LOGGER.debug(f"Polling ECHONETLite Host {self._host}: %s")
-                return await self.poll_pychonet(no_request=False)
+                new_data = await self.poll_pychonet(no_request=False)
+                # Merge with existing data so skipped batches retain their
+                # cached values rather than disappearing from coordinator.data.
+                # This matches 3.9.0 behaviour where self.data.update() was
+                # used rather than replacing the entire dict each cycle.
+                return {**(self.data or {}), **new_data}
 
             except EchonetMaxOpcError as ex:
                 # Memory Pressure Control (MPC): Device rejected batch size, adjust and retry
@@ -351,7 +356,8 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 # 3. Rebuild and retry — semaphore still held
                 self._make_batch_request_flags()
                 try:
-                    return await self.poll_pychonet(no_request=False)
+                    new_data = await self.poll_pychonet(no_request=False)
+                    return {**(self.data or {}), **new_data}
                 except Exception as err:
                     _LOGGER.error(
                         "Failed to process ECHONETLite polling notification: %s", err
@@ -530,19 +536,35 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 )
 
         # Poll singleton EPCs individually after normal batches.
+        # Singletons get one retry after a short pause — they carry high-value
+        # data (e.g. 29-channel power lists) and a brief delay may allow the
+        # device to recover from momentary load before the second attempt.
         for epc in self._singleton_poll_epcs:
             if epc not in self._update_flags_full_list:
                 continue
             if not no_request:
                 await asyncio.sleep(0.1)
-            try:
-                singleton_data = await self._instance.update([epc], no_request)
-            except TimeoutError:
-                _LOGGER.warning(
-                    "Device at %s did not respond to singleton EPC %s",
-                    self._host, hex(epc),
-                )
-                continue
+
+            singleton_data = None
+            for attempt in range(2):  # initial attempt + one retry
+                try:
+                    singleton_data = await self._instance.update([epc], no_request)
+                    break  # success — exit retry loop
+                except TimeoutError:
+                    if attempt == 0:
+                        _LOGGER.debug(
+                            "Device at %s did not respond to singleton EPC %s "
+                            "— retrying after pause",
+                            self._host, hex(epc),
+                        )
+                        await asyncio.sleep(0.2)
+                    else:
+                        _LOGGER.warning(
+                            "Device at %s did not respond to singleton EPC %s "
+                            "after retry — serving cached data",
+                            self._host, hex(epc),
+                        )
+
             if singleton_data is None:
                 _LOGGER.debug(
                     "Device at %s queue busy for singleton EPC %s — serving cached data",
