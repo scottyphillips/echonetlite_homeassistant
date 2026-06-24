@@ -474,7 +474,9 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         for i, flags in enumerate(self._update_flag_batches):
             if i > 0 and not no_request:
-                await asyncio.sleep(0.1)
+                # Back off longer after a timeout — device may need more time
+                # to recover between requests than after a successful response.
+                await asyncio.sleep(1.0 if timed_out_batches else 0.1)
 
             try:
                 batch_data = await self._instance.update(flags, no_request)
