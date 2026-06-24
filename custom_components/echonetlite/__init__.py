@@ -28,12 +28,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 # Throttle removed - UpdateCoordinator handles update intervals
 from pychonet import ECHONETAPIClient
-from pychonet.EchonetInstance import (
-    ENL_GETMAP,
-    ENL_SETMAP,
-    ENL_UID,
-)
-from pychonet.lib.const import ENL_STATMAP, VERSION
+from pychonet.lib.const import VERSION
 from pychonet.lib.epc import EPC_CODE, EPC_SUPER
 from pychonet.lib.udpserver import UDPServer
 
@@ -194,16 +189,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await async_discover_newhost(hass, host)
 
     def unload_config_entry():
-        if server != None:
-            _LOGGER.debug(
-                f"Called unload_config_entry() to try to remove {host} from server._state."
-            )
-            if server._state.get(host):
-                server._state.pop(host)
-            # Remove update callback function
-            for _key in list(server._update_callbacks.keys()):
-                if _key.startswith(host):
-                    del server._update_callbacks[_key]
+        if server is not None and host is not None:
+            _LOGGER.debug("ECHONETLite: unloading host %s from server state", host)
+            server.unregister_host(host)
 
     entry.async_on_unload(unload_config_entry)
 
@@ -221,12 +209,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         udp = UDPServer()
         udp.run("0.0.0.0", 3610, loop=hass.loop)
         server = ECHONETAPIClient(udp)
-        server._debug_flag = True  # Set pychonet debug flag to True to enable debug logging from the library
-        server._logger = _LOGGER.debug
-        server._message_timeout = (
-            50  # 50 ticks x 0.1s = 5s per dropped frame (was 150 = 15s)
+        server.configure(
+            message_timeout=50,  # 50 ticks x 0.1s = 5s per dropped frame (was 150 = 15s)
+            logger=_LOGGER.debug,
+            debug=True,
+            discover_callback=discover_callback,
         )
-        server._discover_callback = discover_callback
         hass.data[DOMAIN].update({"api": server})
 
     if not entry.pref_disable_new_entities:
@@ -237,7 +225,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
         # make sure multicast is registered with the local IP used to reach this host
-        server._server.register_multicast_from_host(host)
+        server.register_multicast(host)
 
         try:
             # Echonet can be slow to respond, so we need to manage our setup budget carefully to avoid timeouts in Home Assistant.
@@ -307,61 +295,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         setmap = instance["setmap"]
         uid = instance["uid"]
 
-        # manually update API states using config entry data
-        if host not in list(server._state):
-            server._state[host] = {
-                "instances": {
-                    eojgc: {
-                        eojcc: {
-                            eojci: {
-                                ENL_STATMAP: ntfmap,
-                                ENL_SETMAP: setmap,
-                                ENL_GETMAP: getmap,
-                                ENL_UID: uid,
-                            }
-                        }
-                    }
-                }
-            }
-        if eojgc not in list(server._state[host]["instances"]):
-            server._state[host]["instances"].update(
-                {
-                    eojgc: {
-                        eojcc: {
-                            eojci: {
-                                ENL_STATMAP: ntfmap,
-                                ENL_SETMAP: setmap,
-                                ENL_GETMAP: getmap,
-                                ENL_UID: uid,
-                            }
-                        }
-                    }
-                }
-            )
-        if eojcc not in list(server._state[host]["instances"][eojgc]):
-            server._state[host]["instances"][eojgc].update(
-                {
-                    eojcc: {
-                        eojci: {
-                            ENL_STATMAP: ntfmap,
-                            ENL_SETMAP: setmap,
-                            ENL_GETMAP: getmap,
-                            ENL_UID: uid,
-                        }
-                    }
-                }
-            )
-        if eojci not in list(server._state[host]["instances"][eojgc][eojcc]):
-            server._state[host]["instances"][eojgc][eojcc].update(
-                {
-                    eojci: {
-                        ENL_STATMAP: ntfmap,
-                        ENL_SETMAP: setmap,
-                        ENL_GETMAP: getmap,
-                        ENL_UID: uid,
-                    }
-                }
-            )
+        # Pre-populate instance state from stored configuration.
+        server.register_instance(
+            host,
+            eojgc,
+            eojcc,
+            eojci,
+            ntfmap=ntfmap,
+            setmap=setmap,
+            getmap=getmap,
+            uid=uid,
+        )
         _LOGGER.debug(
             "ECHONETLite Pass 1: instantiating %s-%s-%s at %s (budget remaining: %.1fs)",
             eojgc,
