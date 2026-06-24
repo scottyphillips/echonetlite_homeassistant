@@ -255,7 +255,7 @@ Some ideas in his own repo got implemented in my own code.
 Thanks to Futomi Hatano for open sourcing a high quality and well documented ECHONET Lite library in Node JS that formed the basis of the 'Pychonet' library.
 (https://github.com/futomi/node-echonet-lite)
 
-Extra special thanks to sayurin. I am so very deeply shamed and sorry that my project did not meet your requirements. 
+Extra special thanks to sayurin. 
 
 Thanks to all other contributers who I might have missed for raising PRs and issues which has made this little weekend project into something useful for many people. 
 
