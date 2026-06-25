@@ -40,6 +40,12 @@ MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
+# Silence threshold before marking entities unavailable.
+# A single failed poll does not immediately cause unavailability — the host
+# must have been completely silent (no packets received by pychonet) for
+# this duration. Matches pyhems' RuntimeMonitor threshold.
+ACTIVITY_TIMEOUT = 300  # 5 minutes
+
 # Per-host semaphore to serialise poll cycles across all ECHONETConnector
 # instances sharing the same host IP. Embedded ECHONET devices have limited
 # UDP stacks and can drop frames if polled concurrently. A semaphore(1) ensures
@@ -378,8 +384,29 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                     raise UpdateFailed(f"Retry failed after MPC adjustment: {err}")
 
             except DeviceTimeoutError as err:
-                # Raising UpdateFailed marks entities as Unavailable
-                _LOGGER.debug("Device Timeout for {self._host}: %s", err)
+                # Check if host has been active recently via pychonet.
+                # pychonet tracks last received packet per host across ALL
+                # traffic — GET responses, INF notifications, anything.
+                # If any packet arrived within ACTIVITY_TIMEOUT, serve cached
+                # data rather than marking unavailable — transient failures
+                # under network load should not flash entities unavailable.
+                import time as _time
+                last = self._api.last_activity(self._host)
+                if last is not None:
+                    elapsed = _time.monotonic() - last
+                    if elapsed < ACTIVITY_TIMEOUT:
+                        _LOGGER.debug(
+                            "ECHONETLite %s-%s-%s at %s poll failed but host "
+                            "was active %.0fs ago — serving cached data",
+                            self._eojgc, self._eojcc, self._eojci,
+                            self._host, elapsed,
+                        )
+                        return self.data or {}
+                elapsed_str = f"{(_time.monotonic() - last):.0f}s" if last else "never"
+                _LOGGER.warning(
+                    "ECHONETLite %s-%s-%s at %s has been silent — last activity: %s",
+                    self._eojgc, self._eojcc, self._eojci, self._host, elapsed_str,
+                )
                 raise UpdateFailed(f"Offline: {err}")
 
             except UpdateFailed:
