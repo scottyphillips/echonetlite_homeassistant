@@ -40,6 +40,13 @@ MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
+# Time in seconds of complete silence before entities are marked unavailable.
+# A single failed poll does not immediately mark entities unavailable — the
+# device must be completely unresponsive for this duration. Matches the
+# behaviour of pyhems' RuntimeMonitor and is more appropriate for embedded
+# ECHONET devices that occasionally drop packets under network load.
+ACTIVITY_TIMEOUT = 300  # 5 minutes
+
 # Per-host semaphore to serialise poll cycles across all ECHONETConnector
 # instances sharing the same host IP. Embedded ECHONET devices have limited
 # UDP stacks and can drop frames if polled concurrently. A semaphore(1) ensures
@@ -186,6 +193,12 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         # User configurable options (fan modes, swing modes, temperature ranges, etc.)
         self._user_options: dict[str, Any] = {}
 
+        # Timestamp of last successful data activity (poll or push).
+        # Used by base_entity.available to implement a 5-minute silence
+        # threshold before marking entities unavailable, rather than
+        # immediately on a single failed poll.
+        self._last_activity_at: float | None = None
+
         # Get API instance from Home Assistant data store
         self._api: ECHONETAPIClient = hass.data[DOMAIN]["api"]
 
@@ -308,12 +321,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             self._eojcc,
             self._eojci,
         )
-        # Pass include_ntf=True so poll_pychonet uses the full EPC list
-        # including STATMAP EPCs. This warms pychonet's _state cache for all
-        # EPCs so push notification reads via no_request=True return real values.
-        return await self.poll_pychonet(
-            no_request=False, best_effort=True, include_ntf=True
-        )
+        return await self.poll_pychonet(no_request=False, best_effort=True)
 
     async def _async_update_data(self) -> dict[int, Any]:
         """Fetch the latest data from the ECHONET device.
@@ -335,6 +343,11 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             try:
                 _LOGGER.debug(f"Polling ECHONETLite Host {self._host}: %s")
                 new_data = await self.poll_pychonet(no_request=False)
+                # Record activity timestamp — used by available property
+                # to implement 5-minute silence threshold.
+                import time as _time
+
+                self._last_activity_at = _time.monotonic()
                 # Merge with existing data so skipped batches retain their
                 # cached values rather than disappearing from coordinator.data.
                 # This matches 3.9.0 behaviour where self.data.update() was
@@ -370,6 +383,9 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 self._make_batch_request_flags()
                 try:
                     new_data = await self.poll_pychonet(no_request=False)
+                    import time as _time
+
+                    self._last_activity_at = _time.monotonic()
                     return {**(self.data or {}), **new_data}
                 except Exception as err:
                     _LOGGER.error(
@@ -433,9 +449,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             # Read only the EPCs the device declared it notifies about.
             # _instance.update() with no_request=True reads from the library's
             # internal _state cache — no network call is made.
-            # Note: _state is written by echonetMessageReceived BEFORE the
-            # callback is awaited (sequential within the same coroutine), so
-            # there is no race condition here.
             raw = await self._instance.update(
                 list(self._ntfPropertyMap), no_request=True
             )
@@ -460,6 +473,11 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
             _LOGGER.debug("Push notification data for %s: %s", self._host, new_data)
 
+            # Record activity — push notifications count as device activity
+            import time as _time
+
+            self._last_activity_at = _time.monotonic()
+
             # Merge into coordinator data and notify listeners.
             self.data = {**(self.data or {}), **new_data}
             self.async_update_listeners()
@@ -468,10 +486,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             _LOGGER.error("Failed to process ECHONETLite push notification: %s", err)
 
     async def poll_pychonet(
-        self,
-        no_request: bool = False,
-        best_effort: bool = False,
-        include_ntf: bool = False,
+        self, no_request: bool = False, best_effort: bool = False
     ) -> dict[int, Any]:
         """Fetch data from pychonet instance.
 
@@ -479,10 +494,6 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             no_request: If True, only return cached data without network request.
             best_effort: If True, skip genuine device timeouts rather than raising
                 DeviceTimeoutError. Used during initial setup.
-            include_ntf: If True, include STATMAP EPCs in the poll even when
-                CONF_FORCE_POLLING is False. Used during setup to warm pychonet's
-                _state cache so push notification reads via no_request=True
-                return real values rather than None.
 
         Returns:
             A dictionary of EPC codes and their current values.
@@ -500,29 +511,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         update_data = {}
         timed_out_batches = []
 
-        # Use full batch list for setup (include_ntf=True) so all EPCs including
-        # STATMAP ones are fetched at least once. For regular polling use the
-        # pruned list (STATMAP EPCs served via push).
-        batches = self._update_flag_batches
-        if include_ntf:
-            # Build full batch list bypassing STATMAP prune
-            batch_size_max = self._user_options.get(
-                CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
-            )
-            full_list = [
-                e
-                for e in self._update_flags_full_list
-                if e not in self._singleton_poll_epcs
-            ]
-            batches = []
-            start = 0
-            while start + batch_size_max < len(full_list):
-                batches.append(full_list[start : start + batch_size_max])
-                start += batch_size_max
-            if full_list[start:]:
-                batches.append(full_list[start:])
-
-        for i, flags in enumerate(batches):
+        for i, flags in enumerate(self._update_flag_batches):
             if i > 0 and not no_request:
                 # Back off longer after a timeout — device may need more time
                 # to recover between requests than after a successful response.
@@ -844,9 +833,8 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             """Apply quirk definitions to the instance."""
             for epc in extention.QUIRKS:
                 if func := extention.QUIRKS[epc].get("EPC_FUNCTION"):
-                    op_code = extention.QUIRKS[epc].get("ENL_OP_CODE")
-                    self._instance.register_epc_function(epc, func, op_code)
-                    if op_code:
+                    self._instance.EPC_FUNCTIONS.update({epc: func})
+                    if op_code := extention.QUIRKS[epc].get("ENL_OP_CODE"):
                         self._enl_op_codes.update({epc: op_code})
                 if extention.QUIRKS[epc].get("SINGLETON_POLL"):
                     if epc not in self._singleton_poll_epcs:

@@ -1,6 +1,9 @@
 """Base entity for ECHONETLite."""
 
+import time
+
 from .const import DOMAIN
+from .connectors import ACTIVITY_TIMEOUT
 from . import get_device_name
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -15,6 +18,25 @@ class EchonetEntity(CoordinatorEntity):
         name = get_device_name(coordinator, config)
         self._attr_name = name
         self._device_name = name
+
+    @property
+    def available(self) -> bool:
+        """Return True if the device has been active within ACTIVITY_TIMEOUT seconds.
+
+        Rather than marking unavailable on a single failed poll, we use a
+        5-minute silence threshold. A device that occasionally drops packets
+        under network load stays available as long as it has responded recently.
+        Only a genuinely unreachable device (silent for 5 minutes) goes unavailable.
+
+        This matches the behaviour of pyhems' RuntimeMonitor and is more
+        appropriate for embedded ECHONET devices.
+        """
+        last = self.coordinator._last_activity_at
+        if last is None:
+            # No activity recorded yet — assume available until proven otherwise.
+            # This prevents entities from starting unavailable on first load.
+            return True
+        return time.monotonic() - last < ACTIVITY_TIMEOUT
 
     @property
     def device_info(self):
