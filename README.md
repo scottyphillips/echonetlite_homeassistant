@@ -7,261 +7,193 @@
 ([日本語](https://github.com/scottyphillips/echonetlite_homeassistant/blob/master/README.ja.md))
 
 A Home Assistant custom component for use with ECHONETLite compatible devices.
-This custom component makes use of the 'pychonet'
+This custom component makes use of the [pychonet](https://github.com/scottyphillips/pychonet)
 Python3 library also maintained by this author.
-(https://github.com/scottyphillips/pychonet)
 
-**Important note** - This project is a best effort activity as I am quite busy these days with two young kids, However I will respond and approve PRs, as well as be able to contribute to troubleshooting occasionally.
+This integration supports any device that implements the ECHONET Lite protocol, 
+regardless of whether the device class appears in the Machine Readable Appendix (MRA). 
+New device classes can be added via pychonet without constraint.
 
 **This component will set up the climate, fan, sensor, select and switch platforms.**
 
-# Current working systems:
-Based upon feedback this custom component works with the following
-compatible ECHONETLite Devices:
+---
 
-| **Manufacturer**    | **Device**                                     | **ECHONETLite Object Class** | **Home Assistant Entities**      | **Notes**                                                                                         |
-|:--------------------|:-----------------------------------------------|:-----------------------------|:---------------------------------|:--------------------------------------------------------------------------------------------------|
-| Mitsubishi Electric | MAC-568IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
-| Mitsubishi Electric | MAC-577IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
-| Mitsubishi Electric | MAC-577IF2-E                                   | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
-| Mitsubishi Electric | MAC-578IF2-E                                   | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
-| Mitsubishi Electric | MAC-587IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
-| Mitsubishi Electric | MAC-588IF-E                                    | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
-| Mitsubishi Electric | MAC-600IF                                      | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
-| Mitsubishi Electric | MAC-900IF                                      | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
-| Mitsubishi Electric | HM-W002-AC                                     | HomeAirConditioner           | Climate, Sensor, Select          | WiFi Adaptor connected to various HVAC ducted and split systems. See list below.                  |
-| Mitsubishi Electric | Eco-Cute SRT-S466A + RMCB-H6SE-T               | ElectricWaterHeater          | Sensor, Select, Switch           |                                                                                                   |
-| Mitsubishi Electric | REF-WLAN001                                    | Refrigerator                 | Sensor                           |                                                                                                   |
-| Sharp               | AY-J22H Air Conditioner                        | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
-| Sharp               | AY-XP12YHE Air Conditioner                     | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
-| Sharp               | AY-XP24YHE Air Conditioner                     | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
-| Sharp               | AY-L40P Air Conditioner                        | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
-| Sharp               | KI-HS70 Air Purifier                           | HomeAirCleaner               | Fan, Sensor, Select              |                                                                                                   |
-| Sharp               | JH-RWL8 Multi Energy Monitor                   | HomeSolarPower, StorageBattery | Sensor, Select                 |                                                                                                   |
-| Panasonic           | CS-221DJ Air Conditioner                       | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
-| Panasonic           | CS-362DJ2 Air Conditioner                      | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
-| Panasonic           | HF-JA2-W                                       |                              | Sensor                           | IP/JEM-A conversion adapter.                                                                      |
-| Panasonic           | Link Plus WTY2001                              | GeneralLighting, Lighting system | Light, Select                | Lighting system is selector of preset scene.                                                      |
-| Panasonic           | Smart Cosmo Type LAN                           | DistributionPanelMeter       | Sensor                           |                                                                                                   |
-| Rinnai              | Hot water systems (ECHONETLite enabled models) |                              | Sensor, Switch, Input            | Input entity to configure Hot Water Timers can be configured by using a template and a [Service Call](Services.md). |
-| Koizumi             | Lighting system AE50264E bridge                | LightingSystem               | Light, Sensor                    | https://www.koizumi-lt.co.jp/product/jyutaku/tree/                                                |
-| Daikin              | ECHONETLite enabled HVAC models.               | HomeAirConditioner           | Climate, Sensor, Select          |                                                                                                   |
-| OMRON               | Home Solar Power Generation                    |                              | Switch, Sensor                   | Full support for Home Assistant Energy Dashboard including solar production and grid consumption. |
-| JDM Electric Meters | Low voltage smart meter (B route service)      |                              | Sensor                           | Require Wi-SUN <-> Ethernet/Wifi bridge. <br> [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite)  |
-| Noritz              | Bathtub and floor heating system               | HotWaterGenerator            | Sensor, Switch                   |                                                                                                   |
-| KDK                 | ECHONETLite enabled Ceiling Fans               | CeilingFan, GeneralLighting  | Fan, Light, Sensor               | Rebranded Panasonic Ceiling, confirmed working with E48GP, H56G, F40GP ceiling fans                                                                  |
-| Sony                | 'MoekadenRoom' ECHONETLite Simulator           |                              | Climate, Select, Switch, Sensor  | https://github.com/SonyCSL/MoekadenRoom.                                                          |
+## Supported Devices
 
-* Mitsubishi MAC-568IF-E WiFi Adaptor connected to the following systems:
-  * GE Series
-     * MSZ-GE42VAD
-     * MSZ-GE24VAD
-     * MSZ-GL71VGD
-     * MSZ-GL50VGD
-     * MSZ-GL35VGD
-     * MSZ-GL25VGD
-  * AP Series
-     * MSZ-AP22VGD
-     * MSZ-AP25VGD
-     * MSZ-AP50VGD
-  * LN Series
-     * MSZ-LN25VG2
-     * MSZ-LN35VG2
-     * MSZ-LN50VG2
-  * Ducted
-     * PEA-M100GAA
-     * PEA-M100HAA
-     * PEA-RP140GAA
-  * Bulkhead
-     * SEZ-M71DA
+| **Manufacturer**    | **Device**                                     | **ECHONET Class**              | **HA Entities**                  | **Notes**                                                                                         |
+|:--------------------|:-----------------------------------------------|:-------------------------------|:---------------------------------|:--------------------------------------------------------------------------------------------------|
+| Mitsubishi Electric | MAC-5xx/6xx/9xx WiFi Adaptors                  | HomeAirConditioner             | Climate, Sensor, Select          | See [Mitsubishi WiFi Adaptor compatibility](#mitsubishi-wifi-adaptor-compatibility) below          |
+| Mitsubishi Electric | HM-W002-AC                                     | HomeAirConditioner             | Climate, Sensor, Select          | See [Mitsubishi WiFi Adaptor compatibility](#mitsubishi-wifi-adaptor-compatibility) below          |
+| Mitsubishi Electric | Eco-Cute SRT-S466A + RMCB-H6SE-T               | ElectricWaterHeater            | Sensor, Select, Switch           |                                                                                                   |
+| Mitsubishi Electric | REF-WLAN001                                    | Refrigerator                   | Sensor                           | MR-WZ55H confirmed                                                                                |
+| Fujitsu General     | OP-J03DZ WiFi Adaptor                          | HomeAirConditioner             | Climate, Sensor, Select          | Nocria C & V Series confirmed                                                                     |
+| Sharp               | AY-J22H, AY-XP12YHE, AY-XP24YHE, AY-L40P     | HomeAirConditioner             | Climate, Sensor, Select          |                                                                                                   |
+| Sharp               | KI-HS70 Air Purifier                           | HomeAirCleaner                 | Fan, Sensor, Select              |                                                                                                   |
+| Sharp               | JH-RWL8 Multi Energy Monitor                   | HomeSolarPower, StorageBattery | Sensor, Select                   |                                                                                                   |
+| Panasonic           | CS-221DJ, CS-362DJ2 Air Conditioners           | HomeAirConditioner             | Climate, Sensor, Select          |                                                                                                   |
+| Panasonic           | HF-JA2-W                                       | —                              | Sensor                           | IP/JEM-A conversion adapter                                                                       |
+| Panasonic           | Link Plus WTY2001                              | GeneralLighting, LightingSystem| Light, Select                    | Lighting system is selector of preset scene                                                       |
+| Panasonic           | Smart Cosmo Type LAN (MKN7350S1)               | DistributionPanelMeter         | Sensor                           |                                                                                                   |
+| Daikin              | ECHONETLite enabled HVAC models                | HomeAirConditioner             | Climate, Sensor, Select          |                                                                                                   |
+| Rinnai              | Hot water systems (ECHONETLite enabled)        | —                              | Sensor, Switch, Input            | Input entity for Hot Water Timers — see [Services.md](Services.md)                                |
+| Noritz              | Bathtub and floor heating system               | HotWaterGenerator              | Sensor, Switch                   |                                                                                                   |
+| Koizumi             | AE50264E Lighting bridge                       | LightingSystem                 | Light, Sensor                    | https://www.koizumi-lt.co.jp/product/jyutaku/tree/                                                |
+| OMRON               | Home Solar Power Generation                    | —                              | Switch, Sensor                   | Full support for HA Energy Dashboard                                                               |
+| KDK                 | ECHONETLite enabled Ceiling Fans               | CeilingFan, GeneralLighting    | Fan, Light, Sensor               | Rebranded Panasonic — confirmed E48GP, H56G, F40GP                                                |
+| JDM Electric Meters | Low voltage smart meter (B route)              | —                              | Sensor                           | Requires Wi-SUN ↔ Ethernet/WiFi bridge — [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite) |
+| Sony                | MoekadenRoom ECHONETLite Simulator             | —                              | Climate, Select, Switch, Sensor  | https://github.com/SonyCSL/MoekadenRoom                                                           |
 
-* Mitsubishi MAC-577IF2-E WiFi Adaptor connected to the following systems:
-     * MSZ-BT35VGK
+---
 
-* Mitsubishi MAC-578IF2-E WiFi Adaptor connected to the following systems:
-  * AP Series
-     * MSZ-AP22VGD
-     * MSZ-AP35VGD
-     * MSZ-AP50VGD
-  * Ducted
-     * PEAD-RP71
+## Mitsubishi WiFi Adaptor Compatibility
 
-* Mitsubishi MAC-587IF-E WiFi Adaptor connected to the following systems:
-  * Ducted
-    * PEAD-M50JA2
+| **WiFi Adaptor**  | **Compatible Systems**                                                                                                            |
+|:------------------|:----------------------------------------------------------------------------------------------------------------------------------|
+| MAC-568IF-E       | GE: MSZ-GE42VAD, GE24VAD, GL71VGD, GL50VGD, GL35VGD, GL25VGD<br>AP: MSZ-AP22VGD, AP25VGD, AP50VGD<br>LN: MSZ-LN25VG2, LN35VG2, LN50VG2<br>Ducted: PEA-M100GAA, PEA-M100HAA, PEA-RP140GAA<br>Bulkhead: SEZ-M71DA |
+| MAC-577IF-E       | MSZ-BT35VGK                                                                                                                       |
+| MAC-577IF2-E      | MSZ-BT35VGK                                                                                                                       |
+| MAC-578IF2-E      | AP: MSZ-AP22VGD, AP35VGD, AP50VGD<br>Ducted: PEAD-RP71                                                                          |
+| MAC-587IF-E       | Ducted: PEAD-M50JA2                                                                                                               |
+| MAC-588IF-E       | Ducted: PEA-M200LAA, PEAD-M71JAA                                                                                                  |
+| MAC-600IF         | Z Series: MSZ-ZW4022S                                                                                                             |
+| MAC-900IF         | Z Series: MSZ-ZW4024S<br>XD Series: MSZ-XD2225<br>R Series: MSZ-BKR2223                                                         |
+| HM-W002-AC        | JXV Series: MSZ-JXV4018S                                                                                                          |
 
-* Mitsubishi MAC-588IF-E WiFi Adaptor connected to the following systems:
-  * Ducted
-     * PEA-M200LAA
-     * PEAD-M71JAA
+---
 
-* Mitsubishi MAC-600IF WiFi Adaptor connected to the following systems:
-  * Z Series
-     * MSZ-ZW4022S
+This list reflects community-confirmed devices. Any ECHONET Lite compatible device is or can be supported — device classes not yet listed can be added to pychonet without constraint by the Machine Readable Appendix.
 
-* Mitsubishi MAC-900IF WiFi Adaptor connected to the following systems:
-  * Z Series
-     * MSZ-ZW4024S
-  * XD Series
-     * MSZ-XD2225
-  * R Series
-     * MSZ-BKR2223
+## Installation — Enable ECHONET Protocol
 
-* Mitsubishi HM-W002-AC WiFi Adaptor connected to the following systems:
-  * JXV Series
-     * MSZ-JXV4018S
-
-
-* Mitsubishi REF-WLAN001 WiFi Adaptor connected to the following systems:
-  * Refrigerator
-     * MR-WZ55H
-
-* Fujitsu General OP-J03DZ WiFi Adaptor connected to the following systems:
-  * Air Conditioner
-    * "Nocria" C Series
-      * AS-C224R
-      * AS-C254R
-    * "Nocria" V Series
-      * AS-V173N2
-
-
-## Installation - Enable ECHONET protocol
-This Custom Component was originally designed for the Mitsubishi MAC-568IF-E WiFi
-Adaptor, a basic guide for enabling ECHONETlite is provided below.
-
-From the official Mitsubishi AU/NZ Wifi App, you will need to enable
-the 'ECHONET lite' protocol under the 'edit unit' settings.
+This component was originally designed for the Mitsubishi MAC-568IF-E WiFi Adaptor.
+From the official Mitsubishi AU/NZ WiFi App, enable the 'ECHONET lite' protocol under 'edit unit' settings.
 
 ![echonet][echonetimg]
 
-Note that the proprietary Mitsubishi app (MELCloud/MELView/Kumo Cloud) controls some models in single ˚F or half ˚C, but
-ECHONET works in whole ˚C.
+> Note: The proprietary Mitsubishi app (MELCloud/MELView/Kumo Cloud) controls some models in single °F or half °C, but ECHONET works in whole °C.
 
-Many other products will work using this custom-component, but they must correctly support the 'ECHONET lite' protocol. The author cannot assist with enabling ECHONET Lite for other vendor products.
+Many other products will work using this component but must correctly support the ECHONET Lite protocol. The author cannot assist with enabling ECHONET Lite for other vendor products.
 
-### Home Network
-If you have a firewall, ensure port 3610 is unblocked 
+**Network:** If you have a firewall, ensure UDP port 3610 is unblocked. ([ECHONET Lite Spec](https://echonet.jp/spec_v113_lite_en/))
 
-([EchoNet Specifications](https://echonet.jp/spec_v113_lite_en/))
+---
 
 ## Installation
-### Install using HACS
-1. Click the link below or look up 'ECHONETLite Platform' in integrations\
-   [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=scottyphillips&repository=echonetlite_homeassistant&category=integration)
-3. Click 'Download', leave the version be and click 'Download' again.
-4. Restart Home Assistant
 
-### Install manually
-1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
-2. If you do not have a `custom_components` directory (folder) there, you need to create it.
-3. In the `custom_components` directory (folder) create a new folder called `echonetlite`.
-4. Download _all_ the files from the `custom_components/echonetlite/` directory (folder) in this repository.
-5. Place the files you downloaded in the new directory (folder) you created.
-6. Restart Home Assistant and clear your browser cache
+### Via HACS (recommended)
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=scottyphillips&repository=echonetlite_homeassistant&category=integration)
+
+1. Click the badge above or search 'ECHONETLite Platform' in HACS integrations
+2. Click **Download**, then **Download** again
+3. Restart Home Assistant
+
+### Manual
+
+1. Open the directory for your HA configuration (where `configuration.yaml` is located)
+2. Create a `custom_components` directory if it doesn't exist
+3. Inside it, create a folder called `echonetlite`
+4. Download all files from `custom_components/echonetlite/` in this repository into that folder
+5. Restart Home Assistant and clear your browser cache
+
+---
 
 ## Setup
-1. In Home Assistant, go to Settings -> Devices & Services -> ADD INTEGRATION.
-2. Select the 'ECHONET Lite' integration. Enter the IP address of the HVAC unit in the host field, and give the platform a name.
-3. Platform will automatically configure any supported platforms e.g. climate, sensor, switch, fan, select.
-4. If you have additional devices to configure then repeat step 1.
 
-## Enabling support for additional Mitsubishi interfaces
+1. Go to **Settings → Devices & Services → ADD INTEGRATION**
+2. Select **ECHONET Lite** and enter the IP address of your device
+3. The integration will automatically configure supported platforms (climate, sensor, switch, fan, select)
+4. Repeat for additional devices
 
-Some Mitsubishi WiFi adaptors have hidden support for the ECHONET Lite protocol, which can be enabled by calling the `/smart` endpoint.
+---
 
-For more information, please see [this issue](https://github.com/scottyphillips/echonetlite_homeassistant/issues/226).
+## Enabling Hidden ECHONET Support on Additional Mitsubishi Adaptors
 
-TLDR: Run the following command:
+Some Mitsubishi WiFi adaptors have hidden ECHONET Lite support that can be unlocked:
 
 ```bash
 curl -H 'Content-Type: text/xml' -d '<?xml version="1.0" encoding="UTF-8"?><ESV>7WVvmfhMYzGVi70nyFhmKEy9Jo3Hg3994vi9y1kEgDFWd/1ch9RWDUgY4HgsvMHFvP93fQ30AvEJCNcd0GTwPID0F8V5eyMVj/qAQCXFqYrRtJh8MIpm2/h7jZ2SsPj0</ESV>' "http://${ip}/smart"
-
 ```
 
-Replace `${ip}` with the IP of your adaptor.
+Replace `${ip}` with your adaptor's IP address. See [issue #226](https://github.com/scottyphillips/echonetlite_homeassistant/issues/226) for details.
 
-If successful, your should see a response like this:
+---
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?><ESV>[encrypted content]</ESV>
+## Options — Fan and Swing Mode Settings
+
+After adding the integration, go to **Configuration → Integrations**, find your ECHONETLite device and click **Configure** to fine-tune fan and swing mode settings.
+
+> Note: Determining which options are supported is a trial-and-error process as ECHONET Lite does not expose permitted values for these settings.
+
+---
+
+## Device Quirks
+
+Some manufacturers implement non-standard EPCs not in the ECHONET Lite specification. To investigate quirks for your device:
+
+1. Enable debug logging on the ECHONETLite integration screen and restart HA
+2. Once startup is complete, disable debug logging and download the log
+3. Using the device IP address, check the `getmap` and `setmap` data for values above 240 (0xF0)
+
+**Example log entry:**
+```
+{'eojcc': 130, 'eojci': 1, 'eojgc': 2, 'getmap': [128, 224, 129, 241, 130, 131, 147, 243, 244, 245,
+246, 247, 136, 248, 249, 138, 250, 251, 252, 157, 253, 158, 254, 159, 255], 'host': '192.168.0.49',
+'manufacturer': 'Rinnai', ...}
 ```
 
-## Configuring Options for Fan and swing mode settings for supported HVAC and Air Purifiers.
-Once you have added the integration, you can go back to configuration -> integrations.
+4. Create a quirks file (e.g. `quirks/Rinnai/all/0282.py`):
 
-Under your ECHONETLite device click 'configure'.
-
-Fine tune your required fan and swing mode settings. The integration will be able to determine what settings are supported for your system in question.
-
-NOTE: Selecting which specific options are suitable is a 'trial and error' process as ECHONETLite does not provide a means of returning permittted values for these settings.
-
-As soon as you configure your options and save, the settings will take effect.
-
-## How to find quirks of a manufacturer or specific device
-It is known that there are manufacturers or specific devices that have data points that are not in the Echonet Lite specification. If the device you are using has these quirks, it will be more useful to find the quirks and define the behavior. Here are the steps to find the quirks as a first step.
-
-1. Enable the debug log on the ECHONETLite integration screen and restart HA.
-2. Once startup is complete, disable the debug log and download the log.
-3. Using the IP address of the target device, check the getmap and setmap data to find values ​​above 240 (0xF0).
-In the following sample log, 250 (0xFA) and 253 (0xFD) can be get/set. This device is from manufacturer "Rinnai" and has eojgc 2 (0x02) and eojcc 130 (0x82)
-```
-{'eojcc': 130, 'eojci': 1, 'eojgc': 2, 'getmap': [128, 224, 129, 241, 130, 131, 147, 243, 244, 245, 246, 247, 136, 248, 249, 138, 250, 251, 252, 157, 253, 158, 254, 159, 255], 'host': '192.168.0.49', 'host_product_code': None, 'manufacturer': 'Rinnai', 'name': None, 'ntfmap': [128, 129, 136, 250, 251, 253], 'setmap': [129, 147, 250, 253], 'uid': '0000590170500000000024cd8d4e84f4', 'uidi': '0000590170500000000024cd8d4e84f4-2-130-1'}]}
-```
-4. Create a quirks file for debugging.
-- File name: quirks/Rinnai/all/0282.py (quirks/{manufacturer}/all/xxyy.py)
 ```python
 from homeassistant.const import CONF_NAME
 
 def _hex(edt):
-	return edt.hex()
+    return edt.hex()
 
 QUIRKS = {
     0xFA: {
         "EPC_FUNCTION": _hex,
-        "ENL_OP_CODE": {
-            CONF_NAME: "FA",
-        },
+        "ENL_OP_CODE": {CONF_NAME: "FA"},
     },
     0xFD: {
         "EPC_FUNCTION": _hex,
-        "ENL_OP_CODE": {
-            CONF_NAME: "FD",
-        },
+        "ENL_OP_CODE": {CONF_NAME: "FD"},
     },
 }
 ```
-5. When you restart the HA, two new entities, FA and FD, will be configured in this example. Perform zone control and observe whether their values ​​change in a distinctive way.
-6. If a characteristic change occurs, you are lucky! Please submit a new issue, or go a step further and submit your pull request. 👍
 
+5. Restart HA — new entities will appear for the custom EPCs. Observe whether their values change meaningfully during device operation
+6. If they do — please raise an issue or submit a PR! 👍
+
+---
 
 ## Hall of Fame
-Thanks Naoki Sawada for creating the switch entity, creating the custom service call framework, and a ton of other improvements.
-Most importantly of all he contributed the translation into 日本語.
 
-Thanks to scumbug, lordCONAN, and xen2 for contributing some very interesting devices. 
+Thanks to Naoki Sawada (nao-pon) for creating the switch entity, the custom service call framework, push notification support via multicast, and the Japanese translation. どうもありがとうございます！
 
-Thanks to Jason Nader for all the quality of life updates to the codebase and doco.
+Extra special thanks to sayurin.
 
-Thanks to khcnz (Karl Chaffey) and gvs for helping refector the old code
-and contributing to testing.
+Thanks to scumbug, lordCONAN, and xen2 for contributing some very interesting devices.
 
-Thanks to Dick Swart, Masaki Tagawa, Paul, khcnz,  Kolodnerd, and Alfie Gerner
-for each contributing code updates to to the original 'mitsubishi_hass' and therefore this custom component.
+Thanks to Jason Nader for quality of life updates to the codebase and documentation.
 
-Thanks to Jeffro Carr who inspired me to write my own native Python ECHONET library for Home Assistant.
-Some ideas in his own repo got implemented in my own code.
+Thanks to khcnz (Karl Chaffey) and gvs for helping refactor the old code and contributing to testing.
+
+Thanks to Dick Swart, Masaki Tagawa, Paul, khcnz, Kolodnerd, and Alfie Gerner for contributing code updates to the original 'mitsubishi_hass' and therefore this component.
+
+Thanks to Jeffro Carr who inspired me to write a native Python ECHONET library for Home Assistant.
 (https://github.com/jethrocarr/echonetlite-hvac-mqtt-service.git)
 
-Thanks to Futomi Hatano for open sourcing a high quality and well documented ECHONET Lite library in Node JS that formed the basis of the 'Pychonet' library.
+Thanks to Futomi Hatano for open sourcing a high quality and well documented ECHONET Lite library in Node JS that formed the basis of the pychonet library.
 (https://github.com/futomi/node-echonet-lite)
 
-Extra special thanks to sayurin. 
+Thanks to all other contributors who have raised PRs and issues that turned this weekend project into something useful for many people.
 
-Thanks to all other contributers who I might have missed for raising PRs and issues which has made this little weekend project into something useful for many people. 
+---
 
 ## License
 
-This application is licensed under an MIT license, refer to LICENSE for details.
+MIT License — refer to LICENSE for details.
 
 ***
 [echonetlite_homeassistant]: https://github.com/scottyphillips/echonetlite_homeassistant
@@ -269,8 +201,6 @@ This application is licensed under an MIT license, refer to LICENSE for details.
 [hacsbadge]: https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/scottyphillips/echonetlite_homeassistant.svg?style=for-the-badge
 [releases]: https://github.com/scottyphillips/echonetlite_homeassistant/releases
-[license-shield]:https://img.shields.io/github/license/scottyphillips/echonetlite_homeassistant?style=for-the-badge
-[buymecoffee]: https://www.buymeacoffee.com/RgKWqyt?style=for-the-badge
-[buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/scottyphillips/echonetlite_homeassistant?style=for-the-badge
 [maintenance-shield]: https://img.shields.io/badge/Maintainer-Scott%20Phillips-blue?style=for-the-badge
 [echonetimg]: ECHONET.jpeg
