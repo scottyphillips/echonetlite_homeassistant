@@ -14,23 +14,6 @@ This integration supports any device that implements the ECHONET Lite protocol,
 regardless of whether the device class appears in the Machine Readable Appendix (MRA). 
 New device classes can be added via pychonet without constraint.
 
-## Why ECHONETLite Platform?
-
-- **Broad device support** — any ECHONET Lite compatible device is supported, 
-  including device classes not documented in the Machine Readable Appendix (MRA)
-- **Battle-tested** — maintained (more or less) since 2018 across a wide range of real-world 
-  hardware including non-compliant firmware
-- **Hybrid push/poll** — push notifications for responsive state updates, 
-  polling for EPCs not covered by the device's notification map
-- **Works on any network** — no dependency on reliable multicast; always_poll option
-  ensures devices are always reachable even on segmented or managed networks
-- **Device quirks system** — manufacturer and model-specific EPC overrides 
-  for devices that deviate from the ECHONET Lite specification
-- **Compound sensor support** — sensors that combine multiple EPCs 
-  (e.g. energy readings scaled by a device-reported coefficient)
-- **Active development** — LLM-assisted development workflow enables rapid 
-  response to bug reports and new device support
-
 **This component will set up the climate, fan, sensor, select and switch platforms.**
 
 ---
@@ -143,26 +126,7 @@ After adding the integration, go to **Configuration → Integrations**, find you
 > Note: Determining which options are supported is a trial-and-error process as ECHONET Lite does not expose permitted values for these settings.
 
 ---
-## Polling Behaviour
 
-By default, EPCs that the device reports via push notifications (STATMAP) are 
-excluded from the regular poll cycle — the integration relies on the device 
-pushing state changes rather than polling for them. This reduces network load 
-on embedded devices.
-
-If your network does not reliably deliver multicast packets (e.g. managed 
-switches with IGMP snooping, VLANs separating IoT devices, or any network 
-segmentation), push notifications may not arrive correctly. In this case, 
-enable **Force Polling** in the integration options to poll all EPCs on every 
-cycle regardless of the notification map.
-
-To configure: **Configuration → Integrations → ECHONETLite → Configure → 
-Force Polling**
-
-> Note: Force Polling increases network traffic to the device but ensures 
-> all sensor values are always current even without working multicast.
-
----
 ## Device Quirks
 
 Some manufacturers implement non-standard EPCs not in the ECHONET Lite specification. To investigate quirks for your device:
