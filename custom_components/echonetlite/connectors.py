@@ -311,6 +311,11 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         even when a device silently drops requests for certain EPCs, trusting
         the coordinator's regular polling to fill in the gaps.
 
+        Uses include_ntf=True to fetch ALL GETMAP EPCs including STATMAP ones,
+        warming pychonet's _state cache so push notification reads work correctly.
+        STATMAP EPCs are pruned from ongoing polls (served via push) but must
+        be fetched at least once on startup to populate initial state.
+
         Returns:
             A dictionary of EPC codes and their current values.
         """
@@ -321,7 +326,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             self._eojcc,
             self._eojci,
         )
-        return await self.poll_pychonet(no_request=False, best_effort=True)
+        return await self.poll_pychonet(no_request=False, best_effort=True, include_ntf=True)
 
     async def _async_update_data(self) -> dict[int, Any]:
         """Fetch the latest data from the ECHONET device.
@@ -486,7 +491,8 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             _LOGGER.error("Failed to process ECHONETLite push notification: %s", err)
 
     async def poll_pychonet(
-        self, no_request: bool = False, best_effort: bool = False
+        self, no_request: bool = False, best_effort: bool = False,
+        include_ntf: bool = False
     ) -> dict[int, Any]:
         """Fetch data from pychonet instance.
 
@@ -494,6 +500,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             no_request: If True, only return cached data without network request.
             best_effort: If True, skip genuine device timeouts rather than raising
                 DeviceTimeoutError. Used during initial setup.
+            include_ntf: If True, include STATMAP EPCs in the poll even when
+                CONF_FORCE_POLLING is False. Used during setup to warm pychonet's
+                _state cache so push notification reads via no_request=True
+                return real values rather than None.
 
         Returns:
             A dictionary of EPC codes and their current values.
@@ -511,7 +521,23 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         update_data = {}
         timed_out_batches = []
 
-        for i, flags in enumerate(self._update_flag_batches):
+        # Use full batch list for setup (include_ntf=True) so all EPCs including
+        # STATMAP ones are fetched at least once, warming pychonet's _state cache.
+        # For regular polling use the pruned list (STATMAP EPCs served via push).
+        if include_ntf:
+            batch_size_max = self._user_options.get(CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE)
+            full_list = [e for e in self._update_flags_full_list if e not in self._singleton_poll_epcs]
+            batches = []
+            start = 0
+            while start + batch_size_max < len(full_list):
+                batches.append(full_list[start:start + batch_size_max])
+                start += batch_size_max
+            if full_list[start:]:
+                batches.append(full_list[start:])
+        else:
+            batches = self._update_flag_batches
+
+        for i, flags in enumerate(batches):
             if i > 0 and not no_request:
                 # Back off longer after a timeout — device may need more time
                 # to recover between requests than after a successful response.
