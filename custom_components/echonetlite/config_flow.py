@@ -235,7 +235,7 @@ async def enumerate_instances(
         return instance_list
     finally:
         if close_server:
-            server._server._sock.close()
+            server._server.close()  # cleanly cancels tasks + closes socket
 
 
 async def async_discover_newhost(hass, host, init_server=None):
@@ -315,7 +315,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     break
         finally:
             if close_server:
-                server._server._sock.close()
+                server._server.close()  # cleanly cancels tasks + closes socket
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
