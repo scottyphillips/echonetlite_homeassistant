@@ -64,7 +64,6 @@ async def enumerate_instances(
     """Validate the user input allows us to connect."""
     _LOGGER.debug(f"Instance IP address is {host}")
     server = None
-    close_server = False
     if DOMAIN in hass.data:  # maybe set up by config entry?
         _LOGGER.debug("API listener actively setup, reusing it for enumeration.")
         server = hass.data[DOMAIN]["api"]
@@ -80,13 +79,30 @@ async def enumerate_instances(
         _LOGGER.debug("API listener has already been setup in init_discover()")
         server = init_server
     else:
+        # This is the FIRST time a server has ever been needed this session.
+        # Register it in hass.data IMMEDIATELY — not after discovery completes —
+        # so it becomes the single shared server for this HA instance. If we
+        # waited and closed it afterward as a "temporary" server, a moment
+        # later async_setup_entry would find no server in hass.data and create
+        # a SECOND one, discarding the first mid-flight. This was the root
+        # cause of intermittent discovery failures: the abandoned server's
+        # _send_periodically/_recv_periodically tasks would eventually be
+        # garbage collected ("Task was destroyed but it is pending!"),
+        # sometimes disrupting the second server's socket state in the process.
+        #
+        # The UDP server is a shared, long-lived resource for the lifetime of
+        # this HA instance — not something to create and discard per discovery
+        # call. It is intentionally never closed from this function.
         udp = UDPServer()
         udp.run("0.0.0.0", 3610, loop=hass.loop)
         server = ECHONETAPIClient(server=udp)
-        server._debug_flag = True
-        server._logger = _LOGGER.debug
-        server._message_timeout = 150
-        close_server = True
+        server.configure(
+            message_timeout=150,
+            logger=_LOGGER.debug,
+            debug=True,
+        )
+        hass.data.setdefault(DOMAIN, {})
+        hass.data[DOMAIN]["api"] = server
 
     try:
         # make sure multicast is registered with the local IP used to reach this host
@@ -234,8 +250,7 @@ async def enumerate_instances(
 
         return instance_list
     finally:
-        if close_server:
-            server._server.close()  # cleanly cancels tasks + closes socket
+        pass  # server is a shared resource — never closed here
 
 
 async def async_discover_newhost(hass, host, init_server=None):
@@ -285,7 +300,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def init_discover(self):
         server = None
-        close_server = False
 
         async def discover_callback(host):
             await async_discover_newhost(self.hass, host, init_server=server)
@@ -294,28 +308,31 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.debug("Node API listener already setup, reusing it for discovery.")
             server = self.hass.data[DOMAIN]["api"]
         else:
+            # See enumerate_instances() for the full rationale: the UDP server
+            # is a shared, long-lived resource. Register it in hass.data
+            # immediately upon creation and never close it here — closing a
+            # "temporary" server just before async_setup_entry needs one is
+            # what caused intermittent discovery failures.
             udp = UDPServer()
             udp.run("0.0.0.0", 3610, loop=self.hass.loop)
             server = ECHONETAPIClient(server=udp)
-            server._debug_flag = True
-            server._logger = _LOGGER.debug
-            server._message_timeout = 150
-            close_server = True
+            server.configure(
+                message_timeout=150,
+                logger=_LOGGER.debug,
+                debug=True,
+            )
+            self.hass.data.setdefault(DOMAIN, {})
+            self.hass.data[DOMAIN]["api"] = server
 
-        server._discover_callback = discover_callback
+        server.configure(discover_callback=discover_callback)
 
-        try:
-            await server.discover()
-
-            # Timeout after 30 seconds
-            for x in range(0, 3000):
-                await asyncio.sleep(0.01)
-                if len(_detected_hosts):
-                    _LOGGER.debug("Node discovery successful.")
-                    break
-        finally:
-            if close_server:
-                server._server.close()  # cleanly cancels tasks + closes socket
+        # Timeout after 30 seconds
+        await server.discover()
+        for x in range(0, 3000):
+            await asyncio.sleep(0.01)
+            if len(_detected_hosts):
+                _LOGGER.debug("Node discovery successful.")
+                break
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
