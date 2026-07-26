@@ -478,6 +478,17 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             else:
                 self._attr_swing_horizontal_modes = DEFAULT_SWING_HORIZ_MODES
 
+        # Add auto-horiz from ENL_AUTO_DIRECTION if that EPC is settable
+        if self.is_settable(ENL_AUTO_DIRECTION):
+            if "auto-horiz" not in self._attr_swing_horizontal_modes:
+                self._attr_swing_horizontal_modes.insert(0, "auto-horiz")
+
+        # Add horiz/vert-horiz from ENL_SWING_MODE if that EPC is settable
+        if self.is_settable(ENL_SWING_MODE):
+            for _sm in ("horiz", "vert-horiz"):
+                if _sm not in self._attr_swing_horizontal_modes:
+                    self._attr_swing_horizontal_modes.insert(0, _sm)
+                    
         if self.hass:
             self.async_schedule_update_ha_state()
 
