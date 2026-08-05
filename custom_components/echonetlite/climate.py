@@ -458,25 +458,51 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             self._attr_fan_modes = DEFAULT_FAN_MODES
 
         """list of available swing modes (vertical)."""
-        # ⚠️ This only runs because feature detection already enabled SWING_MODE
         _modes = self.coordinator._user_options.get(OPTION_HA_UI_SWING)
         if _modes and len(_modes):
-            self._attr_swing_modes = _modes
-        elif _modes := self.coordinator._user_options.get(ENL_AIR_VERT):
-            self._attr_swing_modes = _modes
+            # This option is only populated once the user has opened the
+            # integration options and submitted the form at least once - it
+            # is empty on a fresh config entry. When it IS present (e.g. an
+            # existing setup that already configured it), it takes priority
+            # over the per-EPC option and the derived list below so that
+            # setup isn't changed out from under the user.
+            self._attr_swing_modes = list(_modes)
         else:
-            self._attr_swing_modes = DEFAULT_SWING_MODES
+            _modes = self.coordinator._user_options.get(ENL_AIR_VERT)
+            if _modes:
+                self._attr_swing_modes = list(_modes)
+            else:
+                # Derive from the device's SET map as a union of whichever
+                # of 0xA1/0xA3/0xA4 are actually settable, rather than
+                # assuming 0xA4 (+0xA1) are present.
+                _derived = []
+                if self.is_settable(ENL_AIR_VERT):
+                    _derived.extend(AIRFLOW_VERT.keys())
+                if self.is_settable(ENL_AUTO_DIRECTION):
+                    if "auto-vert" not in _derived:
+                        _derived.insert(0, "auto-vert")
+                if self.is_settable(ENL_SWING_MODE):
+                    for _sm in ("vert", "vert-horiz"):
+                        if _sm not in _derived:
+                            _derived.insert(0, _sm)
+                self._attr_swing_modes = _derived if _derived else list(
+                    DEFAULT_SWING_MODES
+                )
 
         """list of available horizontal swing modes."""
-        # ✅ This check IS needed (horizontal is optional)
+        # Always initialize so the ENL_AUTO_DIRECTION / ENL_SWING_MODE blocks
+        # below never read an attribute that was never assigned (horizontal
+        # support itself is still optional and gated on 0xA5 for the
+        # SWING_HORIZONTAL_MODE feature).
+        self._attr_swing_horizontal_modes = []
         if self.is_settable(ENL_AIR_HORZ):
             _modes = self.coordinator._user_options.get(ENL_AIR_HORZ)
             if _modes and len(_modes):
-                self._attr_swing_horizontal_modes = _modes
+                self._attr_swing_horizontal_modes = list(_modes)
             elif _modes := self.coordinator._user_options.get(OPTION_HA_UI_SWING):
-                self._attr_swing_horizontal_modes = _modes
+                self._attr_swing_horizontal_modes = list(_modes)
             else:
-                self._attr_swing_horizontal_modes = DEFAULT_SWING_HORIZ_MODES
+                self._attr_swing_horizontal_modes = list(DEFAULT_SWING_HORIZ_MODES)
 
         # Add auto-horiz from ENL_AUTO_DIRECTION if that EPC is settable
         if self.is_settable(ENL_AUTO_DIRECTION):
@@ -488,7 +514,7 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             for _sm in ("horiz", "vert-horiz"):
                 if _sm not in self._attr_swing_horizontal_modes:
                     self._attr_swing_horizontal_modes.insert(0, _sm)
-                    
+
         if self.hass:
             self.async_schedule_update_ha_state()
 
