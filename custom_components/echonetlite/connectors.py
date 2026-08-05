@@ -391,6 +391,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 # data rather than marking unavailable — transient failures
                 # under network load should not flash entities unavailable.
                 import time as _time
+
                 last = self._api.last_activity(self._host)
                 if last is not None:
                     elapsed = _time.monotonic() - last
@@ -398,14 +399,21 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                         _LOGGER.debug(
                             "ECHONETLite %s-%s-%s at %s poll failed but host "
                             "was active %.0fs ago — serving cached data",
-                            self._eojgc, self._eojcc, self._eojci,
-                            self._host, elapsed,
+                            self._eojgc,
+                            self._eojcc,
+                            self._eojci,
+                            self._host,
+                            elapsed,
                         )
                         return self.data or {}
                 elapsed_str = f"{(_time.monotonic() - last):.0f}s" if last else "never"
                 _LOGGER.warning(
                     "ECHONETLite %s-%s-%s at %s has been silent — last activity: %s",
-                    self._eojgc, self._eojcc, self._eojci, self._host, elapsed_str,
+                    self._eojgc,
+                    self._eojcc,
+                    self._eojci,
+                    self._host,
+                    elapsed_str,
                 )
                 raise UpdateFailed(f"Offline: {err}")
 
