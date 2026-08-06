@@ -482,11 +482,19 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
                     if "auto-vert" not in _derived:
                         _derived.insert(0, "auto-vert")
                 if self.is_settable(ENL_SWING_MODE):
-                    for _sm in ("vert", "vert-horiz"):
+                    # This device has no independent horizontal control
+                    # (no 0xA5), so per the climate entity docs all of
+                    # 0xA3's values - not just "vert"/"vert-horiz" - need
+                    # to be advertised, or "not-used"/"horiz" become
+                    # unreachable via climate.set_swing_mode even though
+                    # the device itself accepts them. Pull the full set
+                    # from self._opc_data so this list can never drift
+                    # out of sync with what async_set_swing_mode() routes.
+                    for _sm in self._opc_data[ENL_SWING_MODE]:
                         if _sm not in _derived:
                             _derived.insert(0, _sm)
-                self._attr_swing_modes = (
-                    _derived if _derived else list(DEFAULT_SWING_MODES)
+                self._attr_swing_modes = _derived if _derived else list(
+                    DEFAULT_SWING_MODES
                 )
 
         """list of available horizontal swing modes."""
@@ -550,3 +558,4 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
                 res = int(math.floor(req + 0.5))
 
         return res
+    
