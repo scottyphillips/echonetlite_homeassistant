@@ -482,15 +482,38 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
                     if "auto-vert" not in _derived:
                         _derived.insert(0, "auto-vert")
                 if self.is_settable(ENL_SWING_MODE):
-                    # This device has no independent horizontal control
-                    # (no 0xA5), so per the climate entity docs all of
-                    # 0xA3's values - not just "vert"/"vert-horiz" - need
-                    # to be advertised, or "not-used"/"horiz" become
-                    # unreachable via climate.set_swing_mode even though
-                    # the device itself accepts them. Pull the full set
+                    # Per the climate entity docs, a device with no
+                    # independent horizontal control (no 0xA5) needs all
+                    # of 0xA3's values advertised, or "not-used"/"horiz"
+                    # become unreachable via climate.set_swing_mode even
+                    # though the device accepts them. Pull the full set
                     # from self._opc_data so this list can never drift
                     # out of sync with what async_set_swing_mode() routes.
-                    for _sm in self._opc_data[ENL_SWING_MODE]:
+                    #
+                    # But when 0xA4 is ALSO settable, the swing_mode
+                    # property checks 0xA3 before falling back to 0xA4
+                    # (see the swing_mode property below), so including
+                    # "not-used" here would shadow the 0xA4 vane position
+                    # whenever 0xA3 reads not-used. config_flow.py already
+                    # excludes exactly this set from ha_ui_swing choices
+                    # once 0xA4 is present - mirror it here so the derived
+                    # fallback and the config-flow option list agree.
+                    # "vert" is kept: it represents active vertical
+                    # sweeping, distinct from a static 0xA4 position.
+                    _swing_mode_values = self._opc_data[ENL_SWING_MODE]
+                    if self.is_settable(ENL_AIR_VERT):
+                        _excluded = {
+                            "auto",
+                            "non-auto",
+                            "auto-horiz",
+                            "not-used",
+                            "horiz",
+                            "vert-horiz",
+                        }
+                        _swing_mode_values = [
+                            _sm for _sm in _swing_mode_values if _sm not in _excluded
+                        ]
+                    for _sm in _swing_mode_values:
                         if _sm not in _derived:
                             _derived.insert(0, _sm)
                 self._attr_swing_modes = _derived if _derived else list(
