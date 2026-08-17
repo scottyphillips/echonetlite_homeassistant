@@ -516,8 +516,8 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
                     for _sm in _swing_mode_values:
                         if _sm not in _derived:
                             _derived.insert(0, _sm)
-                self._attr_swing_modes = _derived if _derived else list(
-                    DEFAULT_SWING_MODES
+                self._attr_swing_modes = (
+                    _derived if _derived else list(DEFAULT_SWING_MODES)
                 )
 
         """list of available horizontal swing modes."""
@@ -581,4 +581,3 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
                 res = int(math.floor(req + 0.5))
 
         return res
-    
