@@ -240,3 +240,5 @@ MIT License — refer to LICENSE for details.
 [license-shield]: https://img.shields.io/github/license/scottyphillips/echonetlite_homeassistant?style=for-the-badge
 [maintenance-shield]: https://img.shields.io/badge/Maintainer-Scott%20Phillips-blue?style=for-the-badge
 [echonetimg]: ECHONET.jpeg
+
+[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://www.buymeacoffee.com/RgKWqyt)
