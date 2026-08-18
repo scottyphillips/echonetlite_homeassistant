@@ -14,6 +14,11 @@ This integration supports any device that implements the ECHONET Lite protocol,
 regardless of whether the device class appears in the Machine Readable Appendix (MRA). 
 New device classes can be added via pychonet without constraint.
 
+
+> ⚠️ **Project status: maintenance mode.** This project is no longer under active feature development. Sayurin's [HEMS Integration](https://github.com/sayurin/hems_echonet_lite) is developing rapidly, and has reached or exceeded feature parity for most use cases — consider it as a modern, actively developed alternative. If your device isn't in HEMS's [supported list](https://github.com/sayurin/hems_echonet_lite#supported-devices), echonetlite_homeassistant may still offer fuller support — check before switching. The 4.0.x update modernized the integration's core (data-coordinator based polling/push model, updated entities), so it should remain compatible with Home Assistant for the foreseeable future even without active feature work. Bug fixes and community PRs are still welcome.
+>
+> I want to thank everyone for their support the last 8 years; especially all the contributors. It wasn't exactly on my bingo card in 2018 here in Australia of all places, to develop the first viable native Home Assistant integration for an exotic Japanese IOT standard! Let alone get over 250 stars! It's been a fun project; it is now time for me to enjoy life with my kids without having to worry about supporting someone else's EV smart charger/discharger, rice cookers, or smart power conditioners!
+
 ## Why ECHONETLite Platform?
 
 - **Broad device support** — any ECHONET Lite compatible device is supported, 
@@ -28,8 +33,6 @@ New device classes can be added via pychonet without constraint.
   for devices that deviate from the ECHONET Lite specification
 - **Compound sensor support** — sensors that combine multiple EPCs 
   (e.g. energy readings scaled by a device-reported coefficient)
-- **Active development** — LLM-assisted development workflow enables rapid 
-  response to bug reports and new device support
 
 **This component will set up the climate, fan, sensor, select and switch platforms.**
 
