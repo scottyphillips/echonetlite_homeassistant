@@ -106,7 +106,7 @@ class EchonetNumber(EchonetEntity, NumberEntity):
                     max_opc_value = outer_value.get(max_opc[1])
                 else:
                     # Fallback to connector data
-                    outer_value = self.coordinator._update_data.get(max_opc[0])
+                    outer_value = self.coordinator.data.get(max_opc[0])
                     if outer_value and isinstance(outer_value, dict):
                         max_opc_value = outer_value.get(max_opc[1])
                     else:
@@ -116,7 +116,7 @@ class EchonetNumber(EchonetEntity, NumberEntity):
                 max_opc_value = master_data.get(max_opc)
                 if max_opc_value is None:
                     # Fallback to connector data
-                    max_opc_value = self.coordinator._update_data.get(max_opc)
+                    max_opc_value = self.coordinator.data.get(max_opc)
 
             if max_opc_value is not None:
                 return int(max_opc_value) - self._as_zero

@@ -558,6 +558,13 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 batches.append(full_list[start:])
 
         for i, flags in enumerate(batches):
+            if not flags:
+                # Nothing to request in this batch (e.g. all EPCs pruned as
+                # STATMAP/singleton). Requesting zero EPCs gets no response
+                # from the device and would just time out every cycle, so
+                # skip it outright rather than calling pychonet.
+                continue
+
             if i > 0 and not no_request:
                 # Back off longer after a timeout — device may need more time
                 # to recover between requests than after a successful response.
@@ -838,8 +845,16 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             )
             start_index += batch_size_max
 
-        # Add remaining flags as final batch
-        self._update_flag_batches.append(batch_list[start_index:full_list_length])
+        # Add remaining flags as final batch — but only if there are any.
+        # If every EPC was pruned above (e.g. singleton-poll or fully
+        # STATMAP-covered, as with lighting devices whose entire GETMAP is
+        # served via push notifications), batch_list is empty and there is
+        # nothing left to request. Appending an empty batch here would cause
+        # poll_pychonet() to send a zero-EPC GET request every cycle, which
+        # the device never answers — a permanent, pointless timeout loop.
+        remaining = batch_list[start_index:full_list_length]
+        if remaining:
+            self._update_flag_batches.append(remaining)
 
         _LOGGER.debug(
             f"Echonet device {self._host}-{self._eojgc}-{self._eojcc}-{self._eojci} "
