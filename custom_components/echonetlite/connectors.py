@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import time
 from functools import partial
 from importlib import import_module
 from typing import Any
@@ -39,6 +40,14 @@ _LOGGER = logging.getLogger(__name__)
 MAX_UPDATE_BATCH_SIZE = 10
 MIN_UPDATE_BATCH_SIZE = 3
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
+
+# How often to poll STATMAP (push-covered) EPCs as a reconciliation
+# fallback, in seconds. These EPCs are normally served entirely by INF
+# push notifications and excluded from the regular poll batches — this
+# interval bounds how long a dropped/missed INF can leave HA state stale.
+# Default matches the low end of the 5-15 min range suggested for
+# balancing traffic reduction against staleness risk on lossy UDP networks.
+STATMAP_RECONCILE_INTERVAL = 300
 
 # Silence threshold before marking entities unavailable.
 # A single failed poll does not immediately cause unavailability — the host
@@ -184,6 +193,13 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         self._singleton_poll_epcs: list[int] = (
             []
         )  # EPCs polled individually due to quirk
+
+        # STATMAP (push-covered) EPCs, batched separately from the normal
+        # poll list and only requested occasionally as a reconciliation
+        # fallback in case an INF notification was dropped or missed.
+        # See _make_batch_request_flags() for how this is populated.
+        self._statmap_flag_batches: list[list[int]] = []
+        self._last_statmap_reconcile: float = 0.0
 
         # Callbacks for push notifications and option updates
         self._update_callbacks: list[callable] = []
@@ -345,7 +361,8 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 # cached values rather than disappearing from coordinator.data.
                 # This matches 3.9.0 behaviour where self.data.update() was
                 # used rather than replacing the entire dict each cycle.
-                return {**(self.data or {}), **new_data}
+                merged = {**(self.data or {}), **new_data}
+                return await self._maybe_reconcile_statmap(merged)
 
             except EchonetMaxOpcError as ex:
                 # Memory Pressure Control (MPC): Device rejected batch size, adjust and retry
@@ -376,7 +393,8 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 self._make_batch_request_flags()
                 try:
                     new_data = await self.poll_pychonet(no_request=False)
-                    return {**(self.data or {}), **new_data}
+                    merged = {**(self.data or {}), **new_data}
+                    return await self._maybe_reconcile_statmap(merged)
                 except Exception as err:
                     _LOGGER.error(
                         "Failed to process ECHONETLite polling notification: %s", err
@@ -390,11 +408,9 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 # If any packet arrived within ACTIVITY_TIMEOUT, serve cached
                 # data rather than marking unavailable — transient failures
                 # under network load should not flash entities unavailable.
-                import time as _time
-
                 last = self._api.last_activity(self._host)
                 if last is not None:
-                    elapsed = _time.monotonic() - last
+                    elapsed = time.monotonic() - last
                     if elapsed < ACTIVITY_TIMEOUT:
                         _LOGGER.debug(
                             "ECHONETLite %s-%s-%s at %s poll failed but host "
@@ -406,7 +422,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                             elapsed,
                         )
                         return self.data or {}
-                elapsed_str = f"{(_time.monotonic() - last):.0f}s" if last else "never"
+                elapsed_str = f"{(time.monotonic() - last):.0f}s" if last else "never"
                 _LOGGER.warning(
                     "ECHONETLite %s-%s-%s at %s has been silent — last activity: %s",
                     self._eojgc,
@@ -436,6 +452,74 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                     traceback.format_exc(),
                 )
                 raise UpdateFailed(f"Unexpected error: {err}") from err
+
+    async def _maybe_reconcile_statmap(self, merged: dict[int, Any]) -> dict[int, Any]:
+        """Occasionally re-poll STATMAP EPCs as a fallback for missed INF.
+
+        STATMAP EPCs are normally served entirely by push notifications and
+        excluded from the regular poll batches. Since ECHONET Lite INF is
+        sent over UDP with no delivery guarantee, an occasional dropped or
+        misprocessed notification can otherwise leave HA state stale
+        indefinitely. This polls those EPCs directly, but only once every
+        STATMAP_RECONCILE_INTERVAL seconds, so the traffic savings of the
+        STATMAP-pruning optimisation are preserved.
+
+        A timeout here is treated as best-effort: it must not fail the
+        overall coordinator update, and the reconciliation clock still
+        advances so a momentarily unreachable device doesn't retry this
+        extra request every single cycle.
+
+        Args:
+            merged: The already-merged (cached + freshly polled) data dict
+                for this cycle, to be updated in place with any
+                reconciled STATMAP values.
+
+        Returns:
+            merged, with any successfully reconciled STATMAP EPCs applied.
+        """
+        if not self._statmap_flag_batches:
+            return merged
+
+        now = time.monotonic()
+        if now - self._last_statmap_reconcile < STATMAP_RECONCILE_INTERVAL:
+            return merged
+
+        _LOGGER.debug(
+            "ECHONETLite %s-%s-%s at %s: running STATMAP reconciliation poll "
+            "for %s",
+            self._eojgc,
+            self._eojcc,
+            self._eojci,
+            self._host,
+            self._statmap_flag_batches,
+        )
+        try:
+            recon_data = await self.poll_pychonet(
+                no_request=False,
+                best_effort=True,
+                batches_override=self._statmap_flag_batches,
+            )
+            merged.update(recon_data)
+        except Exception as err:
+            # best_effort=True already absorbs genuine per-batch device
+            # timeouts inside poll_pychonet — this catches anything else
+            # unexpected so a reconciliation hiccup can never fail the
+            # regular poll cycle it's piggybacking on.
+            _LOGGER.debug(
+                "ECHONETLite %s-%s-%s at %s: STATMAP reconciliation poll "
+                "failed, will retry next interval: %s",
+                self._eojgc,
+                self._eojcc,
+                self._eojci,
+                self._host,
+                err,
+            )
+        finally:
+            # Advance the clock regardless of outcome, so a silent/offline
+            # device doesn't turn this into an every-cycle retry.
+            self._last_statmap_reconcile = now
+
+        return merged
 
     async def async_update_callback(self, isPush: bool = False):
         """Handle push notifications from the device.
@@ -507,6 +591,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         no_request: bool = False,
         best_effort: bool = False,
         include_ntf: bool = False,
+        batches_override: list[list[int]] | None = None,
     ) -> dict[int, Any]:
         """Fetch data from pychonet instance.
 
@@ -518,6 +603,12 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 CONF_FORCE_POLLING is False. Used during setup to warm pychonet's
                 _state cache so push notification reads via no_request=True
                 return real values rather than None.
+            batches_override: If given, poll exactly these batches instead of
+                the instance's regular poll list. Used for the low-frequency
+                STATMAP reconciliation poll (self._statmap_flag_batches),
+                which must go through the same timeout/best-effort handling
+                as a normal poll without being folded into the every-cycle
+                _update_flag_batches list.
 
         Returns:
             A dictionary of EPC codes and their current values.
@@ -537,9 +628,11 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         # Use full batch list for setup (include_ntf=True) so all EPCs including
         # STATMAP ones are fetched at least once. For regular polling use the
-        # pruned list (STATMAP EPCs served via push).
-        batches = self._update_flag_batches
-        if include_ntf:
+        # pruned list (STATMAP EPCs served via push). An explicit override
+        # (e.g. the STATMAP reconciliation batches) takes priority over both.
+        if batches_override is not None:
+            batches = batches_override
+        elif include_ntf:
             # Build full batch list bypassing STATMAP prune
             batch_size_max = self._user_options.get(
                 CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
@@ -549,13 +642,9 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 for e in self._update_flags_full_list
                 if e not in self._singleton_poll_epcs
             ]
-            batches = []
-            start = 0
-            while start + batch_size_max < len(full_list):
-                batches.append(full_list[start : start + batch_size_max])
-                start += batch_size_max
-            if full_list[start:]:
-                batches.append(full_list[start:])
+            batches = self._chunk_batches(full_list, batch_size_max)
+        else:
+            batches = self._update_flag_batches
 
         for i, flags in enumerate(batches):
             if not flags:
@@ -627,9 +716,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             # Only raise DeviceTimeoutError if ALL batches failed — meaning
             # the device is genuinely offline. Partial failures serve cached
             # data for the missing EPCs rather than marking everything unavailable.
-            if not update_data and len(timed_out_batches) == len(
-                self._update_flag_batches
-            ):
+            # Compare against `batches` (what was actually polled this call),
+            # not self._update_flag_batches — those differ when include_ntf
+            # or batches_override (STATMAP reconciliation) is in use.
+            if not update_data and len(timed_out_batches) == len(batches):
                 raise DeviceTimeoutError(
                     f"Device at {self._host} failed to respond to any EPCs"
                 )
@@ -784,6 +874,26 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
 
         return _prev_update_flags_full_list != self._update_flags_full_list
 
+    @staticmethod
+    def _chunk_batches(flat_list: list[int], batch_size_max: int) -> list[list[int]]:
+        """Split a flat EPC list into batches of at most batch_size_max.
+
+        Never emits an empty trailing batch — if flat_list is empty, returns
+        an empty list of batches rather than [[]] (a zero-EPC batch would
+        cause poll_pychonet() to send a request the device can never answer,
+        resulting in a permanent, pointless timeout loop).
+        """
+        batches: list[list[int]] = []
+        start_index = 0
+        length = len(flat_list)
+        while start_index + batch_size_max < length:
+            batches.append(flat_list[start_index : start_index + batch_size_max])
+            start_index += batch_size_max
+        remaining = flat_list[start_index:length]
+        if remaining:
+            batches.append(remaining)
+        return batches
+
     def _make_batch_request_flags(self):
         """Split the update flags list into batched requests.
 
@@ -793,19 +903,25 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         polled individually to avoid device firmware buffer overflow issues.
 
         If CONF_FORCE_POLLING is False (default), EPCs in STATMAP are also
-        excluded from ongoing batches — they are served via push notifications.
+        excluded from the regular poll batches (_update_flag_batches) — they
+        are served via push notifications instead. Those same EPCs are also
+        batched separately into _statmap_flag_batches, which is polled only
+        occasionally (see STATMAP_RECONCILE_INTERVAL) as a fallback in case
+        an INF notification is dropped or missed — UDP gives no delivery
+        guarantee, so without this a single lost push could leave HA state
+        stale indefinitely.
         The initial setup fetch still polls all EPCs to populate self.data.
         If CONF_FORCE_POLLING is True (fallback for unreliable multicast),
-        all GETMAP EPCs are polled regardless of STATMAP.
+        all GETMAP EPCs are polled regardless of STATMAP, and there is
+        nothing left over to reconcile.
 
         Args:
             CONF_BATCH_SIZE_MAX: User-configurable maximum batch size (default 10).
         """
-        self._update_flag_batches = []
-        start_index = 0
-
         # Prune STATMAP EPCs from ongoing poll batches if force_polling is off.
-        # These EPCs are covered by push notifications so polling them is redundant.
+        # These EPCs are covered by push notifications so polling them on
+        # every cycle is redundant — they get their own low-frequency
+        # reconciliation batch instead (see _statmap_flag_batches below).
         _force_polling = self._user_options.get(CONF_FORCE_POLLING, False)
         _ntf_set = set(self._ntfPropertyMap) if not _force_polling else set()
 
@@ -819,13 +935,18 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             if _pruned:
                 _LOGGER.debug(
                     "ECHONETLite %s-%s-%s: pruning %d EPC(s) from poll batches "
-                    "(served via push): %s",
+                    "(served via push, reconciled every %ds): %s",
                     self._eojgc,
                     self._eojcc,
                     self._eojci,
                     len(_pruned),
+                    STATMAP_RECONCILE_INTERVAL,
                     [hex(e) for e in _pruned],
                 )
+
+        batch_size_max = self._user_options.get(
+            CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
+        )
 
         # Exclude singleton EPCs and (optionally) STATMAP EPCs from batch list
         batch_list = [
@@ -833,32 +954,22 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             for epc in self._update_flags_full_list
             if epc not in self._singleton_poll_epcs and epc not in _ntf_set
         ]
-        full_list_length = len(batch_list)
+        self._update_flag_batches = self._chunk_batches(batch_list, batch_size_max)
 
-        batch_size_max = self._user_options.get(
-            CONF_BATCH_SIZE_MAX, MAX_UPDATE_BATCH_SIZE
-        )
-
-        while start_index + batch_size_max < full_list_length:
-            self._update_flag_batches.append(
-                batch_list[start_index : start_index + batch_size_max]
-            )
-            start_index += batch_size_max
-
-        # Add remaining flags as final batch — but only if there are any.
-        # If every EPC was pruned above (e.g. singleton-poll or fully
-        # STATMAP-covered, as with lighting devices whose entire GETMAP is
-        # served via push notifications), batch_list is empty and there is
-        # nothing left to request. Appending an empty batch here would cause
-        # poll_pychonet() to send a zero-EPC GET request every cycle, which
-        # the device never answers — a permanent, pointless timeout loop.
-        remaining = batch_list[start_index:full_list_length]
-        if remaining:
-            self._update_flag_batches.append(remaining)
+        # Build the separate, rarely-polled STATMAP reconciliation batch list.
+        # Excludes singleton EPCs (those already have their own dedicated
+        # polling path) but keeps everything that was pruned above.
+        statmap_list = [
+            epc
+            for epc in self._update_flags_full_list
+            if epc not in self._singleton_poll_epcs and epc in _ntf_set
+        ]
+        self._statmap_flag_batches = self._chunk_batches(statmap_list, batch_size_max)
 
         _LOGGER.debug(
             f"Echonet device {self._host}-{self._eojgc}-{self._eojcc}-{self._eojci} "
-            f"batch request flags list: {self._update_flag_batches}"
+            f"batch request flags list: {self._update_flag_batches}, "
+            f"statmap reconciliation flags list: {self._statmap_flag_batches}"
         )
 
     def register_async_update_callbacks(self, update_func: callable):
