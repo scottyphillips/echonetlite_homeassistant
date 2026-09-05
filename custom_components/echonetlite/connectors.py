@@ -485,8 +485,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             return merged
 
         _LOGGER.debug(
-            "ECHONETLite %s-%s-%s at %s: running STATMAP reconciliation poll "
-            "for %s",
+            "ECHONETLite %s-%s-%s at %s: running STATMAP reconciliation poll " "for %s",
             self._eojgc,
             self._eojcc,
             self._eojci,
