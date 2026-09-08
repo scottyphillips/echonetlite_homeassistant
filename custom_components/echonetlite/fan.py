@@ -12,6 +12,7 @@ from pychonet.CeilingFan import (
 )
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from .base_entity import EchonetEntity
+from .sharp import SHARP_MODES, sharp_value
 
 from .const import (
     DATA_STATE_ON,
@@ -50,13 +51,23 @@ class EchonetFan(EchonetEntity, FanEntity):
 
         self._attr_unique_id = self._build_unique_id()
 
+        # A0 describes this unit's actual speed, but its writes are ignored in
+        # AI Auto mode. Its connector uses verified F3 commands instead.
+        self._model_fan_modes = None
+        if coordinator.is_sharp_fps42y:
+            self._model_fan_modes = SHARP_MODES
+
         # Set supported features based on device capabilities
         self._attr_supported_features = FanEntityFeature(0)
         if hasattr(FanEntityFeature, "TURN_ON"):  # v2024.8
             self._attr_supported_features |= FanEntityFeature.TURN_ON
         if hasattr(FanEntityFeature, "TURN_OFF"):
             self._attr_supported_features |= FanEntityFeature.TURN_OFF
-        if self.is_settable(ENL_FANSPEED):
+        if (
+            self.is_settable(0xF3) and 0xF3 in coordinator._getPropertyMap
+            if coordinator.is_sharp_fps42y
+            else self.is_settable(ENL_FANSPEED)
+        ):
             self._attr_supported_features |= FanEntityFeature.PRESET_MODE
         if self.is_settable(ENL_FANSPEED_PERCENT):
             self._attr_supported_features |= FanEntityFeature.SET_SPEED
@@ -71,11 +82,15 @@ class EchonetFan(EchonetEntity, FanEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if the device is on."""
+        if self.coordinator.is_sharp_fps42y:
+            return {"on": True, "off": False}.get(self.coordinator.data.get(ENL_STATUS))
         return True if self.coordinator.data.get(ENL_STATUS) == DATA_STATE_ON else False
 
     @property
     def preset_mode(self) -> str | None:
         """Return the fan setting."""
+        if self.coordinator.is_sharp_fps42y:
+            return sharp_value(self.coordinator.data, "mode")
         return self.coordinator.data.get(ENL_FANSPEED)
 
     @property
@@ -96,6 +111,8 @@ class EchonetFan(EchonetEntity, FanEntity):
     @property
     def preset_modes(self) -> list[str] | None:
         """Return the list of available fan modes."""
+        if self._model_fan_modes is not None:
+            return list(self._model_fan_modes)
         if (
             ENL_FANSPEED in list(self.coordinator._user_options.keys())
             and self.coordinator._user_options[ENL_FANSPEED] is not False
@@ -130,4 +147,9 @@ class EchonetFan(EchonetEntity, FanEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new fan mode."""
+        if self._model_fan_modes is not None:
+            if preset_mode not in self._model_fan_modes:
+                raise ValueError(f"Unsupported FP-S42Y fan mode: {preset_mode}")
+            await self.coordinator.async_set_sharp_fan_mode(preset_mode)
+            return
         await self.coordinator._instance.setFanSpeed(preset_mode)

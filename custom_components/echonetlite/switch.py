@@ -5,6 +5,7 @@ import logging
 from homeassistant.const import CONF_ICON, CONF_SERVICE_DATA, CONF_NAME
 from homeassistant.components.switch import SwitchEntity
 from .base_entity import EchonetEntity
+from .sharp_entity import SharpFieldEntity
 from . import get_name_by_epc_code
 from .const import (
     CONF_DISABLED_DEFAULT,
@@ -23,10 +24,33 @@ from pychonet.lib.eojx import EOJX_CLASS
 _LOGGER = logging.getLogger(__name__)
 
 
+class SharpSwitch(SharpFieldEntity, SwitchEntity):
+    """Proven binary LED/child-lock commands with actual GET confirmation."""
+
+    @property
+    def is_on(self):
+        return self.sharp_state
+
+    async def async_turn_on(self, **kwargs):
+        await self.coordinator.async_set_sharp_setting(self._sharp_key, True)
+
+    async def async_turn_off(self, **kwargs):
+        await self.coordinator.async_set_sharp_setting(self._sharp_key, False)
+
+
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
     """Set up the ECHONETLite switch platform."""
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
+        if (
+            entity["echonetlite"].is_sharp_fps42y
+            and 0xF3 in entity["echonetlite"]._getPropertyMap
+            and 0xF3 in entity["echonetlite"]._setPropertyMap
+        ):
+            entities.extend(
+                SharpSwitch(entity["echonetlite"], config, key)
+                for key in ("led", "child-lock")
+            )
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
         set_enl_status = False
