@@ -2,6 +2,7 @@ import logging
 from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.components.select import SelectEntity
 from .base_entity import EchonetEntity
+from .sharp import SHARP_MODES, sharp_value
 from pychonet.HomeAirConditioner import (
     ENL_AIR_HORZ,
     ENL_AIR_VERT,
@@ -37,6 +38,16 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             set(entity["instance"]["setmap"])
             - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
+            coordinator = entity["echonetlite"]
+            if (
+                coordinator.is_sharp_fps42y
+                and op_code == ENL_FANSPEED
+                and not (
+                    0xF3 in coordinator._getPropertyMap
+                    and 0xF3 in coordinator._setPropertyMap
+                )
+            ):
+                continue
             epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
                 op_code, None
             )
@@ -129,6 +140,8 @@ class EchonetSelect(EchonetEntity, SelectEntity):
     @property
     def options(self) -> list:
         """Return available select options, with user override support."""
+        if self._code == ENL_FANSPEED and self.coordinator.is_sharp_fps42y:
+            return list(SHARP_MODES)
         if self._code in self._user_option_epcs:
             if self.coordinator._user_options[self._code] is not False:
                 return self.coordinator._user_options[self._code]
@@ -137,6 +150,8 @@ class EchonetSelect(EchonetEntity, SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return current option with fallback for raw int values, reading fresh from coordinator."""
+        if self._code == ENL_FANSPEED and self.coordinator.is_sharp_fps42y:
+            return sharp_value(self.coordinator.data, "mode")
         val = self.coordinator.data.get(self._code)
         if val is not None and val not in self.options:
             # Handle raw int case - reverse lookup in _options dict
@@ -151,6 +166,9 @@ class EchonetSelect(EchonetEntity, SelectEntity):
         return self._icons.get(self.current_option, self._icon_default)
 
     async def async_select_option(self, option: str):
+        if self._code == ENL_FANSPEED and self.coordinator.is_sharp_fps42y:
+            await self.coordinator.async_set_sharp_fan_mode(option)
+            return
         self._attr_current_option = option
         # self.async_schedule_update_ha_state()
         if not await self.coordinator._instance.setMessage(

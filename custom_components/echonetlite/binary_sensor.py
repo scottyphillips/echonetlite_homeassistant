@@ -11,6 +11,7 @@ from homeassistant.const import (
 )
 from homeassistant.helpers import config_validation as cv, entity_platform
 from .base_entity import EchonetEntity
+from .sharp_entity import SharpFieldEntity
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 
@@ -55,6 +56,15 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+
+class SharpPlasmacluster(SharpFieldEntity, BinarySensorEntity):
+    """Read-only observed ion status; no unverified command is exposed."""
+
+    @property
+    def is_on(self):
+        return self.sharp_state
+
+
 MAP_BINARY_STATE = {
     True: True,
     "1": True,
@@ -73,6 +83,13 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     entities = []
     platform = entity_platform.async_get_current_platform()
     for entity in hass.data[DOMAIN][config.entry_id]:
+        if (
+            entity["echonetlite"].is_sharp_fps42y
+            and 0xF2 in entity["echonetlite"]._getPropertyMap
+        ):
+            entities.append(
+                SharpPlasmacluster(entity["echonetlite"], config, "plasmacluster")
+            )
         _LOGGER.debug(f"Configuring ECHONETLite binary sensor {entity}")
         _LOGGER.debug(
             f"Update flags for this binary sensor are {entity['echonetlite']._update_flags_full_list}"

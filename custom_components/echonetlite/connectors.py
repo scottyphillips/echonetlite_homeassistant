@@ -11,6 +11,7 @@ from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from pychonet import ECHONETAPIClient
@@ -33,6 +34,7 @@ from .const import (
 )
 
 from .config_flow import ErrorConnect
+from .sharp import sharp_command, sharp_raw, sharp_value
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -179,6 +181,11 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         if "host_product_code" in instance:
             self._host_product_code = instance["host_product_code"]
 
+        # The node profile can identify a network adapter rather than the
+        # appliance. Resolve supported object-specific models during startup.
+        self._object_product_code = None
+        self._quirk_product_code = self._host_product_code
+
         # ECHONET property maps from configuration
         self._ntfPropertyMap = instance["ntfmap"]
         self._getPropertyMap = instance["getmap"]
@@ -268,6 +275,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         )
 
         # Load device-specific quirks
+        await self._discover_sharp_model()
         await self._load_quirk()
 
         # Initialize default user options for fan and swing modes
@@ -336,6 +344,106 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         return await self.poll_pychonet(
             no_request=False, best_effort=True, include_ntf=True
         )
+
+    async def _discover_sharp_model(self) -> None:
+        """Read the air cleaner's model, not its HW-A04 node-profile model."""
+        if self._manufacturer != "Sharp" or (self._eojgc, self._eojcc) != (0x01, 0x35):
+            return
+        # Never enable a model quirk from a node-profile match alone.
+        self._quirk_product_code = (
+            None if self._host_product_code == "FPS42Y" else self._host_product_code
+        )
+        self._object_product_code = None
+        if 0x8C not in self._getPropertyMap:
+            return
+        try:
+            semaphore = _host_semaphores.setdefault(self._host, asyncio.Semaphore(1))
+            async with semaphore, asyncio.timeout(10):
+                raw = await self._instance.getMessage(0x8C)
+        except TimeoutError:
+            _LOGGER.debug("Sharp object model lookup timed out at %s", self._host)
+            return
+        # pychonet 2.8.1 eagerly decodes object EPC 8C to a string.
+        if not isinstance(raw, str) or not 1 <= len(raw) <= 12:
+            return
+        model = raw.rstrip("\x00 ")
+        if model == "FPS42Y":
+            self._object_product_code = model
+            self._quirk_product_code = model
+
+    @property
+    def is_sharp_fps42y(self) -> bool:
+        """Whether this Sharp air-cleaner object reports the supported model."""
+        return (
+            self._manufacturer == "Sharp"
+            and self._object_product_code == "FPS42Y"
+            and (self._eojgc, self._eojcc) == (0x01, 0x35)
+        )
+
+    async def async_set_sharp_fan_mode(self, option: str) -> None:
+        """Set a calibrated preset; actual F3 (not A0) distinguishes the modes."""
+        await self.async_set_sharp_setting("mode", option)
+
+    async def async_set_sharp_setting(self, key: str, value) -> None:
+        """Write only validated fields and publish actual GET, never ACK state."""
+        if (
+            not self.is_sharp_fps42y
+            or 0xF3 not in self._getPropertyMap
+            or 0xF3 not in self._setPropertyMap
+        ):
+            raise HomeAssistantError("Unsupported Sharp appliance")
+        try:
+            payload = sharp_command(key, value)
+        except (ValueError, TypeError) as err:
+            raise HomeAssistantError("Unsupported Sharp setting") from err
+        semaphore = _host_semaphores.setdefault(self._host, asyncio.Semaphore(1))
+        async with semaphore:
+            try:
+                async with asyncio.timeout(15):
+                    if not await self._instance.setMessage(
+                        0xF3, int.from_bytes(payload, "big"), pdc=27
+                    ):
+                        raise HomeAssistantError(
+                            "Sharp did not acknowledge the command"
+                        )
+                    for _ in range(3):
+                        await asyncio.sleep(0.5)
+                        try:
+                            # getMessage returns raw bytes and requires a GET
+                            # response; update() alone can decode stale cache
+                            # when pychonet's request queue is busy.
+                            state = await self._instance.getMessage(0xF3)
+                            power = await self._instance.getMessage(0x80)
+                            speed = await self._instance.getMessage(0xA0)
+                        except TimeoutError:
+                            continue
+                        if not (
+                            isinstance(power, bytes)
+                            and len(power) == 1
+                            and isinstance(speed, bytes)
+                            and len(speed) == 1
+                        ):
+                            continue
+                        # Publish raw GET responses directly. Cache decoding
+                        # after SET may otherwise read the optimistic command.
+                        actual = {
+                            0xF3: sharp_raw(state),
+                            0x80: {0x30: "on", 0x31: "off"}.get(power[0]),
+                            0xA0: {
+                                0x41: "auto",
+                                0x31: "low",
+                                0x35: "medium",
+                                0x37: "high",
+                            }.get(speed[0]),
+                        }
+                        self.async_set_updated_data({**(self.data or {}), **actual})
+                        if sharp_value(actual, key) == value:
+                            return
+            except TimeoutError as err:
+                raise HomeAssistantError(
+                    "Sharp setting verification timed out"
+                ) from err
+        raise HomeAssistantError("Sharp did not confirm the requested setting")
 
     async def _async_update_data(self) -> dict[int, Any]:
         """Fetch the latest data from the ECHONET device.
@@ -923,6 +1031,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         # reconciliation batch instead (see _statmap_flag_batches below).
         _force_polling = self._user_options.get(CONF_FORCE_POLLING, False)
         _ntf_set = set(self._ntfPropertyMap) if not _force_polling else set()
+        if self.is_sharp_fps42y:
+            # Physical mode/LED/lock changes must reconcile every normal poll,
+            # even if multicast notifications cannot traverse the device VLAN.
+            _ntf_set.discard(0xF3)
 
         if _ntf_set:
             _pruned = [
@@ -1043,11 +1155,11 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 update(extention)
 
             # Check for product-code-specific quirks
-            if self._host_product_code:
+            if self._quirk_product_code:
                 check = [
                     "quirks",
                     self._manufacturer,
-                    self._host_product_code,
+                    self._quirk_product_code,
                     "{:0>2X}".format(self._eojgc) + "{:0>2X}".format(self._eojcc),
                 ]
                 path = os.path.dirname(__file__) + "/" + "/".join(check) + ".py"
