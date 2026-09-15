@@ -42,10 +42,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             if (
                 coordinator.is_sharp_fps42y
                 and op_code == ENL_FANSPEED
-                and not (
-                    0xF3 in coordinator._getPropertyMap
-                    and 0xF3 in coordinator._setPropertyMap
-                )
+                and not coordinator.sharp_controls_available
             ):
                 continue
             epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(

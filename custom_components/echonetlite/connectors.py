@@ -66,6 +66,11 @@ ACTIVITY_TIMEOUT = 300  # 5 minutes
 # Shared across all ECHONETConnector instances via a module-level dict.
 _host_semaphores: dict[str, asyncio.Semaphore] = {}
 
+# A Sharp F3 write holds the per-host semaphore for the whole SET and verify
+# sequence, so both the command itself and the sequence as a whole are bounded.
+SHARP_SET_COMMAND_TIMEOUT = 15
+SHARP_SET_OVERALL_TIMEOUT = 45
+
 
 def regist_as_inputs(epc_function_data):
     """Check if EPC function data should be registered as input entity.
@@ -380,17 +385,22 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             and (self._eojgc, self._eojcc) == (0x01, 0x35)
         )
 
+    @property
+    def sharp_controls_available(self) -> bool:
+        """Whether the verified F3 commands can be both written and read back."""
+        return (
+            self.is_sharp_fps42y
+            and 0xF3 in self._getPropertyMap
+            and 0xF3 in self._setPropertyMap
+        )
+
     async def async_set_sharp_fan_mode(self, option: str) -> None:
         """Set a calibrated preset; actual F3 (not A0) distinguishes the modes."""
         await self.async_set_sharp_setting("mode", option)
 
     async def async_set_sharp_setting(self, key: str, value) -> None:
         """Write only validated fields and publish actual GET, never ACK state."""
-        if (
-            not self.is_sharp_fps42y
-            or 0xF3 not in self._getPropertyMap
-            or 0xF3 not in self._setPropertyMap
-        ):
+        if not self.sharp_controls_available:
             raise HomeAssistantError("Unsupported Sharp appliance")
         try:
             payload = sharp_command(key, value)
@@ -398,11 +408,20 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             raise HomeAssistantError("Unsupported Sharp setting") from err
         semaphore = _host_semaphores.setdefault(self._host, asyncio.Semaphore(1))
         async with semaphore:
+            # Bound the whole SET and verify sequence so a silent device can
+            # never hold this host's semaphore for minutes.
             try:
-                async with asyncio.timeout(15):
-                    if not await self._instance.setMessage(
-                        0xF3, int.from_bytes(payload, "big"), pdc=27
-                    ):
+                async with asyncio.timeout(SHARP_SET_OVERALL_TIMEOUT):
+                    try:
+                        async with asyncio.timeout(SHARP_SET_COMMAND_TIMEOUT):
+                            acknowledged = await self._instance.setMessage(
+                                0xF3, int.from_bytes(payload, "big"), pdc=27
+                            )
+                    except TimeoutError as err:
+                        raise HomeAssistantError(
+                            "Sharp command send timed out"
+                        ) from err
+                    if not acknowledged:
                         raise HomeAssistantError(
                             "Sharp did not acknowledge the command"
                         )

@@ -19,10 +19,16 @@ from pychonet.lib.functions import decodeEchonetMsg
 
 from custom_components.echonetlite import binary_sensor, select, sensor, switch
 from homeassistant.components.fan import FanEntityFeature
+from custom_components.echonetlite import connectors
 from custom_components.echonetlite.connectors import ECHONETConnector
 from custom_components.echonetlite.fan import EchonetFan
 from custom_components.echonetlite.select import EchonetSelect
-from custom_components.echonetlite.sharp import SHARP_FIELDS, SHARP_MODES, sharp_value
+from custom_components.echonetlite.sharp import (
+    SHARP_FIELDS,
+    SHARP_MODES,
+    sharp_field,
+    sharp_value,
+)
 
 HOST = "sharp-test.invalid"
 
@@ -274,6 +280,73 @@ async def test_failed_set_or_verification_never_publishes_command(device, failur
 
 
 @pytest.mark.asyncio
+async def test_overall_timeout_frees_host_and_names_verification(device, monkeypatch):
+    """A mute device must not hold the per-host semaphore past the deadline."""
+    make, wire, _, _, _ = device
+    c = make()
+    await c.startup()
+    responsive = c._instance.getMessage
+    monkeypatch.setattr(connectors, "SHARP_SET_OVERALL_TIMEOUT", 1)
+
+    async def never_answers(*args, **kwargs):
+        await asyncio.sleep(3600)
+
+    c._instance.getMessage = never_answers
+    c.data = {0xA0: "auto"}
+    loop = asyncio.get_running_loop()
+    started = loop.time()
+    with pytest.raises(
+        HomeAssistantError, match="Sharp setting verification timed out"
+    ):
+        await c.async_set_sharp_fan_mode("low")
+    assert loop.time() - started < 10
+    # No optimistic state, and the host is usable again straight away.
+    assert sharp_value(c.data, "mode") != "low"
+    assert c.data[0xA0] == "auto"
+    assert not connectors._host_semaphores[HOST].locked()
+    c._instance.getMessage = responsive
+    await c.async_set_sharp_fan_mode("low")
+    assert sharp_value(c.data, "mode") == "low"
+    assert not connectors._host_semaphores[HOST].locked()
+
+
+@pytest.mark.asyncio
+async def test_command_send_timeout_is_not_reported_as_verification(device):
+    make, wire, _, _, _ = device
+    c = make()
+    await c.startup()
+    c.data = {0xA0: "auto"}
+    c._instance.setMessage = AsyncMock(side_effect=TimeoutError)
+    with pytest.raises(HomeAssistantError, match="Sharp command send timed out"):
+        await c.async_set_sharp_fan_mode("low")
+    assert sharp_value(c.data, "mode") != "low"
+    assert not connectors._host_semaphores[HOST].locked()
+
+
+@pytest.mark.asyncio
+async def test_capability_gate_is_shared_by_every_platform(device):
+    make, _, _, _, _ = device
+    c = make()
+    await c.startup()
+    assert c.sharp_controls_available
+    for missing in ("_getPropertyMap", "_setPropertyMap"):
+        saved = list(getattr(c, missing))
+        getattr(c, missing).remove(0xF3)
+        assert not c.sharp_controls_available
+        with pytest.raises(HomeAssistantError, match="Unsupported Sharp appliance"):
+            await c.async_set_sharp_fan_mode("low")
+        setattr(c, missing, saved)
+    c._object_product_code = None
+    assert not c.sharp_controls_available
+
+
+@pytest.mark.parametrize("key", ["", "mode", "unknown", None, 0])
+def test_unknown_sharp_field_is_an_explicit_error(key):
+    with pytest.raises(ValueError, match="Unknown Sharp field"):
+        sharp_field(key)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "key,value",
     [("plasmacluster", True), ("led", "dim"), ("mode", "unknown"), ("child-lock", 1)],
@@ -366,7 +439,8 @@ def test_malformed_fields_are_unknown(key, raw):
             27,
             2,
             [
-                (0, None),
+                # Zero is the app's floor reading, not an unknown value.
+                (0, 0),
                 (1, 1),
                 (256, 256),
                 (499, 499),

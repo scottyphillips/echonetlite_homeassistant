@@ -1,7 +1,7 @@
 """Shared coordinator-backed entity for proven, model-scoped Sharp fields."""
 
 from .base_entity import EchonetEntity
-from .sharp import SHARP_FIELDS, sharp_value
+from .sharp import sharp_field, sharp_value
 
 
 class SharpFieldEntity(EchonetEntity):
@@ -9,10 +9,11 @@ class SharpFieldEntity(EchonetEntity):
 
     def __init__(self, coordinator, config, key):
         super().__init__(coordinator, config)
+        _, name, icon = sharp_field(key)
         self._sharp_key = key
         self._attr_unique_id = self._build_unique_id(f"sharp-{key}")
-        self._attr_name = f"{config.title} {SHARP_FIELDS[key][1]}"
-        self._attr_icon = SHARP_FIELDS[key][2]
+        self._attr_name = f"{config.title} {name}"
+        self._attr_icon = icon
 
     @property
     def available(self):

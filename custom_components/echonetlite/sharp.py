@@ -19,6 +19,14 @@ SHARP_FIELDS = {
 }
 
 
+def sharp_field(key):
+    """Resolve a proven field definition; an unknown key is never guessed."""
+    field = SHARP_FIELDS.get(key)
+    if field is None:
+        raise ValueError(f"Unknown Sharp field: {key}")
+    return field
+
+
 def sharp_raw(value):
     """Keep proprietary bytes for shared polling; reject unexpected types."""
     return value if isinstance(value, bytes) else None
@@ -26,7 +34,7 @@ def sharp_raw(value):
 
 def sharp_value(data, key):
     """Decode a proven field; malformed, unsupported and sentinel data are None."""
-    epc = 0xF3 if key == "mode" else SHARP_FIELDS[key][0]
+    epc = 0xF3 if key == "mode" else sharp_field(key)[0]
     raw = data.get(epc)
     # This model has 40-byte F1/F2 and 27-byte F3. Never accept a short
     # response or a SET command (nonzero F3 mask) as reported state.
@@ -48,7 +56,9 @@ def sharp_value(data, key):
     if key == "pm25":
         word = int.from_bytes(raw[27:29], "big")
         value = word & 0x03FF
-        return value if not word & 0x8000 and 0 < value < 500 else None
+        # Zero is the app's floor reading (below detection), not a sentinel;
+        # only the invalid flag and out-of-range values mean "unknown".
+        return value if not word & 0x8000 and value < 500 else None
     offset, on = {
         "plasmacluster": (25, 0xFF),
         "led": (26, 0xF0),

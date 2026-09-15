@@ -64,7 +64,7 @@ class EchonetFan(EchonetEntity, FanEntity):
         if hasattr(FanEntityFeature, "TURN_OFF"):
             self._attr_supported_features |= FanEntityFeature.TURN_OFF
         if (
-            self.is_settable(0xF3) and 0xF3 in coordinator._getPropertyMap
+            coordinator.sharp_controls_available
             if coordinator.is_sharp_fps42y
             else self.is_settable(ENL_FANSPEED)
         ):

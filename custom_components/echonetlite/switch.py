@@ -42,11 +42,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     """Set up the ECHONETLite switch platform."""
     entities = []
     for entity in hass.data[DOMAIN][config.entry_id]:
-        if (
-            entity["echonetlite"].is_sharp_fps42y
-            and 0xF3 in entity["echonetlite"]._getPropertyMap
-            and 0xF3 in entity["echonetlite"]._setPropertyMap
-        ):
+        if entity["echonetlite"].sharp_controls_available:
             entities.extend(
                 SharpSwitch(entity["echonetlite"], config, key)
                 for key in ("led", "child-lock")
