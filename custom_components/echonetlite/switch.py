@@ -17,10 +17,18 @@ from .const import (
     TYPE_SWITCH,
     TYPE_NUMBER,
     ENL_STATUS,
+    ENL_POWER_SAVING,
 )
 from pychonet.lib.eojx import EOJX_CLASS
+from pychonet.lib.epc_functions import EPC_SUPER_FUNCTIONS
 
 _LOGGER = logging.getLogger(__name__)
+
+# Overlay only the power-saving operation setting from the super class table.
+# pychonet decodes 0x8F with the super class function (its update() checks
+# EPC_SUPER_FUNCTIONS before the class specific table), so a class specific
+# 0x8F definition would derive on/off values that never match the state.
+_POWER_SAVING_EPC_FUNCTIONS = {ENL_POWER_SAVING: EPC_SUPER_FUNCTIONS[ENL_POWER_SAVING]}
 
 
 async def async_setup_entry(hass, config, async_add_entities, discovery_info=None):
@@ -31,15 +39,16 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         eojcc = entity["instance"]["eojcc"]
         set_enl_status = False
         _enl_op_codes = entity["echonetlite"]._enl_op_codes
+        _epc_functions = (
+            entity["echonetlite"]._instance.EPC_FUNCTIONS | _POWER_SAVING_EPC_FUNCTIONS
+        )
 
         # Configure switch entities by looking up full ENL_OP_CODE dict
         for op_code in list(
             set(entity["instance"]["setmap"])
             - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
-            epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
-                op_code, None
-            )
+            epc_function_data = _epc_functions.get(op_code, None)
             _by_epc_func = (
                 type(epc_function_data) == list
                 and type(epc_function_data[1]) == dict
@@ -120,7 +129,9 @@ class EchonetSwitch(EchonetEntity, SwitchEntity):
         self._options = options
 
         # Process EPC function data to determine on/off values
-        epc_function_data = coordinator._instance.EPC_FUNCTIONS.get(epc_code, None)
+        epc_function_data = (
+            coordinator._instance.EPC_FUNCTIONS | _POWER_SAVING_EPC_FUNCTIONS
+        ).get(epc_code, None)
         if type(epc_function_data) == list:
             data_keys = list(epc_function_data[1].keys())
             data_items = list(epc_function_data[1].values())
