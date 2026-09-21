@@ -16,6 +16,8 @@ from homeassistant.const import (
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorStateClass
+from .sharp_entity import SharpFieldEntity
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from .base_entity import EchonetEntity
 from homeassistant.exceptions import InvalidStateError, NoEntitySpecifiedError
@@ -60,6 +62,24 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class SharpSensor(SharpFieldEntity, SensorEntity):
+    """Validated temperature, humidity and PM2.5 observations."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator, config, key):
+        super().__init__(coordinator, config, key)
+        self._attr_device_class, self._attr_native_unit_of_measurement = {
+            "temperature": (SensorDeviceClass.TEMPERATURE, "°C"),
+            "humidity": (SensorDeviceClass.HUMIDITY, "%"),
+            "pm25": (SensorDeviceClass.PM25, "µg/m³"),
+        }[key]
+
+    @property
+    def native_value(self):
+        return self.sharp_state
 
 
 @dataclass
@@ -195,6 +215,14 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     entities = []
     platform = entity_platform.async_get_current_platform()
     for entity in hass.data[DOMAIN][config.entry_id]:
+        if (
+            entity["echonetlite"].is_sharp_fps42y
+            and 0xF1 in entity["echonetlite"]._getPropertyMap
+        ):
+            entities.extend(
+                SharpSensor(entity["echonetlite"], config, key)
+                for key in ("temperature", "humidity", "pm25")
+            )
         _LOGGER.debug(f"Configuring ECHONETLite sensor {entity}")
         _LOGGER.debug(
             f"Update flags for this sensor are {entity['echonetlite']._update_flags_full_list}"
@@ -220,6 +248,8 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             set(entity["echonetlite"]._update_flags_full_list)
             - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
+            if entity["echonetlite"].is_sharp_fps42y and op_code in (0xF1, 0xF2, 0xF3):
+                continue  # Dedicated validated fields, not raw vendor blobs.
             # Check DeviceClass or regist_as_binary_sensor()
             if isinstance(
                 _enl_op_codes.get(op_code, {}).get(CONF_TYPE), BinarySensorDeviceClass
