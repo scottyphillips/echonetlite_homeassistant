@@ -51,6 +51,7 @@ from pychonet.lib.const import (
     ENL_FAULT_DESCRIPTION,
     ENL_FAULT_STATUS,
     ENL_INSTANTANEOUS_POWER,
+    ENL_POWER_SAVING,
 )
 from pychonet.lib.epc_functions import DATA_STATE_CLOSE, DATA_STATE_OPEN
 from pychonet.CeilingFan import (
@@ -139,6 +140,7 @@ ENL_SUPER_CODES = {
         CONF_TYPE: SensorDeviceClass.ENUM,
         TYPE_DATA_DICT: ["fault classification", "error code"],
     },
+    ENL_POWER_SAVING: {},
 }
 
 TYPE_MEASUREMENT_CHANNEL = {
