@@ -63,7 +63,7 @@ New device classes can be added via pychonet without constraint.
 | KDK                 | ECHONETLite enabled Ceiling Fans               | CeilingFan, GeneralLighting    | Fan, Light, Sensor               | Rebranded Panasonic — confirmed E48GP, H56G, F40GP                                                |
 | JDM Electric Meters | Low voltage smart meter (B route)              | —                              | Sensor                           | Requires Wi-SUN ↔ Ethernet/WiFi bridge — [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite) |
 | Sony                | MoekadenRoom ECHONETLite Simulator             | —                              | Climate, Select, Switch, Sensor  | https://github.com/SonyCSL/MoekadenRoom                                                           |
-
+| Toshiba             | RAS-N221DRZ air conditioner                    | HomeAirConditioner             | Climate, Sensor                  |
 ---
 
 ## Mitsubishi WiFi Adaptor Compatibility
