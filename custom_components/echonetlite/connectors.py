@@ -34,7 +34,12 @@ from .const import (
 )
 
 from .config_flow import ErrorConnect
-from .sharp import sharp_command, sharp_raw, sharp_value
+from .sharp import (
+    SHARP_AIR_CLEANER_MODELS,
+    sharp_command,
+    sharp_raw,
+    sharp_value,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -356,7 +361,9 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             return
         # Never enable a model quirk from a node-profile match alone.
         self._quirk_product_code = (
-            None if self._host_product_code == "FPS42Y" else self._host_product_code
+            None
+            if self._host_product_code in SHARP_AIR_CLEANER_MODELS
+            else self._host_product_code
         )
         self._object_product_code = None
         if 0x8C not in self._getPropertyMap:
@@ -372,16 +379,16 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         if not isinstance(raw, str) or not 1 <= len(raw) <= 12:
             return
         model = raw.rstrip("\x00 ")
-        if model == "FPS42Y":
+        if model in SHARP_AIR_CLEANER_MODELS:
             self._object_product_code = model
             self._quirk_product_code = model
 
     @property
-    def is_sharp_fps42y(self) -> bool:
-        """Whether this Sharp air-cleaner object reports the supported model."""
+    def is_sharp_air_cleaner(self) -> bool:
+        """Whether this Sharp air-cleaner object reports a verified model."""
         return (
             self._manufacturer == "Sharp"
-            and self._object_product_code == "FPS42Y"
+            and self._object_product_code in SHARP_AIR_CLEANER_MODELS
             and (self._eojgc, self._eojcc) == (0x01, 0x35)
         )
 
@@ -389,7 +396,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
     def sharp_controls_available(self) -> bool:
         """Whether the verified F3 commands can be both written and read back."""
         return (
-            self.is_sharp_fps42y
+            self.is_sharp_air_cleaner
             and 0xF3 in self._getPropertyMap
             and 0xF3 in self._setPropertyMap
         )
@@ -1050,7 +1057,7 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         # reconciliation batch instead (see _statmap_flag_batches below).
         _force_polling = self._user_options.get(CONF_FORCE_POLLING, False)
         _ntf_set = set(self._ntfPropertyMap) if not _force_polling else set()
-        if self.is_sharp_fps42y:
+        if self.is_sharp_air_cleaner:
             # Physical mode/LED/lock changes must reconcile every normal poll,
             # even if multicast notifications cannot traverse the device VLAN.
             _ntf_set.discard(0xF3)

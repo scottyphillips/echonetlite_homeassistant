@@ -40,7 +40,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         ):
             coordinator = entity["echonetlite"]
             if (
-                coordinator.is_sharp_fps42y
+                coordinator.is_sharp_air_cleaner
                 and op_code == ENL_FANSPEED
                 and not coordinator.sharp_controls_available
             ):
@@ -137,7 +137,7 @@ class EchonetSelect(EchonetEntity, SelectEntity):
     @property
     def options(self) -> list:
         """Return available select options, with user override support."""
-        if self._code == ENL_FANSPEED and self.coordinator.is_sharp_fps42y:
+        if self._code == ENL_FANSPEED and self.coordinator.is_sharp_air_cleaner:
             return list(SHARP_MODES)
         if self._code in self._user_option_epcs:
             if self.coordinator._user_options[self._code] is not False:
@@ -147,7 +147,7 @@ class EchonetSelect(EchonetEntity, SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return current option with fallback for raw int values, reading fresh from coordinator."""
-        if self._code == ENL_FANSPEED and self.coordinator.is_sharp_fps42y:
+        if self._code == ENL_FANSPEED and self.coordinator.is_sharp_air_cleaner:
             return sharp_value(self.coordinator.data, "mode")
         val = self.coordinator.data.get(self._code)
         if val is not None and val not in self.options:
@@ -163,7 +163,7 @@ class EchonetSelect(EchonetEntity, SelectEntity):
         return self._icons.get(self.current_option, self._icon_default)
 
     async def async_select_option(self, option: str):
-        if self._code == ENL_FANSPEED and self.coordinator.is_sharp_fps42y:
+        if self._code == ENL_FANSPEED and self.coordinator.is_sharp_air_cleaner:
             await self.coordinator.async_set_sharp_fan_mode(option)
             return
         self._attr_current_option = option

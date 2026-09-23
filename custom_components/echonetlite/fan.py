@@ -54,7 +54,7 @@ class EchonetFan(EchonetEntity, FanEntity):
         # A0 describes this unit's actual speed, but its writes are ignored in
         # AI Auto mode. Its connector uses verified F3 commands instead.
         self._model_fan_modes = None
-        if coordinator.is_sharp_fps42y:
+        if coordinator.is_sharp_air_cleaner:
             self._model_fan_modes = SHARP_MODES
 
         # Set supported features based on device capabilities
@@ -65,7 +65,7 @@ class EchonetFan(EchonetEntity, FanEntity):
             self._attr_supported_features |= FanEntityFeature.TURN_OFF
         if (
             coordinator.sharp_controls_available
-            if coordinator.is_sharp_fps42y
+            if coordinator.is_sharp_air_cleaner
             else self.is_settable(ENL_FANSPEED)
         ):
             self._attr_supported_features |= FanEntityFeature.PRESET_MODE
@@ -82,14 +82,14 @@ class EchonetFan(EchonetEntity, FanEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if the device is on."""
-        if self.coordinator.is_sharp_fps42y:
+        if self.coordinator.is_sharp_air_cleaner:
             return {"on": True, "off": False}.get(self.coordinator.data.get(ENL_STATUS))
         return True if self.coordinator.data.get(ENL_STATUS) == DATA_STATE_ON else False
 
     @property
     def preset_mode(self) -> str | None:
         """Return the fan setting."""
-        if self.coordinator.is_sharp_fps42y:
+        if self.coordinator.is_sharp_air_cleaner:
             return sharp_value(self.coordinator.data, "mode")
         return self.coordinator.data.get(ENL_FANSPEED)
 

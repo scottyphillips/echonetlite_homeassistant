@@ -1,4 +1,9 @@
-"""Sharp FPS42Y proprietary fields and commands, verified against device readback."""
+"""Sharp proprietary fields and commands, verified against device readback."""
+
+# Air-cleaner models whose F1/F2/F3 payloads have been verified byte for byte
+# against the physical device. Adding a model here is only correct once its
+# readback has been confirmed; the layout is not assumed from the model name.
+SHARP_AIR_CLEANER_MODELS = frozenset({"FPS42Y", "FXS120V"})
 
 SHARP_MODES = {
     "auto": 0x20,
@@ -64,7 +69,13 @@ def sharp_value(data, key):
         "led": (26, 0xF0),
         "child-lock": (18, 0xFF),
     }[key]
-    return {0: False, on: True}.get(raw[offset])
+    value = raw[offset]
+    if key == "led":
+        # FX-S120V has three LED states: 0x00 off, 0x10 dim, 0xF0 bright.
+        # FP-S42Y only ever emits 0x00 or 0xF0, so "lit" is unchanged for it,
+        # while a dim FX-S120V no longer decodes to unknown.
+        return value != 0
+    return {0: False, on: True}.get(value)
 
 
 def sharp_command(key, value):
