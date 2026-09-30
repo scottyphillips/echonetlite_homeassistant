@@ -248,7 +248,11 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             set(entity["echonetlite"]._update_flags_full_list)
             - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
-            if entity["echonetlite"].is_sharp_air_cleaner and op_code in (0xF1, 0xF2, 0xF3):
+            if entity["echonetlite"].is_sharp_air_cleaner and op_code in (
+                0xF1,
+                0xF2,
+                0xF3,
+            ):
                 continue  # Dedicated validated fields, not raw vendor blobs.
             # Check DeviceClass or regist_as_binary_sensor()
             if isinstance(

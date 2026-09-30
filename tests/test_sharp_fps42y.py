@@ -501,7 +501,9 @@ def test_sensor_ranges_and_sentinels(key, offset, size, readings):
         ("plasmacluster", 0xF2, 40, 25, 0xFF, None),
     ],
 )
-def test_binary_values_and_set_payload_are_not_inferred(key, epc, size, offset, on, mid):
+def test_binary_values_and_set_payload_are_not_inferred(
+    key, epc, size, offset, on, mid
+):
     raw = bytearray(size)
     for encoded, expected in [(0, False), (on, True), (0x10, mid)]:
         raw[offset] = encoded
