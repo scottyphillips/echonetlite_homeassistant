@@ -146,6 +146,22 @@ After adding the integration, go to **Configuration → Integrations**, find you
 
 > Note: Determining which options are supported is a trial-and-error process as ECHONET Lite does not expose permitted values for these settings.
 
+For home air conditioners, **Display configured fan speeds as numbered bars** is an optional presentation setting shared by the climate entity and its airflow select entity.
+Choose the supported speeds under **Configure Fan settings** first.
+Numbered presentation orders those speeds by their ECHONET values, keeps Auto separate and labels the manual speeds `1 bar`, `2 bars` and so on.
+For example, selecting `minimum`, `low`, `medium`, `medium-high` and `high` produces five bars; it does not claim that every device supports five speeds.
+
+Both entities translate commands to the existing protocol values and display the device's reported setting.
+Existing named commands such as `medium-high` remain accepted for configured speeds.
+A reading outside the configured subset is unknown in numbered presentation, rather than being assigned a guessed bar level.
+The default presentation and entity unique IDs remain unchanged.
+This setting does not measure fan RPM or discover a model's permitted speeds.
+
+**Display vertical vane positions as numbered positions** separately labels the static vertical positions `Position 1` through `Position 5`, from top to bottom.
+It labels `auto-vert` as `Auto` and `vert` as `Swing` where the climate entity already supports them.
+The static vertical airflow select shares the position labels.
+Existing named commands remain accepted for configured positions, and horizontal control capabilities remain unchanged.
+
 ---
 ## Polling Behaviour
 

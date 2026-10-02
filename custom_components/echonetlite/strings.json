@@ -41,6 +41,8 @@
                 "title": "ECHONET Lite HVAC Options",
                 "data": {
                     "fan_settings": "Configure fan settings",
+                    "numbered_fan_speeds": "Display configured fan speeds as numbered bars",
+                    "numbered_vane_positions": "Display vertical vane positions as numbered positions",
                     "swing_horiz": "Configure Horizontal Swing Settings",
                     "swing_vert": "Configure Vertical Swing Settings",
                     "auto_direction": "Configure Auto Direction",
