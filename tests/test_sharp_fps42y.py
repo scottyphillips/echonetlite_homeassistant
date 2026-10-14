@@ -24,6 +24,7 @@ from custom_components.echonetlite.connectors import ECHONETConnector
 from custom_components.echonetlite.fan import EchonetFan
 from custom_components.echonetlite.select import EchonetSelect
 from custom_components.echonetlite.sharp import (
+    SHARP_AIR_CLEANER_MODELS,
     SHARP_FIELDS,
     SHARP_MODES,
     sharp_field,
@@ -32,16 +33,30 @@ from custom_components.echonetlite.sharp import (
 
 HOST = "sharp-test.invalid"
 
+# Verbatim readback from a physical FX-S120V (ASEAN SHARP AIR app), captured
+# with the unit's internet access blocked. Kept raw so a decoder regression
+# fails against real bytes rather than against a hand-written fixture.
+FXS120V_READBACK = {
+    0xF1: bytes.fromhex(
+        "6200981c47030000f300000001ca1707aa00000000000479ee00000001011a011a00000000000000"
+    ),
+    0xF2: bytes.fromhex(
+        "4000000000000000000000000000000000000000ff00000000ff0020010000000000000000000000"
+    ),
+    0xF3: bytes.fromhex("0000000020000000c000000000ff000000000000000000000000f0"),
+}
+
 
 class Wire:
     """Device responses through the actual pychonet encoder and receiver."""
 
-    def __init__(self):
+    def __init__(self, model="FPS42Y"):
         self.frames = []
         self.mode = 0x20
         self.led = 0xF0
         self.lock = 0
-        self.model = b"FPS42Y\0\0\0\0\0\0"
+        self.model_name = model
+        self.model = model.encode().ljust(12, b"\0")
         self.nack = False
         self.mismatch = False
         self.get_nack = False
@@ -101,9 +116,11 @@ class Wire:
         asyncio.create_task(self.callback(bytes(response), addr))
 
 
-@pytest_asyncio.fixture
-async def device(tmp_path):
-    wire = Wire()
+@pytest_asyncio.fixture(params=sorted(SHARP_AIR_CLEANER_MODELS))
+async def device(tmp_path, request):
+    # Every test in this module runs once per verified model, so a change that
+    # only suits one of them fails here instead of in someone's living room.
+    wire = Wire(request.param)
     api = ECHONETAPIClient(wire)
     api._logger = lambda *args: None
     hass = HomeAssistant(str(tmp_path))
@@ -145,13 +162,13 @@ async def test_object_model_discovery_and_instance_isolation(device):
     one, two = make(), make(2)
     original_functions = dict(two._instance.EPC_FUNCTIONS)
     await one.startup()
-    assert one.is_sharp_fps42y and not two.is_sharp_fps42y
+    assert one.is_sharp_air_cleaner and not two.is_sharp_air_cleaner
     assert two._instance.EPC_FUNCTIONS == original_functions
-    assert api._state[HOST]["instances"][1][0x35][1][0x8C] == "FPS42Y"
+    assert api._state[HOST]["instances"][1][0x35][1][0x8C] == wire.model_name
     assert one._host_product_code == api._state[HOST]["product_code"] == "HW-A04"
     assert wire.frames[0][7:10] == b"\x01\x35\x01"
     await two.startup()
-    assert two.is_sharp_fps42y
+    assert two.is_sharp_air_cleaner
     assert wire.frames[1][7:10] == b"\x01\x35\x02"
     for coordinator in (one, two):
         assert {0xF1, 0xF2, 0xF3} <= set(coordinator._update_flags_full_list)
@@ -168,14 +185,26 @@ async def test_object_model_discovery_and_instance_isolation(device):
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "model",
-    [None, False, b"FPS42Y", "", "HW-A04", "FPS42Y-other", "FPS42Y\0x", "fps42y"],
+    [
+        None,
+        False,
+        b"FPS42Y",
+        "",
+        "HW-A04",
+        "FPS42Y-other",
+        "FPS42Y\0x",
+        "fps42y",
+        b"FXS120V",
+        "FXS120V-other",
+        "fxs120v",
+    ],
 )
 async def test_invalid_object_model_never_enables_node_model(device, model):
-    make, _, _, _, _ = device
-    c = make(host_product_code="FPS42Y")
+    make, wire, _, _, _ = device
+    c = make(host_product_code=wire.model_name)
     c._instance.getMessage = AsyncMock(return_value=model)
     await c.startup()
-    assert not c.is_sharp_fps42y and c._quirk_product_code is None
+    assert not c.is_sharp_air_cleaner and c._quirk_product_code is None
     assert 0xF3 not in c._instance.EPC_FUNCTIONS
     with pytest.raises(HomeAssistantError):
         await c.async_set_sharp_fan_mode("low")
@@ -199,7 +228,7 @@ async def test_unsupported_or_unreachable_model(device, change):
     else:
         wire.nack = True
     await c._discover_sharp_model()
-    assert not c.is_sharp_fps42y
+    assert not c.is_sharp_air_cleaner
     with pytest.raises(HomeAssistantError):
         await c.async_set_sharp_fan_mode("low")
     assert not any(frame[10] == SETC for frame in wire.frames)
@@ -212,7 +241,7 @@ async def test_unrelated_sharp_model_keeps_existing_quirk_lookup(device):
     c._instance.getMessage = AsyncMock(return_value=None)
     await c._discover_sharp_model()
     assert c._quirk_product_code == "OTHER-MODEL"
-    assert not c.is_sharp_fps42y
+    assert not c.is_sharp_air_cleaner
 
 
 @pytest.mark.asyncio
@@ -461,16 +490,22 @@ def test_sensor_ranges_and_sentinels(key, offset, size, readings):
 
 
 @pytest.mark.parametrize(
-    "key,epc,size,offset,on",
+    "key,epc,size,offset,on,mid",
     [
-        ("led", 0xF3, 27, 26, 0xF0),
-        ("child-lock", 0xF3, 27, 18, 0xFF),
-        ("plasmacluster", 0xF2, 40, 25, 0xFF),
+        # 0x10 is not an unexpected value for the LED: it is the FX-S120V's dim
+        # level, confirmed by readback and by a verified write. The LED is
+        # therefore lit rather than unknown. Child lock and Plasmacluster have
+        # no such middle state, so an unrecognised byte stays unknown there.
+        ("led", 0xF3, 27, 26, 0xF0, True),
+        ("child-lock", 0xF3, 27, 18, 0xFF, None),
+        ("plasmacluster", 0xF2, 40, 25, 0xFF, None),
     ],
 )
-def test_binary_values_and_set_payload_are_not_inferred(key, epc, size, offset, on):
+def test_binary_values_and_set_payload_are_not_inferred(
+    key, epc, size, offset, on, mid
+):
     raw = bytearray(size)
-    for encoded, expected in [(0, False), (on, True), (0x10, None)]:
+    for encoded, expected in [(0, False), (on, True), (0x10, mid)]:
         raw[offset] = encoded
         assert sharp_value({epc: bytes(raw)}, key) is expected
     if epc == 0xF3:
@@ -538,3 +573,47 @@ async def test_missing_f3_capability_hides_preset_controls(device, missing):
         hass, config, lambda entities, *_: added.extend(entities)
     )
     assert not any(entity._code == 0xA0 for entity in added)
+
+
+@pytest.mark.parametrize(
+    "led_byte,lit",
+    [(0x00, False), (0x10, True), (0xF0, True), (0x01, True), (0x80, True)],
+)
+def test_led_dim_level_reads_as_lit_not_unknown(led_byte, lit):
+    """FX-S120V drives its LED to 0x10 for dim; FP-S42Y only ever 0x00/0xF0.
+
+    Decoding dim to None would have made the LED entity unavailable the moment
+    an FX-S120V owner selected the middle brightness in the app.
+    """
+    f3 = bytearray(27)
+    f3[26] = led_byte
+    assert sharp_value({0xF3: bytes(f3)}, "led") is lit
+
+
+def test_real_fxs120v_readback_decodes_every_field():
+    """Regression against verbatim bytes from a physical FX-S120V."""
+    assert sharp_value(FXS120V_READBACK, "temperature") == 28
+    assert sharp_value(FXS120V_READBACK, "humidity") == 71
+    assert sharp_value(FXS120V_READBACK, "pm25") == 1
+    assert sharp_value(FXS120V_READBACK, "mode") == "auto"
+    assert sharp_value(FXS120V_READBACK, "led") is True
+    assert sharp_value(FXS120V_READBACK, "child-lock") is False
+    assert sharp_value(FXS120V_READBACK, "plasmacluster") is True
+
+
+@pytest.mark.parametrize("model", sorted(SHARP_AIR_CLEANER_MODELS))
+def test_every_supported_model_ships_a_quirk_file(model):
+    """A model in the set without a quirk file would silently lose its
+    F1/F2/F3 decoders at runtime."""
+    from pathlib import Path
+
+    quirk = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "echonetlite"
+        / "quirks"
+        / "Sharp"
+        / model
+        / "0135.py"
+    )
+    assert quirk.is_file(), f"missing quirk file for {model}: {quirk}"

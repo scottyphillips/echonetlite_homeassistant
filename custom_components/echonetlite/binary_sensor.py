@@ -84,7 +84,7 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
     platform = entity_platform.async_get_current_platform()
     for entity in hass.data[DOMAIN][config.entry_id]:
         if (
-            entity["echonetlite"].is_sharp_fps42y
+            entity["echonetlite"].is_sharp_air_cleaner
             and 0xF2 in entity["echonetlite"]._getPropertyMap
         ):
             entities.append(
