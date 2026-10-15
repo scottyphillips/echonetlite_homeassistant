@@ -1,4 +1,4 @@
-"""Presentation of configured HVAC speeds without changing protocol values."""
+"""Map configured fan speeds to display labels."""
 
 from pychonet.HomeAirConditioner import FAN_SPEED
 
@@ -30,7 +30,7 @@ class FanSpeedOptions:
         return list(self.labels)
 
     def label_for_value(self, value):
-        """Decode named or raw readings without guessing an unconfigured level."""
+        """Return the label for a named or raw fan reading."""
         if isinstance(value, int):
             value = next((m for m, code in FAN_SPEED.items() if code == value), None)
         if value not in FAN_SPEED:
@@ -42,7 +42,7 @@ class FanSpeedOptions:
         )
 
     def mode_for_label(self, label):
-        """Accept displayed labels and existing named commands for enabled speeds."""
+        """Accept labels or names for configured speeds."""
         if label in self.labels:
             return self.labels[label]
         if label in self.modes:

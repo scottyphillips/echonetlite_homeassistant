@@ -1,4 +1,4 @@
-"""Vertical vane labels in physical order rather than protocol byte order."""
+"""Label vertical vane positions from upper to lower."""
 
 from pychonet.HomeAirConditioner import AIRFLOW_VERT
 
@@ -15,7 +15,7 @@ VERTICAL_LABELS = {
 
 
 class VanePositionOptions:
-    """Translate supported vertical positions without adding horizontal control."""
+    """Map configured vertical positions to display labels."""
 
     def __init__(self, configured, numbered=False):
         self.numbered = numbered
@@ -35,7 +35,7 @@ class VanePositionOptions:
         return list(self.labels)
 
     def label_for_value(self, value):
-        """Decode static vane readings without sorting their non-monotonic codes."""
+        """Return the label for a named or raw vane reading."""
         if isinstance(value, int):
             value = next((m for m, code in AIRFLOW_VERT.items() if code == value), None)
         if not self.numbered:
@@ -45,7 +45,7 @@ class VanePositionOptions:
         )
 
     def mode_for_label(self, label):
-        """Accept display labels and existing named commands for supported positions."""
+        """Accept labels or names for configured positions."""
         if label in self.labels:
             return self.labels[label]
         if label in self.modes:

@@ -142,9 +142,13 @@ class EchonetSelect(EchonetEntity, SelectEntity):
         """Return available select options, with user override support."""
         if self._code == ENL_FANSPEED and self.coordinator.is_sharp_fps42y:
             return list(SHARP_MODES)
-        if self._is_hvac_fan_speed:
+        if self._is_hvac_fan_speed and self._config.options.get(
+            OPTION_NUMBERED_FAN_SPEEDS, False
+        ):
             return self._fan_speed_options.options
-        if self._is_hvac_vane_position:
+        if self._is_hvac_vane_position and self._config.options.get(
+            OPTION_NUMBERED_VANE_POSITIONS, False
+        ):
             return self._vane_positions.options
         if self._code in self._user_option_epcs:
             if self.coordinator._user_options[self._code] is not False:
@@ -156,11 +160,15 @@ class EchonetSelect(EchonetEntity, SelectEntity):
         """Return current option with fallback for raw int values, reading fresh from coordinator."""
         if self._code == ENL_FANSPEED and self.coordinator.is_sharp_fps42y:
             return sharp_value(self.coordinator.data, "mode")
-        if self._is_hvac_fan_speed:
+        if self._is_hvac_fan_speed and self._config.options.get(
+            OPTION_NUMBERED_FAN_SPEEDS, False
+        ):
             return self._fan_speed_options.label_for_value(
                 self.coordinator.data.get(self._code)
             )
-        if self._is_hvac_vane_position:
+        if self._is_hvac_vane_position and self._config.options.get(
+            OPTION_NUMBERED_VANE_POSITIONS, False
+        ):
             return self._vane_positions.label_for_value(
                 self.coordinator.data.get(self._code)
             )
@@ -181,7 +189,9 @@ class EchonetSelect(EchonetEntity, SelectEntity):
         if self._code == ENL_FANSPEED and self.coordinator.is_sharp_fps42y:
             await self.coordinator.async_set_sharp_fan_mode(option)
             return
-        if self._is_hvac_fan_speed:
+        if self._is_hvac_fan_speed and self._config.options.get(
+            OPTION_NUMBERED_FAN_SPEEDS, False
+        ):
             try:
                 mode = self._fan_speed_options.mode_for_label(option)
             except ValueError as err:
@@ -190,7 +200,9 @@ class EchonetSelect(EchonetEntity, SelectEntity):
                 [ENL_FANSPEED], self.coordinator._instance.setFanSpeed(mode)
             )
             return
-        if self._is_hvac_vane_position:
+        if self._is_hvac_vane_position and self._config.options.get(
+            OPTION_NUMBERED_VANE_POSITIONS, False
+        ):
             try:
                 mode = self._vane_positions.mode_for_label(option)
             except ValueError as err:
