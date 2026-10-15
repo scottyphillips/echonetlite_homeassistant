@@ -13,6 +13,7 @@ import pytest
 import pytest_asyncio
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import frame
 from pychonet import ECHONETAPIClient
 from pychonet.lib.const import GETRES, GET_SNA, SETC, SETRES, SETC_SND
 from pychonet.lib.functions import decodeEchonetMsg
@@ -124,6 +125,7 @@ async def device(tmp_path, request):
     api = ECHONETAPIClient(wire)
     api._logger = lambda *args: None
     hass = HomeAssistant(str(tmp_path))
+    frame.async_setup(hass)
     hass.data["echonetlite"] = {"api": api}
     config = SimpleNamespace(title="Synthetic air cleaner", options={}, entry_id="test")
     api._state[HOST] = {

@@ -1,8 +1,11 @@
 import logging
 from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.components.select import SelectEntity
+from homeassistant.exceptions import HomeAssistantError
 from .base_entity import EchonetEntity
 from .sharp import SHARP_MODES, sharp_value
+from .fan_speed import FanSpeedOptions, OPTION_NUMBERED_FAN_SPEEDS
+from .vane_position import VanePositionOptions, OPTION_NUMBERED_VANE_POSITIONS
 from pychonet.HomeAirConditioner import (
     ENL_AIR_HORZ,
     ENL_AIR_VERT,
@@ -139,6 +142,14 @@ class EchonetSelect(EchonetEntity, SelectEntity):
         """Return available select options, with user override support."""
         if self._code == ENL_FANSPEED and self.coordinator.is_sharp_air_cleaner:
             return list(SHARP_MODES)
+        if self._is_hvac_fan_speed and self._config.options.get(
+            OPTION_NUMBERED_FAN_SPEEDS, False
+        ):
+            return self._fan_speed_options.options
+        if self._is_hvac_vane_position and self._config.options.get(
+            OPTION_NUMBERED_VANE_POSITIONS, False
+        ):
+            return self._vane_positions.options
         if self._code in self._user_option_epcs:
             if self.coordinator._user_options[self._code] is not False:
                 return self.coordinator._user_options[self._code]
@@ -149,6 +160,18 @@ class EchonetSelect(EchonetEntity, SelectEntity):
         """Return current option with fallback for raw int values, reading fresh from coordinator."""
         if self._code == ENL_FANSPEED and self.coordinator.is_sharp_air_cleaner:
             return sharp_value(self.coordinator.data, "mode")
+        if self._is_hvac_fan_speed and self._config.options.get(
+            OPTION_NUMBERED_FAN_SPEEDS, False
+        ):
+            return self._fan_speed_options.label_for_value(
+                self.coordinator.data.get(self._code)
+            )
+        if self._is_hvac_vane_position and self._config.options.get(
+            OPTION_NUMBERED_VANE_POSITIONS, False
+        ):
+            return self._vane_positions.label_for_value(
+                self.coordinator.data.get(self._code)
+            )
         val = self.coordinator.data.get(self._code)
         if val is not None and val not in self.options:
             # Handle raw int case - reverse lookup in _options dict
@@ -166,6 +189,28 @@ class EchonetSelect(EchonetEntity, SelectEntity):
         if self._code == ENL_FANSPEED and self.coordinator.is_sharp_air_cleaner:
             await self.coordinator.async_set_sharp_fan_mode(option)
             return
+        if self._is_hvac_fan_speed and self._config.options.get(
+            OPTION_NUMBERED_FAN_SPEEDS, False
+        ):
+            try:
+                mode = self._fan_speed_options.mode_for_label(option)
+            except ValueError as err:
+                raise HomeAssistantError(str(err)) from err
+            await self.coordinator.async_set_and_verify(
+                [ENL_FANSPEED], self.coordinator._instance.setFanSpeed(mode)
+            )
+            return
+        if self._is_hvac_vane_position and self._config.options.get(
+            OPTION_NUMBERED_VANE_POSITIONS, False
+        ):
+            try:
+                mode = self._vane_positions.mode_for_label(option)
+            except ValueError as err:
+                raise HomeAssistantError(str(err)) from err
+            await self.coordinator.async_set_and_verify(
+                [ENL_AIR_VERT], self.coordinator._instance.setAirflowVert(mode)
+            )
+            return
         self._attr_current_option = option
         # self.async_schedule_update_ha_state()
         if not await self.coordinator._instance.setMessage(
@@ -174,6 +219,37 @@ class EchonetSelect(EchonetEntity, SelectEntity):
             # Restore previous state
             self._attr_current_option = self.coordinator.data.get(self._code)
         #    self.async_schedule_update_ha_state()
+
+    @property
+    def _is_hvac_fan_speed(self):
+        return (
+            self._code == ENL_FANSPEED
+            and self.coordinator._eojgc == 0x01
+            and self.coordinator._eojcc == 0x30
+        )
+
+    @property
+    def _fan_speed_options(self):
+        configured = self.coordinator._user_options.get(ENL_FANSPEED)
+        return FanSpeedOptions(
+            configured,
+            self._config.options.get(OPTION_NUMBERED_FAN_SPEEDS, False),
+        )
+
+    @property
+    def _is_hvac_vane_position(self):
+        return (
+            self._code == ENL_AIR_VERT
+            and self.coordinator._eojgc == 0x01
+            and self.coordinator._eojcc == 0x30
+        )
+
+    @property
+    def _vane_positions(self):
+        return VanePositionOptions(
+            self.coordinator._user_options.get(ENL_AIR_VERT) or list(self._options),
+            self._config.options.get(OPTION_NUMBERED_VANE_POSITIONS, False),
+        )
 
     # @callback
     # def _handle_coordinator_update(self) -> None:

@@ -19,6 +19,7 @@ from homeassistant.const import (
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_platform
+from homeassistant.exceptions import HomeAssistantError
 from pychonet.HomeAirConditioner import (
     AIRFLOW_VERT,
     ENL_AIR_VERT,
@@ -41,6 +42,8 @@ from pychonet.lib.eojx import EOJX_CLASS
 from . import get_device_name
 from .const import DATA_STATE_ON, DOMAIN, OPTION_HA_UI_SWING
 from .base_entity import EchonetEntity
+from .fan_speed import FanSpeedOptions, OPTION_NUMBERED_FAN_SPEEDS
+from .vane_position import VanePositionOptions, OPTION_NUMBERED_VANE_POSITIONS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,6 +102,7 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             config: The config entry for this integration.
         """
         super().__init__(coordinator, config)
+        self._config = config
         self._attr_unique_id = self._build_unique_id()
         # The temperature unit of echonet lite is defined as Celsius.
         # Set temperature_unit setting to Celsius,
@@ -134,7 +138,9 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             self._attr_supported_features = (
                 self._attr_supported_features | ClimateEntityFeature.SWING_MODE
             )
-        if self.is_settable(ENL_AIR_HORZ):
+        if self.is_settable(ENL_AIR_HORZ) and hasattr(
+            ClimateEntityFeature, "SWING_HORIZONTAL_MODE"
+        ):
             self._attr_supported_features = (
                 self._attr_supported_features
                 | ClimateEntityFeature.SWING_HORIZONTAL_MODE
@@ -241,6 +247,10 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
     def fan_mode(self) -> str | None:
         """Return the current fan mode."""
         if ENL_FANSPEED in self.coordinator.data:
+            if self._config.options.get(OPTION_NUMBERED_FAN_SPEEDS, False):
+                return self._fan_speed_options.label_for_value(
+                    self.coordinator.data[ENL_FANSPEED]
+                )
             return self.coordinator.data[ENL_FANSPEED]
         return None
 
@@ -254,6 +264,19 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
     @property
     def swing_mode(self) -> str | None:
         """Return the current swing mode."""
+        if self._config.options.get(OPTION_NUMBERED_VANE_POSITIONS, False):
+            if (
+                self.coordinator.data.get(ENL_AUTO_DIRECTION)
+                in self._vane_positions.modes
+            ):
+                value = self.coordinator.data.get(ENL_AUTO_DIRECTION)
+            elif (
+                self.coordinator.data.get(ENL_SWING_MODE) in self._vane_positions.modes
+            ):
+                value = self.coordinator.data.get(ENL_SWING_MODE)
+            else:
+                value = self.coordinator.data.get(ENL_AIR_VERT)
+            return self._vane_positions.label_for_value(value)
         if self.coordinator.data.get(ENL_AUTO_DIRECTION) in getattr(
             self, "_attr_swing_modes", DEFAULT_SWING_MODES
         ):
@@ -325,6 +348,11 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
 
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode with snappy verification."""
+        if self._config.options.get(OPTION_NUMBERED_FAN_SPEEDS, False):
+            try:
+                fan_mode = self._fan_speed_options.mode_for_label(fan_mode)
+            except ValueError as err:
+                raise HomeAssistantError(str(err)) from err
         await self.coordinator.async_set_and_verify(
             [0xA0], self.coordinator._instance.setFanSpeed(fan_mode)
         )
@@ -338,6 +366,11 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
 
     async def async_set_swing_mode(self, swing_mode):
         """Set new swing mode with snappy verification."""
+        if self._config.options.get(OPTION_NUMBERED_VANE_POSITIONS, False):
+            try:
+                swing_mode = self._vane_positions.mode_for_label(swing_mode)
+            except ValueError as err:
+                raise HomeAssistantError(str(err)) from err
         # 1. Determine which EPC we are actually targeting
         if swing_mode in self._opc_data[ENL_AUTO_DIRECTION]:
             epc, coro = ENL_AUTO_DIRECTION, self.coordinator._instance.setAutoDirection(
@@ -456,6 +489,10 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             self._attr_fan_modes = _modes
         else:
             self._attr_fan_modes = DEFAULT_FAN_MODES
+        self._fan_speed_options = None
+        if self._config.options.get(OPTION_NUMBERED_FAN_SPEEDS, False):
+            self._fan_speed_options = FanSpeedOptions(self._attr_fan_modes, True)
+            self._attr_fan_modes = self._fan_speed_options.options
 
         """list of available swing modes (vertical)."""
         _modes = self.coordinator._user_options.get(OPTION_HA_UI_SWING)
@@ -545,6 +582,11 @@ class EchonetClimate(EchonetEntity, ClimateEntity):
             for _sm in ("horiz", "vert-horiz"):
                 if _sm not in self._attr_swing_horizontal_modes:
                     self._attr_swing_horizontal_modes.insert(0, _sm)
+
+        self._vane_positions = None
+        if self._config.options.get(OPTION_NUMBERED_VANE_POSITIONS, False):
+            self._vane_positions = VanePositionOptions(self._attr_swing_modes, True)
+            self._attr_swing_modes = self._vane_positions.options
 
         if self.hass:
             self.async_schedule_update_ha_state()

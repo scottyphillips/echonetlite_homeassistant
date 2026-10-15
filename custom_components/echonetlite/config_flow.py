@@ -9,7 +9,6 @@ from typing import Any
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
@@ -42,6 +41,8 @@ from .const import (
     TEMP_OPTIONS,
     USER_OPTIONS,
 )
+from .fan_speed import OPTION_NUMBERED_FAN_SPEEDS
+from .vane_position import OPTION_NUMBERED_VANE_POSITIONS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -336,7 +337,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         errors = {}
         """Handle the initial step."""
         scm = STEP_USER_DATA_SCHEMA
@@ -427,6 +428,24 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 instance["eojgc"] == 0x01 and instance["eojcc"] == 0x30
             ):  # HomeAirConditioner
                 ha_swing_list = []
+                if 0xA0 in instance["setmap"]:
+                    data_schema_structure[
+                        vol.Optional(
+                            OPTION_NUMBERED_FAN_SPEEDS,
+                            default=self._config_entry.options.get(
+                                OPTION_NUMBERED_FAN_SPEEDS, False
+                            ),
+                        )
+                    ] = cv.boolean
+                if ENL_AIR_VERT in instance["setmap"]:
+                    data_schema_structure[
+                        vol.Optional(
+                            OPTION_NUMBERED_VANE_POSITIONS,
+                            default=self._config_entry.options.get(
+                                OPTION_NUMBERED_VANE_POSITIONS, False
+                            ),
+                        )
+                    ] = cv.boolean
                 for option in list(USER_OPTIONS.keys()):
                     if option in instance["setmap"]:
                         if option in [ENL_AIR_VERT, ENL_AUTO_DIRECTION, ENL_SWING_MODE]:
