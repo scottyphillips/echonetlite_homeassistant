@@ -68,12 +68,28 @@ ATTR_HUMIDITY = "humidity"
 
 async def async_setup_entry(hass, config_entry, async_add_devices):
     """Set up entry."""
+    # Imported here to avoid a circular import (climate_KAITEKI imports EchonetClimate)
+    from .climate_KAITEKI import create_kaiteki_climate_entities
+
     entities = []
+
     for entity in hass.data[DOMAIN][config_entry.entry_id]:
         if (
-            entity["instance"]["eojgc"] == 0x01 and entity["instance"]["eojcc"] == 0x30
+            entity["instance"]["eojgc"] == 0x01
+            and entity["instance"]["eojcc"] == 0x30
         ):  # Home Air Conditioner
-            entities.append(EchonetClimate(entity["echonetlite"], config_entry))
+            coordinator = entity["echonetlite"]
+
+            # Falls back to the standard entity if this is not a KAITEKI unit
+            # or its zone layout cannot be determined.
+            kaiteki_entities = create_kaiteki_climate_entities(
+                coordinator, config_entry
+            )
+            if kaiteki_entities:
+                entities.extend(kaiteki_entities)
+            else:
+                entities.append(EchonetClimate(coordinator, config_entry))
+
     async_add_devices(entities, True)
 
     platform = entity_platform.async_get_current_platform()
