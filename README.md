@@ -64,6 +64,7 @@ New device classes can be added via pychonet without constraint.
 | JDM Electric Meters | Low voltage smart meter (B route)              | —                              | Sensor                           | Requires Wi-SUN ↔ Ethernet/WiFi bridge — [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite) |
 | Sony                | MoekadenRoom ECHONETLite Simulator             | —                              | Climate, Select, Switch, Sensor  | https://github.com/SonyCSL/MoekadenRoom                                                           |
 | Toshiba             | RAS-N221DRZ air conditioner                    | HomeAirConditioner             | Climate, Sensor                  |
+| Chofu Seisakusho             | MC-38 air conditioner                    | HomeAirConditioner             | Climate,Select, Switch, Sensor                  | Nickname: 快適エアリー (Kaiteki Airy)
 ---
 
 ## Mitsubishi WiFi Adaptor Compatibility
@@ -79,7 +80,6 @@ New device classes can be added via pychonet without constraint.
 | MAC-600IF         | Z Series: MSZ-ZW4022S                                                                                                             |
 | MAC-900IF         | Z Series: MSZ-ZW4024S<br>XD Series: MSZ-XD2225<br>R Series: MSZ-BKR2223                                                         |
 | HM-W002-AC        | JXV Series: MSZ-JXV4018S                                                                                                          |
-
 ---
 
 This list reflects community-confirmed devices. Any ECHONET Lite compatible device is or can be supported — device classes not yet listed can be added to pychonet without constraint by the Machine Readable Appendix.
