@@ -60,6 +60,7 @@ from .const import (
     CONF_ICON_NEGATIVE,
     CONF_ICON_ZERO,
 )
+from .climate_KAITEKI import get_kaiteki_hidden_zone_keys
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -318,6 +319,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                         TYPE_DATA_DICT_OVERRIDES, {}
                     )
                     if isinstance(type_data, list):
+                        # Adds nothing unless this is a supported KAITEKI unit
+                        hidden_keys = get_kaiteki_hidden_zone_keys(
+                            entity["echonetlite"], type_data
+                        )
                         for attr_key in type_data:
                             base_attrs = _enl_op_codes.get(op_code)
                             # Apply override if defined for this specific dict key
@@ -329,6 +334,10 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                                 )
                             else:
                                 entity_attrs = base_attrs | {"dict_key": attr_key}
+                            # Non-representative zones of a group stay available
+                            # but disabled by default (their readings may differ).
+                            if attr_key in hidden_keys:
+                                entity_attrs = entity_attrs | {CONF_DISABLED_DEFAULT: True}
                             entities.append(
                                 EchonetSensor(
                                     entity["echonetlite"],

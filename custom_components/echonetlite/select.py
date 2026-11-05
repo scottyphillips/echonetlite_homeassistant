@@ -3,6 +3,7 @@ from homeassistant.const import CONF_ICON, CONF_NAME
 from homeassistant.components.select import SelectEntity
 from .base_entity import EchonetEntity
 from .sharp import SHARP_MODES, sharp_value
+from .select_KAITEKI import create_kaiteki_select_entities
 from pychonet.HomeAirConditioner import (
     ENL_AIR_HORZ,
     ENL_AIR_VERT,
@@ -30,13 +31,16 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         eojgc = entity["instance"]["eojgc"]
         eojcc = entity["instance"]["eojcc"]
         _enl_op_codes = entity["echonetlite"]._enl_op_codes
-        _non_setup_single_entity = NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(
-            eojcc, set()
+        _non_setup_single_entity = set(
+            NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         )
+
+        # Adds nothing unless this instance is a supported KAITEKI unit
+        entities.extend(create_kaiteki_select_entities(entity["echonetlite"], config))
+
         # configure select entities by looking up full ENL_OP_CODE dict
         for op_code in list(
             set(entity["instance"]["setmap"])
-            - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
             coordinator = entity["echonetlite"]
             if (
@@ -48,6 +52,12 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             epc_function_data = entity["echonetlite"]._instance.EPC_FUNCTIONS.get(
                 op_code, None
             )
+
+            # Exclude EPCs containing TYPE_SELECT from the exclusion list using quirk
+            _enl_op_code_dict = _enl_op_codes.get(op_code, {})
+            if TYPE_SELECT in _enl_op_code_dict:
+                _non_setup_single_entity.discard(op_code)
+
             if op_code in _non_setup_single_entity:
                 continue
             _by_epc_func = (
@@ -55,7 +65,6 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
                 and type(epc_function_data[1]) == dict
                 and len(epc_function_data[1]) > 2
             )
-            _enl_op_code_dict = _enl_op_codes.get(op_code, {})
             if _by_epc_func or TYPE_SELECT in _enl_op_code_dict.keys():
                 entities.append(
                     EchonetSelect(

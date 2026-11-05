@@ -128,7 +128,18 @@
                     "vert-horiz": "上下左右スイング",
                     "non-auto": "固定",
                     "auto-vert": "上下自動",
-                    "auto-horiz": "左右自動"
+                    "auto-horiz": "左右自動",
+                    "heating": "暖房",
+                    "cooling": "冷房",
+                    "dehumidification": "除湿",
+                    "off": "切",
+                    "on": "入",
+                    "timer1": "タイマー1",
+                    "timer2": "タイマー2",
+                    "timer3": "タイマー3",
+                    "Low": "弱",
+                    "Medium": "中",
+                    "High": "強"
                 }
             }
         },

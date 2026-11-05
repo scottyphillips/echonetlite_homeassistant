@@ -65,6 +65,8 @@ New device classes can be added via pychonet without constraint.
 | JDM Electric Meters | Low voltage smart meter (B route)              | —                              | Sensor                           | Requires Wi-SUN ↔ Ethernet/WiFi bridge — [nao-pon/python-echonet-lite](https://github.com/nao-pon/python-echonet-lite) |
 | Sony                | MoekadenRoom ECHONETLite Simulator             | —                              | Climate, Select, Switch, Sensor  | https://github.com/SonyCSL/MoekadenRoom                                                           |
 | Toshiba             | RAS-N221DRZ air conditioner                    | HomeAirConditioner             | Climate, Sensor                  |
+| Chofu Seisakusho    | MC-38 air conditioner                          | HomeAirConditioner             | Climate, Select, Switch, Sensor  | Nickname: 快適エアリー (Kaiteki Airy). See [KAITEKI notes](#chofu-seisakusho-kaiteki-mc-38) below |
+
 ---
 
 ## Mitsubishi WiFi Adaptor Compatibility
@@ -80,10 +82,40 @@ New device classes can be added via pychonet without constraint.
 | MAC-600IF         | Z Series: MSZ-ZW4022S                                                                                                             |
 | MAC-900IF         | Z Series: MSZ-ZW4024S<br>XD Series: MSZ-XD2225<br>R Series: MSZ-BKR2223                                                         |
 | HM-W002-AC        | JXV Series: MSZ-JXV4018S                                                                                                          |
-
 ---
 
 This list reflects community-confirmed devices. Any ECHONET Lite compatible device is or can be supported — device classes not yet listed can be added to pychonet without constraint by the Machine Readable Appendix.
+
+## Chofu Seisakusho KAITEKI (MC-38)
+
+Instead of a single climate entity, this unit is exposed as one climate entity per zone group ("Zone 1", "Zone 2", ...), according to the zone grouping set on the unit. Additional entities are created for the main power switch, the operation mode, the per-zone program operation (off / timer1-3) and Away Mode.
+
+**Upgrading from a previous version**
+
+Earlier versions created a single climate entity for this unit. After upgrading, that entity is replaced by the per-zone entities above, and the old one will remain in Home Assistant as "unavailable".
+
+- You can delete the old unavailable climate entity from **Settings → Devices & services → Entities**.
+- Update any dashboards, automations or scripts that referenced the old entity so that they use the new zone entities.
+
+**Trying other KAITEKI models**
+
+Only the MC-38 has been tested. If your unit has a different product code and you would like to try it:
+
+1. Find the product code. It is shown next to the manufacturer name on the device page in Home Assistant (e.g. "Chofu Seisakusho MC-38"), and in the debug log as `host_product_code`.
+2. Copy the quirks folder `quirks/Chofu Seisakusho/MC-38/` to `quirks/Chofu Seisakusho/<your product code>/`. The folder name must match the product code exactly.
+3. (Optional) Add your product code to `KAITEKI_PRODUCT_CODES` in `climate_KAITEKI.py`. This only attempts the automatic detection of the zone layout (EPC 0xF2) and hides the generic entities that would otherwise duplicate the zone-based ones. It does not change how the unit behaves, and it is not required for trying the unit.
+
+   ```python
+   KAITEKI_PRODUCT_CODES = {
+       "MC-38",
+       "<your product code>",
+   }
+   ```
+4. Restart Home Assistant and check that the zone entities work as expected (zone on/off/keep, target temperature, airflow, program operation and Away Mode).
+
+If it works, or if something behaves differently, please open an issue or a PR with the result. 👍
+
+---
 
 ## Installation — Enable ECHONET Protocol
 

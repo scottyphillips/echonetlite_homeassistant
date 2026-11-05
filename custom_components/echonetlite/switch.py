@@ -62,13 +62,22 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
         _epc_functions = (
             entity["echonetlite"]._instance.EPC_FUNCTIONS | _POWER_SAVING_EPC_FUNCTIONS
         )
+        _non_setup_single_entity = set(
+            NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
+        )
 
         # Configure switch entities by looking up full ENL_OP_CODE dict
         for op_code in list(
             set(entity["instance"]["setmap"])
-            - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
             epc_function_data = _epc_functions.get(op_code, None)
+            # Exclude EPCs containing TYPE_SWITCH from the exclusion list using quirk
+            _enl_op_code_dict = _enl_op_codes.get(op_code, {})
+            if TYPE_SWITCH in _enl_op_code_dict:
+                _non_setup_single_entity.discard(op_code)
+
+            if op_code in _non_setup_single_entity:
+                continue
             _by_epc_func = (
                 type(epc_function_data) == list
                 and type(epc_function_data[1]) == dict
