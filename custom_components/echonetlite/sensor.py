@@ -3,7 +3,7 @@
 import logging
 import voluptuous as vol
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, List, Optional
 
 from homeassistant.const import (
@@ -12,8 +12,12 @@ from homeassistant.const import (
     CONF_SERVICE,
     CONF_TYPE,
     CONF_UNIT_OF_MEASUREMENT,
+    UnitOfVolume,
 )
+from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
+from homeassistant.util.unit_conversion import VolumeConverter
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorStateClass
@@ -62,6 +66,12 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# ECHONET Lite 0x0282/0xE0 is an unsigned four-byte counter in liters.
+MAX_GAS_METER_LITERS = 999_999_999
+# Allow up to five cubic meters between lower readings while a reset is in
+# question. During ordinary operation the full increase is used, even offline.
+MAX_GAS_RESET_DELTA_LITERS = 5_000
 
 
 class SharpSensor(SharpFieldEntity, SensorEntity):
@@ -239,15 +249,25 @@ async def async_setup_entry(hass, config, async_add_entities, discovery_info=Non
             _enl_super_codes = {
                 k: v for k, v in ENL_SUPER_CODES.items() if not k in ENL_SUPER_ENERGES
             }
-        _enl_op_codes = entity["echonetlite"]._enl_op_codes | _enl_super_codes
-        _epc_functions = (
-            entity["echonetlite"]._instance.EPC_FUNCTIONS | EPC_SUPER_FUNCTIONS
-        )
+        coordinator = entity["echonetlite"]
+        _enl_op_codes = coordinator._enl_op_codes | _enl_super_codes
+        _epc_functions = coordinator._instance.EPC_FUNCTIONS | EPC_SUPER_FUNCTIONS
         # For all other devices, sensors will be configured but customise if applicable.
         for op_code in list(
             set(entity["echonetlite"]._update_flags_full_list)
             - NON_SETUP_SINGLE_ENTITY.get(eojgc, {}).get(eojcc, set())
         ):
+            if (eojgc, eojcc, op_code) == (
+                0x02,
+                0x82,
+                0xE0,
+            ) and coordinator._manufacturer == "Rinnai":
+                entities.append(
+                    RinnaiGasSensor(
+                        coordinator, config, op_code, _enl_op_codes[op_code]
+                    )
+                )
+                continue
             if entity["echonetlite"].is_sharp_air_cleaner and op_code in (
                 0xF1,
                 0xF2,
@@ -548,3 +568,129 @@ class EchonetSensor(EchonetEntity, SensorEntity):
             raise NoEntitySpecifiedError(
                 "The required parameter EPC has not been specified."
             )
+
+
+@dataclass(frozen=True)
+class RinnaiGasReading(ExtraStoredData):
+    """Keep the published total and the last readings in whole liters."""
+
+    high: int
+    previous: int
+    total: int
+    total_at_high: int
+
+    def as_dict(self) -> dict[str, int]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Optional["RinnaiGasReading"]:
+        try:
+            reading = cls(**data)
+        except TypeError:
+            return None
+        if any(type(value) is not int for value in data.values()):
+            return None
+        if (
+            not 0 <= reading.previous <= reading.high <= MAX_GAS_METER_LITERS
+            or not reading.high <= reading.total_at_high <= reading.total
+        ):
+            return None
+        return reading
+
+    def advance(self, liters: int) -> "RinnaiGasReading":
+        if liters >= self.high:
+            # A rebound can replay the pre-disconnect total. Only the part
+            # above that reading is new on the original counter's timeline.
+            total = max(self.total, self.total_at_high + liters - self.high)
+            return RinnaiGasReading(liters, liters, total, total)
+
+        # A real reset can continue below the old reading. Use observed small
+        # increases there and skip abrupt jumps between conflicting readings.
+        delta = liters - self.previous
+        total = self.total
+        if 0 < delta <= MAX_GAS_RESET_DELTA_LITERS:
+            total += delta
+        return RinnaiGasReading(self.high, liters, total, self.total_at_high)
+
+
+class RinnaiGasSensor(EchonetSensor, RestoreEntity):
+    """Publish a gas total that survives temporary counter resets."""
+
+    _reading: Optional[RinnaiGasReading] = None
+
+    @property
+    def native_value(self):
+        if self._reading is not None:
+            return self._reading.total / 1_000
+        return None
+
+    @property
+    def extra_restore_state_data(self) -> Optional[RinnaiGasReading]:
+        return self._reading
+
+    async def async_added_to_hass(self) -> None:
+        if (stored := await self.async_get_last_extra_data()) is not None:
+            self._reading = RinnaiGasReading.from_dict(stored.as_dict())
+        if self._reading is None and "recorder" in self.hass.config.components:
+            # Older versions used a regular sensor. Use Recorder's last meter
+            # state to keep a low first reading from becoming a new baseline.
+            if (liters := await self._async_get_recorded_liters()) is not None:
+                self._reading = RinnaiGasReading(liters, liters, liters, liters)
+        self._update_reading()
+        await super().async_added_to_hass()
+
+    async def _async_get_recorded_liters(self) -> Optional[int]:
+        from homeassistant.components.recorder import get_instance
+        from homeassistant.components.recorder.statistics import (
+            get_last_short_term_statistics,
+            get_last_statistics,
+            get_metadata,
+        )
+        from sqlalchemy.exc import SQLAlchemyError
+
+        recorder = get_instance(self.hass)
+        if not await recorder.async_db_ready:
+            return None
+
+        def get_recorded_reading():
+            metadata = get_metadata(self.hass, statistic_ids={self.entity_id}).get(
+                self.entity_id
+            )
+            if metadata is None:
+                return None
+            _, statistic = metadata
+            unit = statistic["unit_of_measurement"]
+            if not statistic["has_sum"] or unit not in VolumeConverter.VALID_UNITS:
+                return None
+            for get_statistics in (get_last_short_term_statistics, get_last_statistics):
+                rows = get_statistics(
+                    self.hass, 1, self.entity_id, False, {"state"}
+                ).get(self.entity_id)
+                if rows and (value := rows[0].get("state")) is not None:
+                    liters = VolumeConverter.convert(value, unit, UnitOfVolume.LITERS)
+                    if 0 <= liters <= MAX_GAS_METER_LITERS:
+                        return round(liters)
+            return None
+
+        try:
+            return await recorder.async_add_executor_job(get_recorded_reading)
+        except SQLAlchemyError:
+            _LOGGER.debug("Could not restore the Rinnai gas reading", exc_info=True)
+            return None
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._update_reading()
+        super()._handle_coordinator_update()
+
+    @callback
+    def _update_reading(self) -> None:
+        if not self.coordinator.last_update_success:
+            return
+        liters = self.coordinator.data.get(self._op_code)
+        if type(liters) is not int or not 0 <= liters <= MAX_GAS_METER_LITERS:
+            return
+        if self._reading is None:
+            self._reading = RinnaiGasReading(liters, liters, liters, liters)
+        else:
+            self._reading = self._reading.advance(liters)
