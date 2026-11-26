@@ -204,11 +204,10 @@ async def enumerate_instances(
                     _LOGGER.debug(
                         f"{host} - Instance {eojgc}-{eojcc}-{instance} map attributes discovered!"
                     )
-                    ntfmap = state["instances"][eojgc][eojcc][instance].get(
-                        ENL_STATMAP, []
-                    )
-                    getmap = state["instances"][eojgc][eojcc][instance][ENL_GETMAP]
-                    setmap = state["instances"][eojgc][eojcc][instance][ENL_SETMAP]
+                    properties = state["instances"][eojgc][eojcc][instance]
+                    ntfmap = properties.get(ENL_STATMAP, [])
+                    getmap = properties.get(ENL_GETMAP, [])
+                    setmap = properties.get(ENL_SETMAP, [])
 
                     uidi = f"{uid}-{eojgc}-{eojcc}-{instance}"
                     name = None
