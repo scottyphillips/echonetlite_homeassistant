@@ -88,8 +88,10 @@ def regist_as_inputs(epc_function_data):
     """
     if epc_function_data:
         if type(epc_function_data) == list:
-            if type(epc_function_data[1]) == dict and len(epc_function_data[1]) > 1:
-                return True  # Switch or Select
+            if len(epc_function_data) > 1:
+                values = epc_function_data[1]
+                if isinstance(values, dict) and len(values) > 1:
+                    return True  # Switch or Select
             if callable(epc_function_data[0]) and epc_function_data[0] == _hh_mm:
                 return True  # Time
         elif callable(epc_function_data) and epc_function_data == _hh_mm:
@@ -113,16 +115,16 @@ def regist_as_binary_sensor(epc_function_data):
         DICT_41_ON_OFF,
     )
 
-    if epc_function_data:
-        if type(epc_function_data) == list:
-            if epc_function_data[1] in (
-                DICT_41_ON_OFF,
-                DICT_30_TRUE_FALSE,
-                DICT_30_ON_OFF,
-                DICT_30_OPEN_CLOSED,
-            ):
-                return True
-    return False
+    return (
+        isinstance(epc_function_data, list)
+        and len(epc_function_data) > 1
+        and epc_function_data[1] in (
+            DICT_41_ON_OFF,
+            DICT_30_TRUE_FALSE,
+            DICT_30_ON_OFF,
+            DICT_30_OPEN_CLOSED,
+        )
+    )
 
 
 class DeviceTimeoutError(Exception):
@@ -692,14 +694,13 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 list(self._ntfPropertyMap), no_request=True
             )
 
-            if not raw:
+            if raw is None:
                 return
 
-            # raw may be a dict (multiple EPCs) or a scalar (single EPC).
-            if isinstance(raw, dict):
-                new_data = raw
-            elif len(self._ntfPropertyMap) == 1:
+            if len(self._ntfPropertyMap) == 1:
                 new_data = {self._ntfPropertyMap[0]: raw}
+            elif isinstance(raw, dict):
+                new_data = raw
             else:
                 return
 
@@ -749,8 +750,8 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         Note on pychonet return values:
             False  — request was sent but device did not respond (genuine timeout)
             None   — pychonet _waiting queue was busy, request was not sent
-            dict   — success with EPC data
-            other  — success with single EPC value
+            one EPC — the value itself, which may be a dict
+            multiple EPCs — a dict keyed by EPC
 
         None (queue busy) is treated as a cache-serve rather than an error,
         matching the silent-skip behaviour of 3.9.0's @Throttle which also
@@ -834,10 +835,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
                 timed_out_batches.append(flags)
                 continue
 
-            if isinstance(batch_data, dict):
-                update_data.update(batch_data)
-            elif len(flags) == 1:
+            if len(flags) == 1:
                 update_data[flags[0]] = batch_data
+            elif isinstance(batch_data, dict):
+                update_data.update(batch_data)
 
         if timed_out_batches:
             _LOGGER.warning(
@@ -928,12 +929,10 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
             _LOGGER.warning("Targeted poll failed for EPCs %s", epcs)
             return {}
 
-        if isinstance(batch_data, dict):
-            update_data.update(batch_data)
-        elif len(epcs) == 1:
-            # Handle the case where pychonet returns a single value
-            # instead of a dict for a single-EPC request
+        if len(epcs) == 1:
             update_data[epcs[0]] = batch_data
+        elif isinstance(batch_data, dict):
+            update_data.update(batch_data)
 
         return update_data
 
@@ -941,8 +940,8 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         """
         Executes the pychonet setter command, and schedules a targeted poll.
         """
-        # 1. Execute the set command
-        await set_coro
+        if await set_coro is False:
+            raise HomeAssistantError(f"ECHONET Lite write was not confirmed for {self._host}")
 
         # 2. Targeted Background Verification
         async def verify():
