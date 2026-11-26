@@ -118,7 +118,8 @@ def regist_as_binary_sensor(epc_function_data):
     return (
         isinstance(epc_function_data, list)
         and len(epc_function_data) > 1
-        and epc_function_data[1] in (
+        and epc_function_data[1]
+        in (
             DICT_41_ON_OFF,
             DICT_30_TRUE_FALSE,
             DICT_30_ON_OFF,
@@ -941,7 +942,9 @@ class ECHONETConnector(DataUpdateCoordinator[dict]):
         Executes the pychonet setter command, and schedules a targeted poll.
         """
         if await set_coro is False:
-            raise HomeAssistantError(f"ECHONET Lite write was not confirmed for {self._host}")
+            raise HomeAssistantError(
+                f"ECHONET Lite write was not confirmed for {self._host}"
+            )
 
         # 2. Targeted Background Verification
         async def verify():

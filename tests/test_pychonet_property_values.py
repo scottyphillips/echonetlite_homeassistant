@@ -33,10 +33,14 @@ async def test_single_epc_keeps_structured_value_in_each_ha_path(epc, value):
         async_update_listeners=Mock(),
     )
 
-    assert await ECHONETConnector.poll_pychonet(connector, batches_override=[[epc]]) == {
+    assert await ECHONETConnector.poll_pychonet(
+        connector, batches_override=[[epc]]
+    ) == {
         epc: value,
     }
-    assert await ECHONETConnector.poll_pychonet_specific(connector, [epc]) == {epc: value}
+    assert await ECHONETConnector.poll_pychonet_specific(connector, [epc]) == {
+        epc: value
+    }
     await ECHONETConnector.async_update_callback(connector, isPush=True)
     assert connector.data == {epc: value}
     connector.async_update_listeners.assert_called_once()
